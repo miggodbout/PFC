@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Project Log — PFC</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root { --gold: #C4814E; --gold-dim: rgba(196,129,78,0.22); --dark: #0D0D0D; }
+    html, body { height: 100%; overflow: hidden; background: var(--dark); font-family: Arial, sans-serif; color: white; }
+    #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+    .top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      padding: max(env(safe-area-inset-top,14px),14px) 16px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; }
+    .brand img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(196,129,78,0.4); }
+    .brand-text p:first-child { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: white; }
+    .brand-text p:last-child { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.8px; text-transform: uppercase; margin-top: 1px; }
+    .unit-select-wrap { position: relative; }
+    #unit-select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--gold-dim); border: 1.5px solid var(--gold);
+      border-radius: 20px; color: var(--gold);
+      font-size: 12px; font-weight: 700; font-family: Arial, sans-serif;
+      padding: 6px 28px 6px 13px; cursor: pointer; outline: none;
+    }
+    #unit-select option { background: #1a1a1a; color: white; }
+    .select-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--gold); font-size: 9px; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+    .shake { animation: shake 0.3s ease; }
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+      padding: 24px 20px max(env(safe-area-inset-bottom,28px),28px);
+      background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    #capture-btn {
+      width: 78px; height: 78px; border-radius: 50%;
+      border: 3.5px solid white; background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.1s, background 0.1s;
+      -webkit-user-select: none; user-select: none;
+    }
+    #capture-btn:active { transform: scale(0.88); background: rgba(255,255,255,0.35); }
+    .capture-inner { width: 60px; height: 60px; border-radius: 50%; background: white; }
+    .footer-credit { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 0.5px; }
+    .screen { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px; text-align: center; }
+    .screen.active { display: flex; }
+    #screen-denied { background: var(--dark); }
+    #screen-denied img { width: 72px; height: 72px; border-radius: 50%; border: 1.5px solid var(--gold-dim); margin-bottom: 4px; }
+    #screen-denied .label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
+    #screen-denied h2 { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    #screen-denied p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    #screen-success { background: rgba(0,0,0,0.88); }
+    .success-circle { width: 78px; height: 78px; border-radius: 50%; background: #2D6A4F; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+    #screen-success h2 { font-size: 26px; font-weight: 700; }
+    #screen-success p { font-size: 13px; color: rgba(255,255,255,0.5); }
+    .progress-bar-wrap { width: 120px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+    .progress-bar { height: 100%; background: var(--gold); border-radius: 2px; width: 0%; transition: width 2s linear; }
+  </style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+
+<div class="top-bar" id="top-bar" style="display:none;">
+  <div class="brand">
+    <img id="logo-bar" alt="PFC">
+    <div class="brand-text"><p>Project Log</p><p>Premier Finish</p></div>
+  </div>
+  <div class="unit-select-wrap">
+    <select id="unit-select"><option value="">Select unit</option></select>
+    <span class="select-arrow">▼</span>
+  </div>
+</div>
+
+<div class="bottom-bar" id="bottom-bar" style="display:none;">
+  <div id="capture-btn" role="button" aria-label="Capture photo">
+    <div class="capture-inner"></div>
+  </div>
+  <p class="footer-credit">Built by Miguel Godbout</p>
+</div>
+
+<div class="screen active" id="screen-denied">
+  <img id="logo-denied" alt="PFC">
+  <p class="label">Project Log</p>
+  <h2>Camera Access Denied</h2>
+  <p>Go to Settings → Safari → Camera and allow access, then reload this page.</p>
+</div>
+
+<div class="screen" id="screen-success">
+  <div class="success-circle">✓</div>
+  <h2>Logged</h2>
+  <p id="success-detail"></p>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+</div>
+
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwukwZFvoGQ_UtS2hjAqGAFxzq8EoBATey2FLNgcir0PDhAMJI3uduffmjd0AKN4DwliQ/exec';
+  const LOGO = 'data:image/jpeg;base64,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';
+
+  document.getElementById('logo-bar').src    = LOGO;
+  document.getElementById('logo-denied').src = LOGO;
+
+  const params    = new URLSearchParams(window.location.search);
+  const jobsite   = params.get('job')   || 'Unknown-Job';
+  const unitCount = parseInt(params.get('units')) || 36;
+
+  const select      = document.getElementById('unit-select');
+  const floorsCount = Math.ceil(unitCount / 12);
+  for (let f = 1; f <= floorsCount; f++) {
+    const group = document.createElement('optgroup');
+    group.label = 'Floor ' + f;
+    for (let u = 1; u <= 12; u++) {
+      const opt = document.createElement('option');
+      opt.value = f * 100 + u;
+      opt.textContent = 'Unit ' + (f * 100 + u);
+      group.appendChild(opt);
+    }
+    select.appendChild(group);
+  }
+
+  const video     = document.getElementById('video');
+  const topBar    = document.getElementById('top-bar');
+  const bottomBar = document.getElementById('bottom-bar');
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 1280 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      showScreen(null);
+    } catch (err) {
+      showScreen('denied');
+    }
+  }
+  startCamera();
+
+  document.getElementById('capture-btn').addEventListener('click', function () {
+    const unit = select.value;
+    if (!unit) {
+      const wrap = document.querySelector('.unit-select-wrap');
+      wrap.classList.remove('shake');
+      void wrap.offsetWidth;
+      wrap.classList.add('shake');
+      setTimeout(() => wrap.classList.remove('shake'), 300);
+      return;
+    }
+
+    const MAX    = 1000;
+    const canvas = document.createElement('canvas');
+    const ratio  = Math.min(MAX / video.videoWidth, MAX / video.videoHeight, 1);
+    canvas.width  = Math.round(video.videoWidth  * ratio);
+    canvas.height = Math.round(video.videoHeight * ratio);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    document.getElementById('success-detail').textContent =
+      'Unit ' + unit + '  ·  ' + jobsite.replace(/-/g, ' ');
+    showScreen('success');
+
+    const bar = document.getElementById('progress-bar');
+    bar.style.transition = 'none'; bar.style.width = '0%';
+    void bar.offsetWidth;
+    bar.style.transition = 'width 2s linear'; bar.style.width = '100%';
+
+    select.value = '';
+    setTimeout(() => showScreen(null), 2000);
+
+    canvas.toBlob(function (blob) {
+      const reader = new FileReader();
+      reader.onloadend = function () {
+        fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ jobsite, unit, image: reader.result.split(',')[1] })
+        }).catch(function () {});
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.65);
+  });
+
+  function showScreen(name) {
+    document.getElementById('screen-denied').classList.toggle('active', name === 'denied');
+    document.getElementById('screen-success').classList.toggle('active', name === 'success');
+    topBar.style.display    = !name ? 'flex' : 'none';
+    bottomBar.style.display = !name ? 'flex' : 'none';
+  }
+</script>
+</body>
+</html>
