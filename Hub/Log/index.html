@@ -7,69 +7,97 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-    :root { --gold: #C4814E; --gold-dim: rgba(196,129,78,0.25); --dark: #0D0D0D; }
+    :root {
+      --gold:     #C4814E;
+      --gold-dim: rgba(196,129,78,0.22);
+      --dark:     #0D0D0D;
+    }
 
-    html, body { height: 100%; overflow: hidden; background: var(--dark); font-family: Arial, sans-serif; color: white; }
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--dark);
+      font-family: Arial, sans-serif;
+      color: white;
+    }
 
-    /* ── LIVE VIEWFINDER ─────────────────────────────── */
+    /* ── VIDEO ───────────────────────────────────────── */
     #video {
       position: fixed; inset: 0;
       width: 100%; height: 100%;
-      object-fit: cover;
-      z-index: 0;
+      object-fit: cover; z-index: 0;
     }
 
     /* ── TOP BAR ─────────────────────────────────────── */
     .top-bar {
-      position: fixed; top: 0; left: 0; right: 0;
-      padding: env(safe-area-inset-top, 16px) 20px 16px;
-      padding-top: max(env(safe-area-inset-top, 16px), 16px);
-      background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      padding: max(env(safe-area-inset-top,14px),14px) 16px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
       display: flex; align-items: center; justify-content: space-between;
-      z-index: 10;
     }
 
-    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 9px; }
 
     .brand img {
-      width: 38px; height: 38px;
-      border-radius: 50%;
+      width: 36px; height: 36px; border-radius: 50%;
       object-fit: cover;
-      border: 1px solid var(--gold-dim);
+      border: 1px solid rgba(196,129,78,0.4);
     }
 
     .brand-text p:first-child {
       font-size: 10px; font-weight: 700;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: white;
+      letter-spacing: 2px; text-transform: uppercase; color: white;
     }
     .brand-text p:last-child {
-      font-size: 9px; color: rgba(255,255,255,0.45);
-      letter-spacing: 0.8px; text-transform: uppercase;
+      font-size: 9px; color: rgba(255,255,255,0.4);
+      letter-spacing: 0.8px; text-transform: uppercase; margin-top: 1px;
     }
 
-    .unit-pill {
-      font-size: 13px; font-weight: 700;
-      color: var(--gold);
-      background: var(--gold-dim);
-      border: 1px solid rgba(196,129,78,0.5);
-      border-radius: 20px;
-      padding: 5px 14px;
-      letter-spacing: 0.5px;
+    /* ── UNIT DROPDOWN ───────────────────────────────── */
+    .unit-select-wrap {
+      position: relative;
     }
+
+    #unit-select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--gold-dim);
+      border: 1.5px solid var(--gold);
+      border-radius: 20px;
+      color: var(--gold);
+      font-size: 12px; font-weight: 700;
+      font-family: Arial, sans-serif;
+      padding: 6px 28px 6px 13px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    #unit-select option { background: #1a1a1a; color: white; }
+
+    .select-arrow {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--gold); font-size: 9px;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+    .shake { animation: shake 0.3s ease; }
 
     /* ── BOTTOM BAR ──────────────────────────────────── */
     .bottom-bar {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      padding: 30px 20px max(env(safe-area-inset-bottom, 30px), 30px);
-      background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 10;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+      padding: 24px 20px max(env(safe-area-inset-bottom,28px),28px);
+      background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%);
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px;
     }
 
-    .capture-btn {
-      width: 76px; height: 76px;
-      border-radius: 50%;
+    /* ── CAPTURE BUTTON ──────────────────────────────── */
+    #capture-btn {
+      width: 78px; height: 78px; border-radius: 50%;
       border: 3.5px solid white;
       background: rgba(255,255,255,0.15);
       display: flex; align-items: center; justify-content: center;
@@ -77,92 +105,62 @@
       transition: transform 0.1s, background 0.1s;
       -webkit-user-select: none; user-select: none;
     }
-    .capture-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.35); }
+    #capture-btn:active { transform: scale(0.88); background: rgba(255,255,255,0.35); }
 
     .capture-inner {
-      width: 58px; height: 58px;
-      border-radius: 50%;
-      background: white;
+      width: 60px; height: 60px; border-radius: 50%; background: white;
     }
 
-    /* ── FULL-SCREEN STATES ──────────────────────────── */
+    /* ── FOOTER ──────────────────────────────────────── */
+    .footer-credit {
+      font-size: 9px; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── FULL SCREENS ────────────────────────────────── */
     .screen {
-      position: fixed; inset: 0;
+      position: fixed; inset: 0; z-index: 20;
       display: none; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 18px; padding: 48px 36px;
-      text-align: center; z-index: 20;
-      background: var(--dark);
+      gap: 16px; padding: 40px; text-align: center;
     }
     .screen.active { display: flex; }
 
-    .screen img.logo {
-      width: 80px; height: 80px;
-      border-radius: 50%; object-fit: cover;
-      border: 1.5px solid var(--gold-dim);
-      margin-bottom: 4px;
+    /* ── PERMISSION DENIED ───────────────────────────── */
+    #screen-denied { background: var(--dark); }
+    #screen-denied img {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 1.5px solid var(--gold-dim); margin-bottom: 4px;
     }
-
-    .screen .label {
+    #screen-denied .label {
       font-size: 10px; font-weight: 700;
-      letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--gold);
+      letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
     }
+    #screen-denied h2 { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    #screen-denied p  { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
 
-    .screen .sub {
-      font-size: 9px; color: rgba(255,255,255,0.4);
-      letter-spacing: 1px; text-transform: uppercase;
-      margin-top: -10px;
-    }
+    /* ── SUCCESS ─────────────────────────────────────── */
+    #screen-success { background: rgba(0,0,0,0.88); }
 
-    .screen h2 { font-size: 22px; font-weight: 700; margin-top: 4px; }
-    .screen p  { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
-
-    .screen-btn {
-      background: none;
-      border: 1.5px solid rgba(255,255,255,0.3);
-      border-radius: 30px;
-      padding: 12px 36px;
-      font-size: 13px; font-weight: 700;
-      color: white; font-family: Arial, sans-serif;
-      cursor: pointer; margin-top: 6px;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .screen-btn:active { background: rgba(255,255,255,0.1); }
-
-    .allow-btn {
-      background: var(--gold);
-      border: none;
-      border-radius: 30px;
-      padding: 14px 44px;
-      font-size: 15px; font-weight: 700;
-      color: white; font-family: Arial, sans-serif;
-      cursor: pointer; margin-top: 8px;
-    }
-    .allow-btn:active { opacity: 0.8; }
-
-    /* ── SPINNER ─────────────────────────────────────── */
-    .spinner {
-      width: 52px; height: 52px;
-      border: 3px solid rgba(255,255,255,0.1);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── ICON CIRCLES ────────────────────────────────── */
-    .icon-circle {
-      width: 80px; height: 80px; border-radius: 50%;
+    .success-circle {
+      width: 78px; height: 78px; border-radius: 50%;
+      background: #2D6A4F;
       display: flex; align-items: center; justify-content: center;
       font-size: 36px;
     }
-    .icon-success { background: #2D6A4F; }
-    .icon-error   { background: #7F1D1D; }
 
-    /* ── HIDE CAMERA UI WHEN SCREEN IS ACTIVE ────────── */
-    body.overlay-active .top-bar,
-    body.overlay-active .bottom-bar { display: none; }
+    #screen-success h2 { font-size: 26px; font-weight: 700; }
+    #screen-success p  { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+    .progress-bar-wrap {
+      width: 120px; height: 3px; background: rgba(255,255,255,0.15);
+      border-radius: 2px; overflow: hidden; margin-top: 4px;
+    }
+    .progress-bar {
+      height: 100%; background: var(--gold); border-radius: 2px;
+      width: 0%;
+      transition: width 2s linear;
+    }
   </style>
 </head>
 <body>
@@ -173,154 +171,160 @@
 <!-- Top bar -->
 <div class="top-bar" id="top-bar" style="display:none;">
   <div class="brand">
-    <img id="logo-top" alt="PFC">
+    <img id="logo-bar" alt="PFC">
     <div class="brand-text">
       <p>Project Log</p>
       <p>Premier Finish</p>
     </div>
   </div>
-  <div class="unit-pill" id="unit-display">—</div>
-</div>
-
-<!-- Capture button -->
-<div class="bottom-bar" id="bottom-bar" style="display:none;">
-  <div class="capture-btn" id="capture-btn" role="button" aria-label="Capture photo">
-    <div class="capture-inner"></div>
+  <div class="unit-select-wrap">
+    <select id="unit-select">
+      <option value="">Select unit</option>
+    </select>
+    <span class="select-arrow">▼</span>
   </div>
 </div>
 
-<!-- PERMISSION SCREEN -->
-<div class="screen active" id="screen-permission">
-  <img class="logo" id="logo-perm" alt="PFC">
-  <p class="label">Project Log</p>
-  <p class="sub">Premier Finish & Construction</p>
-  <h2>Camera Access</h2>
-  <p>Tap below to allow camera access.<br>You'll only need to do this once.</p>
-  <button class="allow-btn" id="allow-btn">Allow Camera</button>
+<!-- Bottom bar -->
+<div class="bottom-bar" id="bottom-bar" style="display:none;">
+  <div id="capture-btn" role="button" aria-label="Capture photo">
+    <div class="capture-inner"></div>
+  </div>
+  <p class="footer-credit">Built by Miguel Godbout</p>
 </div>
 
-<!-- UPLOADING SCREEN -->
-<div class="screen" id="screen-loading">
-  <div class="spinner"></div>
-  <h2>Uploading…</h2>
-  <p>Don't close this page.</p>
+<!-- PERMISSION DENIED SCREEN -->
+<div class="screen active" id="screen-denied">
+  <img id="logo-denied" alt="PFC">
+  <p class="label">Project Log</p>
+  <h2>Camera Access Denied</h2>
+  <p>Go to your phone Settings → Safari → Camera and allow access, then reload this page.</p>
 </div>
 
 <!-- SUCCESS SCREEN -->
 <div class="screen" id="screen-success">
-  <div class="icon-circle icon-success">✓</div>
+  <div class="success-circle">✓</div>
   <h2>Logged</h2>
   <p id="success-detail"></p>
-  <p style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:8px;">Scan next unit's QR to continue</p>
-</div>
-
-<!-- ERROR SCREEN -->
-<div class="screen" id="screen-error">
-  <div class="icon-circle icon-error">✕</div>
-  <h2>Upload Failed</h2>
-  <p>Check your connection and try again.</p>
-  <button class="screen-btn" onclick="returnToCamera()">Try Again</button>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
 </div>
 
 <script>
-  // ── CONFIG ────────────────────────────────────────────────────────────────
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPJsj1kg6jyd3GKYWi_zzdcvgdl7oLhPvtrxxBpWbbyY9z-Y74eGaoaSTDGsYerHf37Q/exec';
-  const LOGO_SRC   = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBw8RBhESBxAQEBUXEhsVFhgTFg8VFxMSFhMWGBYWFRUZIighGB4lJxUZIT0iJSkrLy4uGCAzODMvNygtLisBCgoKDg0OGxAQGzAlHyU3My0uLSstNS0tLS41LzcrLSs1LS01NSstNSs1MS03Ly0uKy0tNSsyNzcrMS0tKy0rK//AABEIAOEA4QMBIgACEQEDEQH/xAAbAAEAAgMBAQAAAAAAAAAAAAAAAQIEBQYDB//EAEIQAAICAQEFBgIFCQYHAQAAAAABAgMRBAUSEyExBiJBUVKRFHEjMmGBsQcVMzZTYpLB0UJyc3ShszU3Q2OCtOEk/8QAGAEBAQEBAQAAAAAAAAAAAAAAAAEDAgT/xAApEQEAAgEDAgMJAQAAAAAAAAAAAQIRAxIhQVExYfAiMnGBkaGx0eET/9oADAMBAAIRAxEAPwD5NxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuxxZeqXuygAvxZeqXuwUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHtDS2yjmuuySfRqE2n8mkW+Cu/Y2/wT/oTMLtnsxwZHwV37G3+Cf9B8Fd+xt/gn/QZg2z2Y4L2VyjLFsZRflJNP2ZQqAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbbY2zFOKt1ik697dhGP1r7PRD7PN+HP7vPZmgjKp3bQbhTF4ePrWz/AGcP5vw/DbajWzVVTglXdclCqMemm00mox3V6pefkjO9ukN9Oke9ZftHq9Wrc6Hi101xUHKpyjXvr62MeCfdz9h70bQue29GnbZu2aaLlHelhyddnPHnlJmJdbdLbd3wN0aK6IqvM33IwXd3XHDzlp+BixnfDtXS9oS3pqyCysYcG0k448MMy28YbzeYtnnxete0NS9gV/T27z1e45b8s4daws+XPJ59oNr6iO2Lo03WwjGW6kpSSxFJf64z95FkcbJ1kVy4erjKPzbnD+RlX6FX67T33x3IypV2ofPdSi2s/Y5JLl9p1G2JzLmd1oxE9v0y9XWtQ1ptc0pVaWFnGk+cLGlvKbfWL3l7HKazSzq1Mq9THdkuv8mn4p+ZvLpzs0Nkor6TWXqMF5VQf4ZwvkjO11VWoqnC1wrjVONGntee/Yo4lCXnHK6+GRW20vT/AE+Ljgeup0869RKGoi4yi8NM8jd45jAAAAAAAAAAAAAAAAAAAAAAAAAAANpsrXwUODtOLnRKWf3q5euD/FeP47WWnm+1vF1WOGs3xknmDorXc3X/AArHmzljb7J2olpZabXSlwZ8srrU285XnHPWJnavWG+nqRxWyYWOXZ3Uzl1nqYN/fvS/Ey9DqaJVaa7VWxjLTxcZQed+zdead3z6/dgWbOlVsyNFzT42sgouLypVKKW/H+Irtd12aDVcKquvgXRhW4JJuDcoNSf9r6uTjMT6+TTExzPb+vK6M3seqEU3Zqb3dheld2C+9tv7j1lGqqlU7R1dlyi/0FKk476f1XY+XXy+4y7Hu9oruH1p0TVf2ONMcNfxyNV2d5SvnUk7IUSnXnniWVmSXi0m2OhPFvt9GfrtXOlSt1KjC+Ve5TVHppqcYy/KWOnjz9sjanD0lVCsxZOutcKvqlZLnO6zz58kvs9tZRUqKlqNpriWz71VcsvL/a2+OPJeP4ajUXzsvlPUScpSeW34ssUyltTbHmX3Snc5XScpN5bfVs8wDZ5QAAAAAAAAAAAAAAAAAAAAAAAAAAAABvez214Qtrr2klKuM96EnnNM/Nfu+aLy0dkdn66rUfX7lya5qytTe9KL8V3kznzoOzu2YxxTtHDralGMn1qU1hxf7j8vDC+7K9ccw9GneJ9mz0lqktdpNWucZpVWrynGO5NP5xaf3COjWg1MrdS8yUpRogn9dc1xJ46Rx4eJbT0/B7OsW2IQszZGVNec784Jricv7HNdevkaDWaqduplZqZb0n1f4JLwS8iVjM+Tq1tsZnx/CNVqZ26iU9RJylJ5b/kvJfYeIBs80zkAAQAAAAAAAAAAAAAATGLbxFNv7CZQaffTXzTQMKgF5VyUcyjJLzaaXuBQAvGuTXcjJ/JNgUBLWHz5BJvom/5ICASot9E3/QgACcPGcPBAAF3VJLMoyS+1SKAWlJvG+28LCy28JdEvJFS/DluZ3ZY88PHuUC8gPSqmc39DCc8dd2MpY+eCLK5Rli2MovyknF+zCKAtCEpSxWnJ+STb9kVAAtuPh72HjOM4eM+WemRKDWN9NZWVlNZT6Nea+0CoLRi3JKCbb6JJtt/Yl1Ia58wIB6UUznao6aE7JPpGEZSk8dcRjzKzi1NqacWnhpppp+TT6MCoLQg5TSrTk30STbfySCg3FuKbS6tJ4WemX4AVBJAG27K/rFR/el/tzMraeof5mlDaGor1Njti69yasdcVnfbl4Z6YNLpNTOrUxs07xKPR4TxlNdH8zyOJrm2WtdTFNqJfVZ3d8rI6yU9RdF6aNEeJVvbz71SSTrx3cvxOE8DN/Ol3xEpuWXKvhy5RxKGEsOOMPoiXrNl0tSKZywl05nR7Jv3Ozcm9TPTf/qxvQjOTf0X1cR9/uOcM7Q7WvppcNNKKi5bzTjCXexjPeT8i3rmHOleKzmWPq572pm1N25k3vtNOf7zT5rJuOydkI2ah6lZhwGp/3HOKl/ozS32ud0pWYzJ5eElzf2LoWo1M4QmqnhThuS5J5i3nH2dC2rmuCltt9zptJs/4bZushf8ApJ1W7r/7VeEpf+Tln7jkzNntS+Um7J5zVweaj+i9P/3qYRKVmPFdS9bYivRttT+rGn/x7Pwiaif1H8j3lqZvSxrk+7GTklhcpS6vPXwPF9DqIw5tbMw6jtVql8TdD4yzOI/Qbtm79WLxvZx+8cubLV7b1FtLjqJRaaw+5WnyxjvJZ8DWnNK4jC6t4tbMOz2fHUPQ6H4O+NcVCUrIuXOUI2Zk1XjvLGV95ymvshLXWS0qxBzk4r91t45eBevaV0ZVOueHVlV8l3U3l/PP2mNOWZtvHN55YSy/JeBK1mJy61NSLViI9cO4/Jla47O2vKOqeixpqvp0rJOr6d88Q7z8uXmc32nuc9rOU9c9ovciuM42xb69zFne5fzMXR7Suq0t9emluwvgoWrEXvRjLeisvpz8jDNGLsPyVfrjH/L3/wCxM42n9FH5L8DP2TtS7S63i7PluT3ZRziMu7OLjJYfLo2YSWFhAfR+wtunfYHUUbWwqtTtGOnc3/0Zz029VavlOEPubNT+UvRWafVbOo1ixOrZdNcl1xKE7U8Py5HMraFv5olpt76GVquccR52qDgnvdejxjoeu2ttanWXwntWx2yhVGqMmop8OLbSeFzfefN8+YGw/J/+vOz/APNQ/E1e2f8AjWp/zNv+7Ips7XWafX13aOW7ZXNTg8J4kujw+TPG62U75TteZSk5SfnKTbb92B13YTaCo2Zr3qnqtPVbGquWs0q7+lmpuUU8NS3Z5w93ny9sT8oMNR+fK57Quq1O/pap131RlD4inDULLIvnxHhp/JGt2Ht/U6Odj2dOKVkVGyE4QsrsinlKcJJp4z1PHbO1r9XrndtKe/PdUVhRiowj9WEYxSUYrPReYG9/JX/zE0H+JP8A9e022k0Wjr7E7aeyddLVuUdPvp6e2jhparlzm3vZy+nkcTsnaV2l2lXfs+W5ZW24SxGWG4uL5Pk+UmTptp3V6LUVUSxC9RVqxF7yrnvw5vmsN55AYYAAAAAAAAAAA3fYynTT7R1LbLrVKU3JWOMYyarluRzJqOc4feaTxhnltnS6evtROELK56fjxe9p25wVM3GUlVLm5bqk4p9Xu9PADUg6vtpRpo1r4KvZsF8RNVPR3TsnPS47kro5kk+nebUs5W7jmZWw9Ps57AqerWjw673qp2WNaqu1b3wy01aksp4h0i0+9kDigb7sbVopajULtC4xg9K1GTeHC6VtMVZBf2nFSnLd8VFl9o1aNdvJR0/AelWsil9I40ujfjn6WOWotZ7yzgDngdB22p00Nv42TwNx1Qk40uLjCbzmEt2c4uXJZ3JY59E8le1mp005aX82UaWnOlrss4G/+nsWbISzKWN3HTqsvIGhJOw2/Ts1djNNLQ/DPU7un3+G2rYylTN3u3MmpptRWFFbrTz1K7C02z5dm3ZrZadWVx1ampzUbJSlRD4PcrbzPv72N1PDzkDkAb/sjVRJ6j4mOlncqovTQ1c9yic+JHibzcopyUctJySz8jD21Oqvb1ktHDTThGakoVzttok1GLlCM3iU4N5X+ieMMDWA3Xbe3Tvbtq2NXRXVGMVDgZcZt1xlKTbby8ya5elIvtmrRLtlKNLitJx6k3U95Klxr4rg1nPWfTxA0QOt7ZUaSOig9LHQwt+JmoLRWOyMtFurhzt70kpt+eG1nK5HtotPst9h3K+VUdZHS3tJyWbLHqsV93PKyMYrC8Y2N+AHGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACQBAJAEAkAQCQBAJAEAkAQCQBAJAEAkAQCQBAJAEAkAQCQBAJAEAkgCQAdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/9k=';
+  // ── CONFIG ─────────────────────────────────────────────────────────────────
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwukwZFvoGQ_UtS2hjAqGAFxzq8EoBATey2FLNgcir0PDhAMJI3uduffmjd0AKN4DwliQ/exec';
+  const LOGO      = 'data:image/jpeg;base64,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';
 
-  // ── INJECT LOGO ───────────────────────────────────────────────────────────
-  document.getElementById('logo-top').src  = LOGO_SRC;
-  document.getElementById('logo-perm').src = LOGO_SRC;
+  // ── INJECT LOGO ────────────────────────────────────────────────────────────
+  document.getElementById('logo-bar').src    = LOGO;
+  document.getElementById('logo-denied').src = LOGO;
 
-  // ── URL PARAMS ────────────────────────────────────────────────────────────
-  const params  = new URLSearchParams(window.location.search);
-  const jobsite = params.get('job')  || 'Unknown-Job';
-  const unit    = params.get('unit') || '???';
+  // ── URL PARAMS ─────────────────────────────────────────────────────────────
+  const params    = new URLSearchParams(window.location.search);
+  const jobsite   = params.get('job')   || 'Unknown-Job';
+  const unitCount = parseInt(params.get('units')) || 36;
 
-  document.getElementById('unit-display').textContent = 'Unit ' + unit;
+  // ── GENERATE UNIT DROPDOWN ─────────────────────────────────────────────────
+  const select     = document.getElementById('unit-select');
+  const floorsCount = Math.ceil(unitCount / 12);
 
-  // ── ELEMENTS ──────────────────────────────────────────────────────────────
+  for (let f = 1; f <= floorsCount; f++) {
+    const group = document.createElement('optgroup');
+    group.label = 'Floor ' + f;
+    for (let u = 1; u <= 12; u++) {
+      const opt = document.createElement('option');
+      opt.value = f * 100 + u;
+      opt.textContent = 'Unit ' + (f * 100 + u);
+      group.appendChild(opt);
+    }
+    select.appendChild(group);
+  }
+
+  // ── CAMERA ─────────────────────────────────────────────────────────────────
   const video     = document.getElementById('video');
   const topBar    = document.getElementById('top-bar');
   const bottomBar = document.getElementById('bottom-bar');
-  const captureBtn = document.getElementById('capture-btn');
+  let   stream    = null;
 
-  let stream = null;
-
-  // ── CAMERA ────────────────────────────────────────────────────────────────
   async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1000 }, height: { ideal: 1000 } },
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 1280 } },
         audio: false
       });
       video.srcObject = stream;
       await video.play();
-      showScreen(null); // hide all screens, show live camera
+      showScreen(null);  // camera running — hide all screens
     } catch (err) {
-      showScreen('permission'); // show permission prompt
+      showScreen('denied');
     }
   }
 
-  document.getElementById('allow-btn').addEventListener('click', startCamera);
-
-  // Try auto-start on load
   startCamera();
 
-  // ── CAPTURE ───────────────────────────────────────────────────────────────
-  captureBtn.addEventListener('click', async function () {
-    if (!stream) return;
+  // ── CAPTURE ────────────────────────────────────────────────────────────────
+  document.getElementById('capture-btn').addEventListener('click', function () {
+    const unit = select.value;
 
+    // No unit selected — shake the dropdown
+    if (!unit) {
+      const wrap = document.querySelector('.unit-select-wrap');
+      wrap.classList.remove('shake');
+      void wrap.offsetWidth;
+      wrap.classList.add('shake');
+      setTimeout(() => wrap.classList.remove('shake'), 300);
+      return;
+    }
+
+    // Capture frame
+    const MAX    = 1000;
     const canvas = document.createElement('canvas');
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    const ratio  = Math.min(MAX / video.videoWidth, MAX / video.videoHeight, 1);
+    canvas.width  = Math.round(video.videoWidth  * ratio);
+    canvas.height = Math.round(video.videoHeight * ratio);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    showScreen('loading');
+    // Show success IMMEDIATELY
+    document.getElementById('success-detail').textContent =
+      'Unit ' + unit + '  ·  ' + jobsite.replace(/-/g, ' ');
+    showScreen('success');
 
-    canvas.toBlob(async function (blob) {
-      try {
-        const reader = new FileReader();
-        reader.onloadend = function () {
-          const base64 = reader.result.split(',')[1];
+    // Animate progress bar
+    const bar = document.getElementById('progress-bar');
+    bar.style.transition = 'none'; bar.style.width = '0%';
+    void bar.offsetWidth;
+    bar.style.transition = 'width 2s linear'; bar.style.width = '100%';
 
-          // Show success immediately — upload runs in background
-          document.getElementById('success-detail').textContent =
-            'Unit ' + unit + '  ·  ' + jobsite.replace(/-/g, ' ');
-          showScreen('success');
+    // Reset dropdown
+    select.value = '';
 
-          // Fire and forget — browser keeps retrying on weak connection
-          fetch(SCRIPT_URL, {
-            method:  'POST',
-            mode:    'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body:    JSON.stringify({ jobsite, unit, image: base64 })
-          }).catch(function() {
-            // Silent fail — upload queued by browser, will complete when signal allows
-          });
-        };
-        reader.readAsDataURL(blob);
-      } catch (err) {
-        showScreen('error');
-      }
+    // Return to camera after 2s
+    setTimeout(() => showScreen(null), 2000);
+
+    // Upload in background — fire and forget
+    canvas.toBlob(function (blob) {
+      const reader = new FileReader();
+      reader.onloadend = function () {
+        fetch(SCRIPT_URL, {
+          method:  'POST',
+          mode:    'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body:    JSON.stringify({ jobsite, unit, image: reader.result.split(',')[1] })
+        }).catch(function () {});
+      };
+      reader.readAsDataURL(blob);
     }, 'image/jpeg', 0.65);
   });
 
-  // ── SCREEN HELPER ─────────────────────────────────────────────────────────
-  const screens = ['permission', 'loading', 'success', 'error'];
-
+  // ── SCREEN HELPER ──────────────────────────────────────────────────────────
   function showScreen(name) {
-    screens.forEach(id => {
-      document.getElementById('screen-' + id)
-        .classList.toggle('active', id === name);
-    });
-
-    const cameraActive = !name;
-    topBar.style.display    = cameraActive ? 'flex'  : 'none';
-    bottomBar.style.display = cameraActive ? 'flex'  : 'none';
-    document.body.classList.toggle('overlay-active', !!name && name !== 'permission');
+    document.getElementById('screen-denied').classList.toggle('active', name === 'denied');
+    document.getElementById('screen-success').classList.toggle('active', name === 'success');
+    const cameraVisible = !name;
+    topBar.style.display    = cameraVisible ? 'flex' : 'none';
+    bottomBar.style.display = cameraVisible ? 'flex' : 'none';
   }
-
-  function returnToCamera() { showScreen(null); }
 </script>
 </body>
 </html>
