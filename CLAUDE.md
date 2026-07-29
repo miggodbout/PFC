@@ -8,7 +8,7 @@ Built by Miguel Godbout. Crew of 5 on iOS iPhones.
 - Frontend: GitHub Pages (miggodbout.github.io/PFC/)
 - Backend: Google Apps Script
 - Push frontend: git add . && git commit -m "message" && git push
-- Push Apps Script: clasp push (from repo root, Code.gs is the script file)
+- Push Apps Script: clasp push (from repo root, appscript/Code.js is the script file)
 
 ## Critical constraints
 - NEVER touch Hub/Log/app_v2.html or Hub/Log/index.html
