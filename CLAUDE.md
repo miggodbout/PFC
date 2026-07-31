@@ -39,6 +39,8 @@ Purpose: crew photographs the physical checklist sheet taped to each unit door. 
 - `Code.gs`
 - `upload.html`
 
+Path note: in this repo `Code.gs` is the file `appscript/Code.js`, tracked with `.clasp.json` and `appscript/appsscript.json`. `upload.html` is not in this repo. It exists only inside the live Apps Script project.
+
 Backend: Google Apps Script, deployed as a web app. Redeploy via Manage Deployments → pencil icon → New Version. Never create a new deployment — the URL is embedded in printed QR codes on physical sheets and cannot change.
 
 Branding: dark theme, accent color `#C4814E`, Arial font.

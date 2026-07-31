@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="description" content="Job site progress and deficiency tracker for Premier Finish & Construction.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="shared/logo.png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="shared/logo.png">
+<title>PFC Control</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  /* The card grid. Two across on every phone size. */
+  .grid {
+    padding: 0 20px calc(40px + var(--btm-safe));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .hub-card {
+    min-height: 128px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+    text-align: left;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+  }
+
+  /* A diamond, made by turning a rounded square. */
+  .diamond {
+    width: 34px; height: 34px;
+    transform: rotate(45deg);
+    border-radius: 7px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* The glyph turns back, so it sits upright inside the diamond. */
+  .diamond > span { transform: rotate(-45deg); display: flex; }
+
+  .hub-label { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; color: var(--fg-2); }
+  .hub-sub   { font-size: 12.5px; margin-top: 3px; color: var(--fg-5); }
+
+  /* Cards for features that are not built yet. They do not press. */
+  .hub-card.off { background: var(--off-bg); border-color: var(--off-line); cursor: default; }
+  .hub-card.off .diamond { background: var(--off-icon); }
+  .hub-card.off .hub-label { color: var(--off-fg); }
+  .hub-card.off .hub-sub   { color: var(--off-fg-2); }
+
+  .foot {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.4px;
+    padding: 0 20px calc(24px + var(--btm-safe));
+  }
+</style>
+</head>
+<body>
+
+<header class="hdr hdr--home">
+  <img class="hdr-logo" src="shared/logo.png" alt="PFC Control logo">
+  <div class="hdr-titles">
+    <h1 class="hdr-title" style="font-size:21px">PFC Control</h1>
+    <div class="hdr-sub" style="margin-top:2px">Job site tracker</div>
+  </div>
+</header>
+
+<nav class="grid" id="grid"></nav>
+
+<p class="foot">Built by Miguel Godbout</p>
+
+<script src="shared/common.js"></script>
+<script>
+/* =====================================================================
+   HUB — the home screen
+   =====================================================================
+   Add a card to this list to add a feature. Nothing else changes.
+   ===================================================================== */
+
+var CARDS = [
+  { label: 'Tracking',     sub: 'Buildings & units',    href: 'tracker/index.html', icon: 'bars' },
+  { label: 'Create Job',   sub: 'Set up a new project', href: 'admin/index.html',   icon: 'plus' },
+  { label: 'Deficiencies', sub: 'Coming soon' },
+  { label: 'Materials',    sub: 'Coming soon' },
+  { label: 'Reports',      sub: 'Coming soon' }
+];
+
+document.getElementById('grid').innerHTML = CARDS.map(function (card) {
+  var glyph = card.icon ? ICON[card.icon] : '';
+  var inner =
+    '<span class="diamond"><span>' + glyph + '</span></span>' +
+    '<span>' +
+      '<span class="hub-label" style="display:block">' + escapeHtml(card.label) + '</span>' +
+      '<span class="hub-sub" style="display:block">' + escapeHtml(card.sub) + '</span>' +
+    '</span>';
+
+  if (!card.href) {
+    return '<div class="hub-card off" aria-disabled="true">' + inner + '</div>';
+  }
+  return '<a class="hub-card press" href="' + card.href + '">' + inner + '</a>';
+}).join('');
+</script>
+</body>
+</html>

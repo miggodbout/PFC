@@ -1,0 +1,656 @@
+/* =====================================================================
+   PFC CONTROL — theme and shared components
+   =====================================================================
+   Every colour and size here comes from the design prototype in
+   reference/design-handoff/. Change a value here and it changes on every
+   screen. Do not put colours in the HTML files.
+
+   Dark mode only. Light mode is a later version.
+   ===================================================================== */
+
+
+/* ── TOKENS ──────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --bg:        #0D0D0D;   /* screen background */
+  --surface-1: #171514;   /* cards, rows, inputs */
+  --surface-2: #1D1A18;   /* unit chips, dropdown panel */
+
+  /* Accents */
+  --accent:       #DE7452;   /* primary, PFC Control orange */
+  --accent-2:     #A47263;   /* secondary, section labels */
+  --accent-hover: #EE9578;
+  --on-accent:    #0D0D0D;   /* text and glyphs drawn on the accent */
+
+  --accent-soft:   rgba(222, 116, 82, 0.10);
+  --accent-line:   rgba(222, 116, 82, 0.40);
+  --accent-check:  rgba(222, 116, 82, 0.60);
+  --accent-chip:   rgba(222, 116, 82, 0.08);
+  --accent-chipbd: rgba(222, 116, 82, 0.25);
+  --accent-2-line: rgba(164, 114, 99, 0.35);
+
+  /* Text */
+  --fg-1: rgba(255, 255, 255, 0.94);   /* screen titles */
+  --fg-2: rgba(255, 255, 255, 0.92);   /* card titles, input text */
+  --fg-3: rgba(255, 255, 255, 0.88);   /* item names, chip numbers */
+  --fg-4: rgba(255, 255, 255, 0.85);   /* checkbox labels */
+  --fg-5: rgba(255, 255, 255, 0.55);   /* card subtitles */
+  --fg-6: rgba(255, 255, 255, 0.50);   /* screen subtitles */
+  --fg-7: rgba(255, 255, 255, 0.40);   /* details text */
+
+  /* Lines */
+  --line-card: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.06);
+  --line-menu: rgba(255, 255, 255, 0.12);
+  --line-input: rgba(255, 255, 255, 0.10);
+
+  /* Disabled hub cards */
+  --off-bg:   rgba(255, 255, 255, 0.03);
+  --off-line: rgba(255, 255, 255, 0.06);
+  --off-fg:   rgba(255, 255, 255, 0.35);
+  --off-fg-2: rgba(255, 255, 255, 0.25);
+  --off-icon: rgba(255, 255, 255, 0.15);
+
+  --danger: #F08080;   /* form errors */
+  --good:   #4CAF6D;   /* success tick */
+
+  /* Space above the header. On an installed app this clears the phone's
+     status bar. In a browser tab the inset is zero. */
+  --top-safe: calc(env(safe-area-inset-top, 0px) + 12px);
+  --btm-safe: env(safe-area-inset-bottom, 0px);
+}
+
+
+/* ── STATUS PALETTE ──────────────────────────────────────────────────
+   One class for each status. Any component inside picks the colours up
+   through these four variables, so a status badge, a dot and a tinted row
+   all stay in step.
+
+   Note the two deliberate mismatches, copied from the prototype: for
+   Deficiency and On Hold the text is lighter than the dot, so small text
+   stays readable on the tinted background. */
+
+.s-not_started { --dot: #8A8A8E; --sfg: rgba(255,255,255,0.75); --sbg: rgba(255,255,255,0.08); --sbd: rgba(255,255,255,0.12); }
+.s-in_progress { --dot: #E0A344; --sfg: #E0A344;                 --sbg: rgba(224,163,68,0.16); --sbd: rgba(224,163,68,0.35); }
+.s-complete    { --dot: #4CAF6D; --sfg: #4CAF6D;                 --sbg: rgba(76,175,109,0.16); --sbd: rgba(76,175,109,0.35); }
+.s-deficiency  { --dot: #E85C5C; --sfg: #F08080;                 --sbg: rgba(224,82,82,0.18);  --sbd: rgba(224,82,82,0.40); }
+.s-on_hold     { --dot: #6C9CFF; --sfg: #8CB0FF;                 --sbg: rgba(91,141,239,0.18); --sbd: rgba(91,141,239,0.40); }
+
+
+/* ── BASE ────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html { background: var(--bg); }
+
+body {
+  background: var(--bg);
+  color: var(--fg-1);
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  padding-top: var(--top-safe);
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* One press effect, used on everything you can tap. */
+.press { transition: transform 120ms ease, opacity 120ms ease; }
+.press:active { transform: scale(0.95); opacity: 0.75; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+.hidden { display: none !important; }
+
+
+/* ── HEADER ──────────────────────────────────────────────────────── */
+
+.hdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 4px;
+}
+.hdr--tight { padding-bottom: 8px; }
+.hdr--home  { gap: 12px; padding: 6px 20px 22px; }
+
+/* 44px is the smallest comfortable touch target on a phone. */
+.hdr-back {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-left: -10px;   /* pulls the glyph back to the 16px page edge */
+}
+
+.hdr-titles { min-width: 0; }
+
+.hdr-title {
+  font-size: 20px; font-weight: 700;
+  color: var(--fg-1); letter-spacing: -0.3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hdr-title--lg { font-size: 22px; }
+
+.hdr-sub {
+  font-size: 12.5px;
+  color: var(--fg-6);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.hdr-spacer { flex: 1; }
+
+.hdr-logo {
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-1);
+}
+
+
+/* ── PAGE BODY ───────────────────────────────────────────────────── */
+
+.body {
+  padding: 14px 16px calc(40px + var(--btm-safe));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.body--flush { padding-top: 6px; gap: 22px; }
+
+
+/* ── STATUS PILL ─────────────────────────────────────────────────── */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--sbg);
+  flex-shrink: 0;
+  padding: 6px 10px;
+}
+.pill .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--dot);
+  flex-shrink: 0;
+}
+.pill .txt {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--sfg);
+  white-space: nowrap;
+}
+
+/* Size steps, from the widest context down to the tightest. */
+.pill--md .txt { font-size: 11px; }
+.pill--sm { padding: 5px 9px; }
+.pill--sm .txt { font-size: 11px; }
+.pill--xs { padding: 4px 8px; gap: 5px; }
+.pill--xs .dot { width: 6px; height: 6px; }
+.pill--xs .txt { font-size: 10.5px; }
+
+/* A dot on its own, used on the unit chips. */
+.dot-only {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+
+/* ── CARDS AND ROWS ──────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--line-card);
+  border-radius: 16px;
+}
+
+.row {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  width: 100%;
+  text-align: left;
+}
+.row-main { flex: 1; min-width: 0; }
+/* These sit inside a link, so they are spans. Spans need display block to
+   stack. The same applies to every text pair inside a tappable link. */
+.row-title {
+  display: block;
+  font-size: 16.5px; font-weight: 700;
+  color: var(--fg-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--fg-6);
+  margin-top: 3px;
+}
+
+/* "DEMO" marker beside a project name. */
+.tag {
+  display: inline-block;
+  vertical-align: 2px;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+  color: var(--accent);
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px;
+}
+
+
+/* ── FLOOR ACCORDION ─────────────────────────────────────────────── */
+
+.floor { overflow: hidden; }
+
+.floor-head {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+}
+.floor-label { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.90); }
+.floor-count { font-size: 12px; color: var(--fg-6); margin-top: 2px; }
+
+.floor-body {
+  padding: 2px 12px 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.unit-chip {
+  min-height: 48px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.unit-chip .num {
+  font-size: 14px; font-weight: 700;
+  color: var(--fg-3);
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0 4px;
+}
+
+/* Caret that flips when a floor opens. */
+.caret { transition: transform 150ms ease; flex-shrink: 0; }
+.caret.open { transform: rotate(180deg); }
+
+
+/* ── UNIT VIEW ───────────────────────────────────────────────────── */
+
+.phase { display: flex; flex-direction: column; }
+
+.phase-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 2px 10px;
+  border-bottom: 1px solid var(--accent-2-line);
+}
+.phase-label {
+  flex: 1;
+  font-size: 13.5px; font-weight: 700;
+  color: var(--accent-2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.item {
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.item-name {
+  flex: 1; min-width: 0;
+  font-size: 15px; font-weight: 500;
+  color: var(--fg-3);
+}
+.item-details {
+  font-size: 12.5px;
+  color: var(--fg-7);
+  word-break: break-word;
+}
+.item-details:empty { display: none; }
+
+/* "Details" button */
+.details-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--line-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px; font-weight: 600;
+  color: var(--fg-6);
+  white-space: nowrap;
+}
+.details-btn.on {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+/* Editor that opens under the item row. */
+.details-edit { display: flex; flex-direction: column; gap: 8px; }
+.details-edit textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  border-radius: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-input);
+  color: var(--fg-2);
+  font-family: inherit;
+  font-size: 16px;   /* 16px stops iOS zooming in when the field is tapped */
+  line-height: 1.4;
+  padding: 10px 12px;
+}
+.details-edit textarea:focus { outline: none; border-color: var(--accent-line); }
+.details-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+
+/* ── STATUS CONTROL AND DROPDOWN ─────────────────────────────────── */
+
+.status-wrap { position: relative; flex-shrink: 0; }
+
+.status-trigger {
+  min-height: 48px;
+  min-width: 152px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 13px;
+  background: var(--sbg);
+  border: 1px solid var(--sbd);
+  width: 100%;
+}
+.status-trigger .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); flex-shrink: 0; }
+.status-trigger .txt {
+  flex: 1;
+  font-size: 13.5px; font-weight: 700;
+  color: var(--sfg);
+  white-space: nowrap;
+  text-align: left;
+}
+/* The caret takes the status text colour through currentColor. */
+.status-trigger svg { color: var(--sfg); flex-shrink: 0; }
+
+/* On a narrow phone the item row runs out of room. Give the status control
+   less width and let the item name wrap. */
+@media (max-width: 359px) {
+  .status-trigger { min-width: 128px; padding: 0 11px; }
+  .status-trigger .txt { font-size: 12.5px; }
+  .item-name { font-size: 14px; }
+  .details-btn { padding: 0 9px; }
+}
+
+.status-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  min-width: 190px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-menu);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+}
+/* Flips above the trigger when there is no room below. */
+.status-menu.up { top: auto; bottom: calc(100% + 6px); }
+
+.status-opt {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+}
+/* The chosen option is marked by its own tint, not by a tick. */
+.status-opt.on { background: var(--sbg); }
+.status-opt .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); flex-shrink: 0; }
+.status-opt .txt { font-size: 14px; font-weight: 600; color: var(--sfg); white-space: nowrap; }
+
+
+/* ── BUTTONS ─────────────────────────────────────────────────────── */
+
+.btn {
+  min-height: 52px;
+  width: 100%;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary[disabled] { opacity: 0.5; cursor: default; }
+.btn-ghost {
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--fg-4);
+  font-size: 15px; font-weight: 600;
+}
+.btn-small {
+  min-height: 40px;
+  width: auto;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+
+/* ── FORM CONTROLS ───────────────────────────────────────────────── */
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.field-label {
+  font-size: 13px; font-weight: 700;
+  color: var(--accent-2);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.field-note { font-size: 12.5px; color: var(--fg-6); }
+
+.input {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-input);
+  color: var(--fg-2);
+  font-family: inherit;
+  font-size: 16px;   /* 16px stops iOS zooming in when the field is tapped */
+  padding: 0 14px;
+}
+.input:focus { outline: none; border-color: var(--accent-line); }
+.input--sm { height: 44px; border-radius: 10px; font-size: 16px; padding: 0 12px; }
+
+select.input {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23DE7452' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.row-2 { display: flex; gap: 12px; }
+.row-2 > * { flex: 1; min-width: 0; }
+
+/* Two-button choice, used for the building shape. */
+.seg { display: flex; gap: 10px; }
+.seg button {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px; font-weight: 700;
+  background: transparent;
+  color: var(--fg-4);
+  border: 1px solid var(--line-input);
+}
+.seg button.accent-edge { border-color: var(--accent-line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* Checkbox rows */
+.check {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px;
+  width: 100%;
+  text-align: left;
+}
+.check-box {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--accent-check);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+.check[aria-checked="true"] .check-box { background: var(--accent); }
+.check[aria-checked="true"] .check-box svg { display: block; }
+.check-box svg { display: none; }
+.check-label { font-size: 15px; color: var(--fg-4); }
+
+.phase-sub {
+  font-size: 12.5px; font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  padding: 6px 2px;
+  margin-bottom: 8px;
+}
+
+/* Row that adds a custom item. Indented past the checkbox. */
+.add-row { display: flex; gap: 8px; margin: 2px 4px 6px 34px; }
+.add-row .input--sm { flex: 1; min-width: 0; }
+.add-row button {
+  flex-shrink: 0;
+  min-width: 60px; height: 44px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13.5px; font-weight: 700;
+}
+
+/* Custom item, once added. */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 4px 4px 34px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+}
+.chip-name { flex: 1; font-size: 14px; color: var(--fg-4); }
+.chip-x {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.form-error {
+  font-size: 13px;
+  color: var(--danger);
+  padding: 0 2px;
+}
+
+
+/* ── MESSAGE STATES ──────────────────────────────────────────────── */
+
+/* Shown while data loads, when a load fails, and when there is nothing
+   to show. The app must never go blank. */
+.state {
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.state-title { font-size: 17px; font-weight: 700; color: var(--fg-1); }
+.state-text { font-size: 14px; color: var(--fg-5); line-height: 1.5; max-width: 300px; }
+
+/* Thin bar that explains where the data came from.
+   Always place it inside a container that already has side padding. */
+.banner {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.banner b { color: var(--accent); font-weight: 700; }
+.banner button {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-chipbd);
+  color: var(--accent);
+  font-size: 12px; font-weight: 700;
+}
+
+/* Simple spinner for the loading state. */
+.spinner {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.12);
+  border-top-color: var(--accent);
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin:0; background:#050505; }
+    a { color:#DE7452; }
+    a:hover { color:#EE9578; }
+    * { -webkit-tap-highlight-color: transparent; }
+  </style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#050505;padding:36px 16px;box-sizing:border-box">
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402,874">
+
+    <sc-if value="{{ isHub }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height:100%;display:flex;flex-direction:column;background:#0D0D0D;padding-top:56px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif">
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 20px 22px">
+          <img src="./assets/pfc-logo.png" alt="PFC Control logo" style="width:42px;height:42px;border-radius:11px;object-fit:cover;flex-shrink:0" />
+          <div>
+            <div style="font-size:21px;font-weight:700;color:rgba(255,255,255,0.94);letter-spacing:-0.3px">PFC Control</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:2px">Job site tracker</div>
+          </div>
+        </div>
+        <div style="padding:0 20px 40px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <sc-for list="{{ hubCards }}" as="card" hint-placeholder-count="4">
+            <div onClick="{{ card.onTap }}" style-active="{{ card.activeStyle }}" style="min-height:128px;border-radius:18px;background:{{ card.bg }};border:1px solid {{ card.border }};display:flex;flex-direction:column;justify-content:space-between;padding:16px;cursor:{{ card.cursor }};box-sizing:border-box;transition:transform 120ms ease">
+              <div style="width:34px;height:34px;background:{{ card.iconColor }};transform:rotate(45deg);border-radius:7px;display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ card.showPlus }}" hint-placeholder-val="{{ false }}">
+                  <div style="transform:rotate(-45deg);display:flex">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1v14M1 8h14" stroke="#0D0D0D" stroke-width="2.4" stroke-linecap="round"/></svg>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ card.showTracking }}" hint-placeholder-val="{{ false }}">
+                  <div style="transform:rotate(-45deg);display:flex">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="3" rx="1" fill="#0D0D0D"/><rect x="1" y="7" width="14" height="3" rx="1" fill="#0D0D0D"/><rect x="1" y="12" width="9" height="3" rx="1" fill="#0D0D0D"/></svg>
+                  </div>
+                </sc-if>
+              </div>
+              <div>
+                <div style="font-size:16px;font-weight:700;color:{{ card.labelColor }};letter-spacing:-0.2px">{{ card.label }}</div>
+                <div style="font-size:12.5px;color:{{ card.subColor }};margin-top:3px">{{ card.subtitle }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTracking }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100%;background:#0D0D0D;padding-top:56px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 16px 4px">
+          <div onClick="{{ goHub }}" style-active="{{ pressStyle }}" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="font-size:22px;font-weight:700;color:rgba(255,255,255,0.94);letter-spacing:-0.3px">Tracking</div>
+        </div>
+        <div style="padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ trackingProjects }}" as="proj" hint-placeholder-count="2">
+            <div onClick="{{ proj.onTap }}" style-active="{{ pressStyle }}" style="min-height:76px;border-radius:16px;background:#171514;border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;box-sizing:border-box">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:16.5px;font-weight:700;color:rgba(255,255,255,0.92)">{{ proj.name }}</div>
+                <div style="font-size:12.5px;color:rgba(255,255,255,0.5);margin-top:3px">{{ proj.subtitle }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:{{ proj.rollup.bg }};flex-shrink:0">
+                <div style="width:7px;height:7px;border-radius:50%;background:{{ proj.rollup.dot }}"></div>
+                <div style="font-size:11.5px;font-weight:600;color:{{ proj.rollup.fg }};white-space:nowrap">{{ proj.rollup.label }}</div>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" style="flex-shrink:0"><path d="M1 1l6 6-6 6" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBuilding }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100%;background:#0D0D0D;padding-top:56px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 16px 4px">
+          <div onClick="{{ goTracking }}" style-active="{{ pressStyle }}" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div style="font-size:20px;font-weight:700;color:rgba(255,255,255,0.94);letter-spacing:-0.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ currentProject.name }}</div>
+            <div style="font-size:12.5px;color:rgba(255,255,255,0.5)">{{ currentProject.subtitle }}</div>
+          </div>
+        </div>
+        <div style="padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ buildingFloors }}" as="floor" hint-placeholder-count="3">
+            <div style="border-radius:16px;background:#171514;border:1px solid rgba(255,255,255,0.08);overflow:hidden">
+              <div onClick="{{ floor.onToggle }}" style-active="{{ pressStyle }}" style="min-height:56px;display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;box-sizing:border-box">
+                <div style="flex:1">
+                  <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.9)">{{ floor.label }}</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px">{{ floor.countLabel }}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:{{ floor.rollup.bg }};flex-shrink:0">
+                  <div style="width:7px;height:7px;border-radius:50%;background:{{ floor.rollup.dot }}"></div>
+                  <div style="font-size:11px;font-weight:600;color:{{ floor.rollup.fg }};white-space:nowrap">{{ floor.rollup.label }}</div>
+                </div>
+                <svg width="14" height="8" viewBox="0 0 14 8" style="flex-shrink:0;transform:{{ floor.chevronRotate }};transition:transform 150ms ease"><path d="M1 1l6 6 6-6" stroke="rgba(255,255,255,0.4)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <sc-if value="{{ floor.expanded }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:2px 12px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+                  <sc-for list="{{ floor.units }}" as="u" hint-placeholder-count="6">
+                    <div onClick="{{ u.onTap }}" style-active="{{ pressStyle }}" style="min-height:48px;border-radius:11px;background:#1D1A18;border:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;box-sizing:border-box">
+                      <div style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.88)">{{ u.number }}</div>
+                      <div style="width:7px;height:7px;border-radius:50%;background:{{ u.rollup.dot }}"></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isUnit }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100%;background:#0D0D0D;padding-top:56px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 16px 8px">
+          <div onClick="{{ goBuilding }}" style-active="{{ pressStyle }}" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div style="font-size:20px;font-weight:700;color:rgba(255,255,255,0.94);letter-spacing:-0.3px">Unit {{ currentUnit.number }}</div>
+            <div style="font-size:12.5px;color:rgba(255,255,255,0.5)">{{ currentProject.name }} · {{ currentUnit.floorLabel }}</div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:{{ currentUnit.rollup.bg }};flex-shrink:0">
+            <div style="width:7px;height:7px;border-radius:50%;background:{{ currentUnit.rollup.dot }}"></div>
+            <div style="font-size:11px;font-weight:600;color:{{ currentUnit.rollup.fg }};white-space:nowrap">{{ currentUnit.rollup.label }}</div>
+          </div>
+        </div>
+        <div style="padding:6px 16px 48px;display:flex;flex-direction:column;gap:22px">
+          <sc-for list="{{ unitPhases }}" as="phase" hint-placeholder-count="3">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 2px 10px;border-bottom:1px solid rgba(164,114,99,0.35)">
+                <div style="flex:1;font-size:13.5px;font-weight:700;color:#A47263;text-transform:uppercase;letter-spacing:0.3px">{{ phase.label }}</div>
+                <div style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:{{ phase.rollup.bg }}">
+                  <div style="width:6px;height:6px;border-radius:50%;background:{{ phase.rollup.dot }}"></div>
+                  <div style="font-size:10.5px;font-weight:600;color:{{ phase.rollup.fg }}">{{ phase.rollup.label }}</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <sc-for list="{{ phase.items }}" as="item" hint-placeholder-count="3">
+                  <div style="padding:12px 2px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="flex:1;min-width:0;font-size:15px;color:rgba(255,255,255,0.88);font-weight:500">{{ item.name }}</div>
+                      <div style="min-height:36px;padding:0 12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-active="{{ pressStyle }}">
+                        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);white-space:nowrap">Details</div>
+                      </div>
+                      <div style="position:relative;flex-shrink:0">
+                        <div onClick="{{ item.onToggle }}" style-active="{{ pressStyle }}" style="min-height:48px;min-width:152px;display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:13px;background:{{ item.statusMeta.bg }};border:1px solid {{ item.statusMeta.border }};cursor:pointer;box-sizing:border-box">
+                          <div style="width:9px;height:9px;border-radius:50%;background:{{ item.statusMeta.dot }};flex-shrink:0"></div>
+                          <div style="flex:1;font-size:13.5px;font-weight:700;color:{{ item.statusMeta.fg }};white-space:nowrap">{{ item.statusMeta.label }}</div>
+                          <svg width="10" height="6" viewBox="0 0 10 6" style="flex-shrink:0;transform:{{ item.chevronRotate }};transition:transform 150ms ease"><path d="M1 1l4 4 4-4" stroke="{{ item.statusMeta.fg }}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <sc-if value="{{ item.isOpen }}" hint-placeholder-val="{{ false }}">
+                          <div style="position:absolute;top:calc(100% + 6px);right:0;z-index:50;background:#1D1A18;border:1px solid rgba(255,255,255,0.12);border-radius:14px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,0.5);min-width:190px">
+                            <sc-for list="{{ item.statusOptions }}" as="opt" hint-placeholder-count="5">
+                              <div onClick="{{ opt.onSelect }}" style-active="{{ pressStyle }}" style="min-height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;cursor:pointer;background:{{ opt.rowBg }};box-sizing:border-box">
+                                <div style="width:9px;height:9px;border-radius:50%;background:{{ opt.meta.dot }};flex-shrink:0"></div>
+                                <div style="font-size:14px;font-weight:600;color:{{ opt.meta.fg }};white-space:nowrap">{{ opt.meta.label }}</div>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </div>
+                    <div style="font-size:12.5px;color:rgba(255,255,255,0.4);padding-left:0">{{ item.details }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100%;background:#0D0D0D;padding-top:56px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 16px 4px">
+          <div onClick="{{ goHub }}" style-active="{{ pressStyle }}" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="font-size:20px;font-weight:700;color:rgba(255,255,255,0.94);letter-spacing:-0.3px">Create Job</div>
+        </div>
+
+        <sc-if value="{{ isAdminForm }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:12px 16px 48px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:#A47263;text-transform:uppercase;letter-spacing:0.3px">Project name</div>
+              <input value="{{ formName }}" onChange="{{ setFormName }}" placeholder="e.g. Elsliger 36-B" style="width:100%;height:48px;border-radius:12px;background:#171514;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);font-size:16px;padding:0 14px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif" />
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:#A47263;text-transform:uppercase;letter-spacing:0.3px">Building shape</div>
+              <div style="display:flex;gap:10px">
+                <div onClick="{{ setModeFloors }}" style-active="{{ pressStyle }}" style="flex:1;min-height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:700;background:{{ modeFloorsBg }};color:{{ modeFloorsFg }};border:1px solid rgba(222,116,82,0.4);box-sizing:border-box">Floors + Units</div>
+                <div onClick="{{ setModeFlat }}" style-active="{{ pressStyle }}" style="flex:1;min-height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:700;background:{{ modeFlatBg }};color:{{ modeFlatFg }};border:1px solid rgba(255,255,255,0.1);box-sizing:border-box">Flat List</div>
+              </div>
+            </div>
+
+            <sc-if value="{{ isFloorsMode }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:12px">
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+                  <div style="font-size:12.5px;color:rgba(255,255,255,0.5)">Floors</div>
+                  <input type="number" min="1" value="{{ formFloorCount }}" onChange="{{ setFormFloorCount }}" style="width:100%;height:48px;border-radius:12px;background:#171514;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);font-size:16px;padding:0 14px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif" />
+                </div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+                  <div style="font-size:12.5px;color:rgba(255,255,255,0.5)">Units per floor</div>
+                  <input type="number" min="1" value="{{ formUnitsPerFloor }}" onChange="{{ setFormUnitsPerFloor }}" style="width:100%;height:48px;border-radius:12px;background:#171514;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);font-size:16px;padding:0 14px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif" />
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isFlatMode }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:12.5px;color:rgba(255,255,255,0.5)">Unit count</div>
+                <input type="number" min="1" value="{{ formUnitCount }}" onChange="{{ setFormUnitCount }}" style="width:100%;height:48px;border-radius:12px;background:#171514;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);font-size:16px;padding:0 14px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif" />
+              </div>
+            </sc-if>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:#A47263;text-transform:uppercase;letter-spacing:0.3px">Items to track</div>
+              <sc-for list="{{ formPhases }}" as="phase" hint-placeholder-count="3">
+                <div style="margin-bottom:8px">
+                  <div style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,0.6);padding:6px 2px">{{ phase.label }}</div>
+                  <sc-for list="{{ phase.items }}" as="fi" hint-placeholder-count="3">
+                    <div onClick="{{ fi.onToggle }}" style-active="{{ pressStyle }}" style="min-height:48px;display:flex;align-items:center;gap:12px;padding:0 4px;cursor:pointer">
+                      <div style="width:22px;height:22px;border-radius:6px;flex-shrink:0;background:{{ fi.checkedBg }};border:1.5px solid rgba(222,116,82,0.6);display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                        <sc-if value="{{ fi.checked }}" hint-placeholder-val="{{ false }}">
+                          <svg width="12" height="10" viewBox="0 0 12 10"><path d="M1 5l3.5 3.5L11 1" stroke="#0D0D0D" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </sc-if>
+                      </div>
+                      <div style="font-size:15px;color:rgba(255,255,255,0.85)">{{ fi.name }}</div>
+                    </div>
+                  </sc-for>
+                  <div onClick="{{ phase.onToggleOther }}" style-active="{{ pressStyle }}" style="min-height:48px;display:flex;align-items:center;gap:12px;padding:0 4px;cursor:pointer">
+                    <div style="width:22px;height:22px;border-radius:6px;flex-shrink:0;background:{{ phase.otherCheckedBg }};border:1.5px solid rgba(222,116,82,0.6);display:flex;align-items:center;justify-content:center;box-sizing:border-box">
+                      <sc-if value="{{ phase.otherEnabled }}" hint-placeholder-val="{{ false }}">
+                        <svg width="12" height="10" viewBox="0 0 12 10"><path d="M1 5l3.5 3.5L11 1" stroke="#0D0D0D" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </sc-if>
+                    </div>
+                    <div style="font-size:15px;color:rgba(255,255,255,0.85)">Other</div>
+                  </div>
+                  <sc-if value="{{ phase.otherEnabled }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:8px;margin:2px 4px 6px 34px">
+                      <input value="{{ phase.otherText }}" onChange="{{ phase.onOtherTextChange }}" onKeyDown="{{ phase.onOtherKeyDown }}" placeholder="Custom item name" style="flex:1;min-width:0;width:100%;height:44px;border-radius:10px;background:#171514;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);font-size:14px;padding:0 12px;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif" />
+                      <div onClick="{{ phase.onAddOther }}" style-active="{{ pressStyle }}" style="flex-shrink:0;min-width:60px;height:44px;border-radius:10px;background:#DE7452;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13.5px;font-weight:700;color:#0D0D0D;box-sizing:border-box">Add</div>
+                    </div>
+                    <sc-for list="{{ phase.otherItems }}" as="oi" hint-placeholder-count="0">
+                      <div style="display:flex;align-items:center;gap:10px;margin:0 4px 4px 34px;padding:8px 10px;border-radius:10px;background:rgba(222,116,82,0.08);border:1px solid rgba(222,116,82,0.25)">
+                        <div style="flex:1;font-size:14px;color:rgba(255,255,255,0.85)">{{ oi.name }}</div>
+                        <div onClick="{{ oi.onRemove }}" style-active="{{ pressStyle }}" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+                          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ formError }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:13px;color:#F08080;padding:0 2px">{{ formError }}</div>
+            </sc-if>
+
+            <div onClick="{{ submitForm }}" style-active="{{ pressStyle }}" style="min-height:52px;border-radius:14px;background:#DE7452;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;font-weight:700;color:#0D0D0D">Create project</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAdminDone }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(76,175,109,0.16);display:flex;align-items:center;justify-content:center">
+              <svg width="24" height="18" viewBox="0 0 24 18"><path d="M1 9l7 7L23 1" stroke="#4CAF6D" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="font-size:19px;font-weight:700;color:rgba(255,255,255,0.94)">Project created</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.55)">{{ createdProject.name }} is ready to track. All items start as Not Started.</div>
+            <div onClick="{{ viewCreatedProject }}" style-active="{{ pressStyle }}" style="width:100%;min-height:52px;border-radius:14px;background:#DE7452;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;font-weight:700;color:#0D0D0D;box-sizing:border-box;margin-top:8px">View building</div>
+            <div onClick="{{ createAnother }}" style-active="{{ pressStyle }}" style="width:100%;min-height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;font-weight:600;color:rgba(255,255,255,0.85);box-sizing:border-box">Create another</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+  </x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PHASES = [
+  { key: 'phase1', label: 'Phase 1 — Doors & Windows', items: ['Interior Doors', 'Exterior Door(s)', 'Unit Door', 'Windows', 'Attic Hatch', 'Handrail'] },
+  { key: 'phase2', label: 'Phase 2 — Baseboards', items: ['Cut', 'Nailed'] },
+  { key: 'phase3', label: 'Phase 3 — Hardware & Accessories', items: ['Passage', 'Privacy', 'Dummy', 'Ball Catch', 'Deadbolts', 'Spring Stops', 'Hinge Stops', 'Mirrors', 'Bathroom Accessories'] },
+];
+
+const STATUS_META = {
+  not_started: { key: 'not_started', label: 'Not Started', dot: '#8A8A8E', fg: 'rgba(255,255,255,0.75)', bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.12)' },
+  in_progress: { key: 'in_progress', label: 'In Progress', dot: '#E0A344', fg: '#E0A344', bg: 'rgba(224,163,68,0.16)', border: 'rgba(224,163,68,0.35)' },
+  complete: { key: 'complete', label: 'Complete', dot: '#4CAF6D', fg: '#4CAF6D', bg: 'rgba(76,175,109,0.16)', border: 'rgba(76,175,109,0.35)' },
+  deficiency: { key: 'deficiency', label: 'Deficiency', dot: '#E85C5C', fg: '#F08080', bg: 'rgba(224,82,82,0.18)', border: 'rgba(224,82,82,0.4)' },
+  on_hold: { key: 'on_hold', label: 'On Hold', dot: '#6C9CFF', fg: '#8CB0FF', bg: 'rgba(91,141,239,0.18)', border: 'rgba(91,141,239,0.4)' },
+};
+const CYCLE = ['not_started', 'in_progress', 'complete', 'deficiency', 'on_hold'];
+const ROLLUP_ORDER = ['deficiency', 'on_hold', 'in_progress', 'not_started'];
+
+const TIERS = {
+  ahead: [['complete', 5], ['in_progress', 2], ['deficiency', 1], ['on_hold', 1], ['not_started', 1]],
+  mid: [['complete', 2], ['in_progress', 4], ['deficiency', 1], ['on_hold', 1], ['not_started', 2]],
+  behind: [['complete', 0], ['in_progress', 2], ['deficiency', 1], ['on_hold', 1], ['not_started', 6]],
+};
+
+const DETAILS = {
+  not_started: ['Not started'],
+  in_progress: ['Crew on site today', 'In progress, half done', 'Started, needs second pass'],
+  complete: ['No issues', 'Installed, inspected', 'Complete, signed off'],
+  deficiency: ['Scratched, needs replacement', 'Wrong size received', 'Damaged in transit, reorder needed', 'Missing hardware'],
+  on_hold: ['Awaiting materials', 'Backordered, ETA unknown', 'Paused, waiting on supplier'],
+};
+
+function hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h;
+}
+function pickStatus(seed, tier) {
+  const weights = TIERS[tier];
+  const total = weights.reduce((s, [, n]) => s + n, 0);
+  const h = hashStr(seed) % total;
+  let acc = 0;
+  for (const [status, n] of weights) { acc += n; if (h < acc) return status; }
+  return weights[weights.length - 1][0];
+}
+function pickDetail(seed, status) {
+  const arr = DETAILS[status];
+  return arr[hashStr(seed + '|d') % arr.length];
+}
+function worst(list) {
+  for (const s of ROLLUP_ORDER) if (list.includes(s)) return s;
+  return 'complete';
+}
+
+function itemKeyFor(phaseKey, name) { return phaseKey + '__' + name.replace(/[^a-zA-Z0-9]/g, '_'); }
+function allItemDefs() { return PHASES.flatMap((phase) => phase.items.map((name) => ({ phaseKey: phase.key, name, key: itemKeyFor(phase.key, name) }))); }
+
+function buildProject(id, name, floorCount, unitsPerFloor) {
+  const tierFor = (i) => (i === 0 ? 'ahead' : i === floorCount - 1 ? 'behind' : 'mid');
+  const floors = [];
+  for (let f = 1; f <= floorCount; f++) {
+    const tier = tierFor(f - 1);
+    const units = [];
+    for (let u = 1; u <= unitsPerFloor; u++) {
+      const number = f * 100 + u;
+      const unitId = String(number);
+      const items = [];
+      PHASES.forEach((phase) => {
+        phase.items.forEach((itemName) => {
+          const key = itemKeyFor(phase.key, itemName);
+          const seed = id + '|' + number + '|' + key;
+          const status = pickStatus(seed, tier);
+          const details = pickDetail(seed, status);
+          items.push({ key, name: itemName, phaseKey: phase.key, status, details });
+        });
+      });
+      units.push({ unitId, chipLabel: String(number), fullLabel: 'Unit ' + number, items });
+    }
+    floors.push({ index: f - 1, label: 'Floor ' + f, units });
+  }
+  return { id, name, mode: 'floors', floors };
+}
+
+function buildFreshProject(id, name, mode, config, selectedItems) {
+  const makeItems = () => selectedItems.map((it) => ({ key: it.key, name: it.name, phaseKey: it.phaseKey, status: 'not_started', details: 'Not started' }));
+  const floors = [];
+  if (mode === 'floors') {
+    const { floorCount, unitsPerFloor } = config;
+    for (let f = 1; f <= floorCount; f++) {
+      const units = [];
+      for (let u = 1; u <= unitsPerFloor; u++) {
+        const number = f * 100 + u;
+        units.push({ unitId: id + '_' + number, chipLabel: String(number), fullLabel: 'Unit ' + number, items: makeItems() });
+      }
+      floors.push({ index: f - 1, label: 'Floor ' + f, units });
+    }
+  } else {
+    const units = [];
+    for (let u = 1; u <= config.unitCount; u++) {
+      units.push({ unitId: id + '_u' + u, chipLabel: String(u), fullLabel: 'Unit ' + u, items: makeItems() });
+    }
+    floors.push({ index: 0, label: 'Units', units });
+  }
+  return { id, name, mode, floors };
+}
+
+function defaultFormItems() {
+  const out = {};
+  allItemDefs().forEach((it) => { out[it.key] = true; });
+  return out;
+}
+function defaultFormOther() {
+  const out = {};
+  PHASES.forEach((p) => { out[p.key] = { enabled: false, text: '', items: [] }; });
+  return out;
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 'hub', projectId: null, unitId: null, expandedFloors: { elsliger: 0, highland: 0 }, overrides: {},
+    adminStep: 'form', createdId: null, formError: '', openDropdownKey: null,
+    formName: '', formMode: 'floors', formFloorCount: 3, formUnitsPerFloor: 6, formUnitCount: 12,
+    formItems: defaultFormItems(), formOther: defaultFormOther(),
+  };
+
+  get projects() {
+    if (!this._projects) {
+      this._projects = {
+        elsliger: buildProject('elsliger', 'Elsliger 36-B', 3, 12),
+        highland: buildProject('highland', 'Highland View', 3, 6),
+      };
+    }
+    return this._projects;
+  }
+
+  effectiveStatus(projectId, unitId, itemKey, base) {
+    const k = projectId + '|' + unitId + '|' + itemKey;
+    return this.state.overrides[k] || base;
+  }
+
+  unitRollup(projectId, unit) {
+    return worst(unit.items.map((it) => this.effectiveStatus(projectId, unit.unitId, it.key, it.status)));
+  }
+  floorRollup(projectId, floor) {
+    return worst(floor.units.map((u) => this.unitRollup(projectId, u)));
+  }
+  projectRollup(project) {
+    return worst(project.floors.map((f) => this.floorRollup(project.id, f)));
+  }
+  phaseRollup(projectId, unit, phaseKey) {
+    const items = unit.items.filter((it) => it.phaseKey === phaseKey);
+    return worst(items.map((it) => this.effectiveStatus(projectId, unit.unitId, it.key, it.status)));
+  }
+
+  goHub = () => this.setState({ screen: 'hub' });
+  goTracking = () => this.setState({ screen: 'tracking' });
+  goBuilding = (projectId) => this.setState({ screen: 'building', projectId: projectId || this.state.projectId });
+  goUnit = (projectId, unitId) => this.setState({ screen: 'unit', projectId, unitId });
+  goAdmin = () => this.setState({ screen: 'admin', adminStep: 'form', formError: '' });
+
+  setFormName = (e) => this.setState({ formName: e.target.value });
+  setFormMode = (mode) => this.setState({ formMode: mode });
+  setFormFloorCount = (e) => this.setState({ formFloorCount: Math.max(1, parseInt(e.target.value) || 1) });
+  setFormUnitsPerFloor = (e) => this.setState({ formUnitsPerFloor: Math.max(1, parseInt(e.target.value) || 1) });
+  setFormUnitCount = (e) => this.setState({ formUnitCount: Math.max(1, parseInt(e.target.value) || 1) });
+  toggleFormItem = (key) => this.setState((s) => ({ formItems: { ...s.formItems, [key]: !s.formItems[key] } }));
+  toggleFormOther = (phaseKey) => this.setState((s) => ({ formOther: { ...s.formOther, [phaseKey]: { ...s.formOther[phaseKey], enabled: !s.formOther[phaseKey].enabled } } }));
+  setFormOtherText = (phaseKey, e) => this.setState((s) => ({ formOther: { ...s.formOther, [phaseKey]: { ...s.formOther[phaseKey], text: e.target.value } } }));
+  addFormOtherItem = (phaseKey) => {
+    this.setState((s) => {
+      const cur = s.formOther[phaseKey];
+      const name = cur.text.trim();
+      if (!name) return null;
+      return { formOther: { ...s.formOther, [phaseKey]: { ...cur, text: '', items: [...cur.items, name] } } };
+    });
+  };
+  removeFormOtherItem = (phaseKey, index) => {
+    this.setState((s) => {
+      const cur = s.formOther[phaseKey];
+      return { formOther: { ...s.formOther, [phaseKey]: { ...cur, items: cur.items.filter((_, i) => i !== index) } } };
+    });
+  };
+  handleOtherKeyDown = (phaseKey, e) => { if (e.key === 'Enter') { e.preventDefault(); this.addFormOtherItem(phaseKey); } };
+
+  submitForm = () => {
+    const s = this.state;
+    if (!s.formName.trim()) { this.setState({ formError: 'Enter a project name.' }); return; }
+    const selectedItems = allItemDefs().filter((it) => s.formItems[it.key]);
+    PHASES.forEach((p) => {
+      const other = s.formOther[p.key];
+      const names = [...other.items];
+      if (other.enabled && other.text.trim()) names.push(other.text.trim());
+      names.forEach((name, i) => {
+        selectedItems.push({ phaseKey: p.key, name, key: itemKeyFor(p.key, name + '_' + Date.now() + '_' + i) });
+      });
+    });
+    if (selectedItems.length === 0) { this.setState({ formError: 'Select at least one item to track.' }); return; }
+    const id = 'proj_' + Date.now();
+    const config = s.formMode === 'floors'
+      ? { floorCount: s.formFloorCount, unitsPerFloor: s.formUnitsPerFloor }
+      : { unitCount: s.formUnitCount };
+    const project = buildFreshProject(id, s.formName.trim(), s.formMode, config, selectedItems);
+    this.projects; // ensure cache built
+    this._projects[id] = project;
+    this.setState({
+      adminStep: 'done', createdId: id, formError: '',
+      formName: '', formMode: 'floors', formFloorCount: 3, formUnitsPerFloor: 6, formUnitCount: 12,
+      formItems: defaultFormItems(), formOther: defaultFormOther(),
+    });
+  };
+  toggleFloor = (projectId, floorIndex) => {
+    this.setState((s) => ({
+      expandedFloors: { ...s.expandedFloors, [projectId]: s.expandedFloors[projectId] === floorIndex ? -1 : floorIndex },
+    }));
+  };
+  cycleStatus = (projectId, unitId, itemKey, current) => {
+    const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
+    const k = projectId + '|' + unitId + '|' + itemKey;
+    this.setState((s) => ({ overrides: { ...s.overrides, [k]: next } }));
+  };
+  toggleDropdown = (compositeKey) => this.setState((s) => ({ openDropdownKey: s.openDropdownKey === compositeKey ? null : compositeKey }));
+  chooseStatus = (compositeKey, value) => this.setState((s) => ({ overrides: { ...s.overrides, [compositeKey]: value }, openDropdownKey: null }));
+
+  renderVals() {
+    const pressStyle = { transform: 'scale(0.95)', opacity: 0.75 };
+    const screen = this.state.screen;
+    const projects = this.projects;
+
+    const hubCards = [
+      { id: 'tracking', label: 'Tracking', subtitle: 'Buildings & units', bg: 'rgba(222,116,82,0.10)', border: 'rgba(222,116,82,0.4)', iconColor: '#DE7452', labelColor: 'rgba(255,255,255,0.92)', subColor: 'rgba(255,255,255,0.55)', cursor: 'pointer', activeStyle: pressStyle, onTap: this.goTracking, showTracking: true, showPlus: false },
+      { id: 'admin', label: 'Create Job', subtitle: 'Set up a new project', bg: 'rgba(222,116,82,0.10)', border: 'rgba(222,116,82,0.4)', iconColor: '#DE7452', labelColor: 'rgba(255,255,255,0.92)', subColor: 'rgba(255,255,255,0.55)', cursor: 'pointer', activeStyle: pressStyle, onTap: this.goAdmin, showTracking: false, showPlus: true },
+      { id: 'deficiencies', label: 'Deficiencies', subtitle: 'Coming soon', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.06)', iconColor: 'rgba(255,255,255,0.15)', labelColor: 'rgba(255,255,255,0.35)', subColor: 'rgba(255,255,255,0.25)', cursor: 'default', activeStyle: {}, onTap: () => {} },
+      { id: 'materials', label: 'Materials', subtitle: 'Coming soon', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.06)', iconColor: 'rgba(255,255,255,0.15)', labelColor: 'rgba(255,255,255,0.35)', subColor: 'rgba(255,255,255,0.25)', cursor: 'default', activeStyle: {}, onTap: () => {} },
+      { id: 'reports', label: 'Reports', subtitle: 'Coming soon', bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.06)', iconColor: 'rgba(255,255,255,0.15)', labelColor: 'rgba(255,255,255,0.35)', subColor: 'rgba(255,255,255,0.25)', cursor: 'default', activeStyle: {}, onTap: () => {} },
+    ];
+
+    const trackingProjects = Object.values(projects).map((p) => {
+      const totalUnits = p.floors.reduce((s, f) => s + f.units.length, 0);
+      return {
+        id: p.id, name: p.name,
+        subtitle: totalUnits + ' units · ' + p.floors.length + ' floors',
+        rollup: STATUS_META[this.projectRollup(p)],
+        onTap: () => this.goBuilding(p.id),
+      };
+    });
+
+    let currentProject = null, buildingFloors = null;
+    if (this.state.projectId) {
+      const p = projects[this.state.projectId];
+      const totalUnits = p.floors.reduce((s, f) => s + f.units.length, 0);
+      currentProject = { id: p.id, name: p.name, subtitle: totalUnits + ' units · ' + p.floors.length + ' floors' };
+      const expandedIdx = this.state.expandedFloors[p.id];
+      buildingFloors = p.floors.map((f) => ({
+        index: f.index, label: f.label,
+        countLabel: f.units.length + ' units',
+        rollup: STATUS_META[this.floorRollup(p.id, f)],
+        expanded: expandedIdx === f.index,
+        chevronRotate: expandedIdx === f.index ? 'rotate(180deg)' : 'rotate(0deg)',
+        onToggle: () => this.toggleFloor(p.id, f.index),
+        units: f.units.map((u) => ({
+          unitId: u.unitId, number: u.chipLabel,
+          rollup: STATUS_META[this.unitRollup(p.id, u)],
+          onTap: () => this.goUnit(p.id, u.unitId),
+        })),
+      }));
+    }
+
+    let currentUnit = null, unitPhases = null;
+    if (this.state.projectId && this.state.unitId) {
+      const p = projects[this.state.projectId];
+      let foundUnit = null, foundFloorLabel = '';
+      p.floors.forEach((f) => {
+        const u = f.units.find((u) => u.unitId === this.state.unitId);
+        if (u) { foundUnit = u; foundFloorLabel = f.label; }
+      });
+      if (foundUnit) {
+        currentUnit = { number: foundUnit.chipLabel, floorLabel: foundFloorLabel, rollup: STATUS_META[this.unitRollup(p.id, foundUnit)] };
+        unitPhases = PHASES.map((phase) => ({
+          key: phase.key, label: phase.label,
+          rollup: STATUS_META[this.phaseRollup(p.id, foundUnit, phase.key)],
+          items: foundUnit.items.filter((it) => it.phaseKey === phase.key).map((it) => {
+            const status = this.effectiveStatus(p.id, foundUnit.unitId, it.key, it.status);
+            const compositeKey = p.id + '|' + foundUnit.unitId + '|' + it.key;
+            const isOpen = this.state.openDropdownKey === compositeKey;
+            return {
+              key: it.key, name: it.name, details: it.details,
+              statusMeta: STATUS_META[status],
+              isOpen, chevronRotate: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              onToggle: () => this.toggleDropdown(compositeKey),
+              statusOptions: CYCLE.map((k) => ({
+                value: k, meta: STATUS_META[k], isCurrent: k === status,
+                rowBg: k === status ? STATUS_META[k].bg : 'transparent',
+                onSelect: () => this.chooseStatus(compositeKey, k),
+              })),
+            };
+          }),
+        }));
+      }
+    }
+
+    const s = this.state;
+    const isFloors = s.formMode === 'floors';
+    const formPhases = PHASES.map((phase) => {
+      const other = s.formOther[phase.key];
+      return {
+        key: phase.key, label: phase.label,
+        items: phase.items.map((name) => {
+          const key = itemKeyFor(phase.key, name);
+          const checked = !!s.formItems[key];
+          return { key, name, checked, checkedBg: checked ? '#DE7452' : 'transparent', onToggle: () => this.toggleFormItem(key) };
+        }),
+        otherEnabled: other.enabled, otherCheckedBg: other.enabled ? '#DE7452' : 'transparent',
+        otherText: other.text, onToggleOther: () => this.toggleFormOther(phase.key),
+        onOtherTextChange: (e) => this.setFormOtherText(phase.key, e),
+        onOtherKeyDown: (e) => this.handleOtherKeyDown(phase.key, e),
+        onAddOther: () => this.addFormOtherItem(phase.key),
+        otherItems: other.items.map((name, i) => ({ name, index: i, onRemove: () => this.removeFormOtherItem(phase.key, i) })),
+      };
+    });
+    const createdProject = s.createdId ? projects[s.createdId] : null;
+
+    return {
+      pressStyle,
+      isHub: screen === 'hub', isTracking: screen === 'tracking', isBuilding: screen === 'building', isUnit: screen === 'unit',
+      isAdmin: screen === 'admin', isAdminForm: screen === 'admin' && s.adminStep === 'form', isAdminDone: screen === 'admin' && s.adminStep === 'done',
+      hubCards, trackingProjects, currentProject, buildingFloors, currentUnit, unitPhases,
+      goHub: this.goHub, goTracking: this.goTracking,
+      goBuilding: () => this.goBuilding(this.state.projectId),
+      formName: s.formName, setFormName: this.setFormName,
+      formMode: s.formMode, isFloorsMode: isFloors, isFlatMode: !isFloors,
+      setModeFloors: () => this.setFormMode('floors'), setModeFlat: () => this.setFormMode('flat'),
+      modeFloorsBg: isFloors ? '#DE7452' : 'transparent', modeFloorsFg: isFloors ? '#0D0D0D' : 'rgba(255,255,255,0.85)',
+      modeFlatBg: !isFloors ? '#DE7452' : 'transparent', modeFlatFg: !isFloors ? '#0D0D0D' : 'rgba(255,255,255,0.85)',
+      formFloorCount: s.formFloorCount, setFormFloorCount: this.setFormFloorCount,
+      formUnitsPerFloor: s.formUnitsPerFloor, setFormUnitsPerFloor: this.setFormUnitsPerFloor,
+      formUnitCount: s.formUnitCount, setFormUnitCount: this.setFormUnitCount,
+      formPhases, formError: s.formError, submitForm: this.submitForm,
+      createdProject, viewCreatedProject: () => this.goBuilding(s.createdId), createAnother: this.goAdmin,
+    };
+  }
+}
+</script>
+</body>
+</html>

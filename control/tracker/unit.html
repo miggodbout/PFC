@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Unit — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+
+<header class="hdr hdr--tight">
+  <a class="hdr-back press" id="back" href="index.html" aria-label="Go back to the building">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles">
+    <h1 class="hdr-title" id="title">Unit</h1>
+    <div class="hdr-sub" id="subtitle"></div>
+  </div>
+  <div class="hdr-spacer"></div>
+  <div id="unit-pill"></div>
+</header>
+
+<main id="screen"></main>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   UNIT — every item, grouped by phase
+   =====================================================================
+   The status dropdown and the details box work fully on screen. Neither
+   one writes to the project Sheet. That is the next version. A note at the
+   top of the screen says so, so nobody thinks the work is saved.
+   ===================================================================== */
+
+var projectId = param('p');
+var unitKey   = param('u');
+var screen    = document.getElementById('screen');
+
+var data       = null;   // the unit, once it loads
+var openMenu   = null;   // item key of the open status dropdown
+var openEditor = null;   // item key of the open details box
+var editorFrom = '';     // the details text as it was when the box opened
+
+
+document.getElementById('back').href = 'building.html?p=' + encodeURIComponent(projectId);
+
+if (!projectId || !unitKey) {
+  screen.innerHTML = errorHtml('server', 'No unit was given. Go back and choose one.');
+} else {
+  screen.innerHTML = loadingHtml('Loading unit…');
+  loadUnit(projectId, unitKey).then(function (result) {
+    if (result.source === 'error') {
+      screen.innerHTML = errorHtml(result.reason, result.detail);
+      return;
+    }
+    data = result.data;
+    document.title = 'Unit ' + data.unit.label + ' — PFC Control';
+    render();
+  });
+}
+
+
+/* ── DRAW ─────────────────────────────────────────────────────────── */
+
+function render() {
+  document.getElementById('title').textContent = 'Unit ' + data.unit.label;
+  document.getElementById('subtitle').textContent =
+    data.projectName + (data.groupLabel ? ' · ' + data.groupLabel : '');
+  document.getElementById('unit-pill').innerHTML = pillHtml(data.overall, 'md');
+
+  screen.innerHTML =
+    '<div class="body body--flush">' +
+      localOnlyNote() +
+      data.phases.map(phaseHtml).join('') +
+    '</div>';
+
+  placeOpenMenu();
+}
+
+
+function phaseHtml(phase) {
+  if (phase.items.length === 0) return '';
+
+  var statuses = phase.items.map(function (item) { return item.status; });
+
+  return '<section class="phase">' +
+           '<div class="phase-head">' +
+             '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
+             pillHtml(worst(statuses), 'xs') +
+           '</div>' +
+           phase.items.map(itemHtml).join('') +
+         '</section>';
+}
+
+
+function itemHtml(item) {
+  var key      = safeStatus(item.status);
+  var editing  = (openEditor === item.key);
+  var menuOpen = (openMenu === item.key);
+
+  var menu = menuOpen
+    ? '<div class="status-menu" id="menu-' + escapeHtml(item.key) + '">' +
+        CYCLE.map(function (option) {
+          return '<button type="button" class="status-opt press s-' + option +
+                        (option === key ? ' on' : '') + '" ' +
+                        'onclick="chooseStatus(event,' + attr(item.key) + ',\'' + option + '\')">' +
+                   '<span class="dot"></span>' +
+                   '<span class="txt">' + STATUS[option].label + '</span>' +
+                 '</button>';
+        }).join('') +
+      '</div>'
+    : '';
+
+  var editor = editing
+    ? '<div class="details-edit" onclick="event.stopPropagation()">' +
+        '<textarea id="editor" placeholder="Add a note about this item…" ' +
+                  'oninput="typeDetails(' + attr(item.key) + ', this.value)">' +
+          escapeHtml(item.details) +
+        '</textarea>' +
+        '<div class="details-actions">' +
+          '<button type="button" class="btn btn-ghost btn-small press" ' +
+                  'onclick="cancelDetails(event,' + attr(item.key) + ')">Cancel</button>' +
+          '<button type="button" class="btn btn-primary btn-small press" ' +
+                  'onclick="closeDetails(event)">Save</button>' +
+        '</div>' +
+      '</div>'
+    : '';
+
+  return '<div class="item">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + escapeHtml(item.label) + '</span>' +
+
+             '<button type="button" class="details-btn press' + (editing ? ' on' : '') + '" ' +
+                     'aria-expanded="' + editing + '" ' +
+                     'onclick="toggleDetails(event,' + attr(item.key) + ')">Details</button>' +
+
+             '<span class="status-wrap">' +
+               '<button type="button" class="status-trigger press s-' + key + '" ' +
+                       'aria-expanded="' + menuOpen + '" ' +
+                       'onclick="toggleMenu(event,' + attr(item.key) + ')">' +
+                 '<span class="dot"></span>' +
+                 '<span class="txt">' + STATUS[key].label + '</span>' +
+                 '<span class="caret' + (menuOpen ? ' open' : '') + '">' + ICON.caretSm + '</span>' +
+               '</button>' +
+               menu +
+             '</span>' +
+           '</div>' +
+
+           (editing ? '' : '<div class="item-details">' + escapeHtml(item.details) + '</div>') +
+           editor +
+         '</div>';
+}
+
+
+/** A JavaScript string, made safe to sit inside an HTML attribute. */
+function attr(text) {
+  return escapeHtml(JSON.stringify(String(text)));
+}
+
+
+/* ── STATUS DROPDOWN ──────────────────────────────────────────────── */
+
+function toggleMenu(event, itemKey) {
+  event.stopPropagation();     // keeps the page listener from closing it again
+  openMenu = (openMenu === itemKey) ? null : itemKey;
+  openEditor = null;           // only one thing stays open at a time
+  render();
+}
+
+
+function chooseStatus(event, itemKey, status) {
+  event.stopPropagation();
+
+  var item = findItem(itemKey);
+  if (!item) return;
+
+  var was = item.status;
+  item.status = status;
+  Store.setItem(projectId, unitKey, itemKey, { status: status });
+
+  // On a demo building the note is made-up text that matches the old
+  // status. Move it on with the status, so the two never disagree.
+  // A real note from the Sheet is never touched. It belongs to the user.
+  if (data.demo && isMadeUpNote(item.details, was)) {
+    item.details = demoItemDetails(demoDef(projectId), unitKey, itemKey, status);
+    Store.setItem(projectId, unitKey, itemKey, { details: item.details });
+  }
+
+  refreshRollup();
+  openMenu = null;
+  render();
+}
+
+
+/** Puts the open dropdown above the trigger when it would run off screen. */
+function placeOpenMenu() {
+  if (!openMenu) return;
+  var menu = document.getElementById('menu-' + openMenu);
+  if (!menu) return;
+
+  var box = menu.getBoundingClientRect();
+  if (box.bottom > window.innerHeight - 8) menu.classList.add('up');
+}
+
+
+/* ── DETAILS BOX ──────────────────────────────────────────────────── */
+
+function toggleDetails(event, itemKey) {
+  event.stopPropagation();
+
+  if (openEditor === itemKey) { closeDetails(event); return; }
+
+  var item = findItem(itemKey);
+  editorFrom = item ? item.details : '';
+  openEditor = itemKey;
+  openMenu = null;
+  render();
+
+  var box = document.getElementById('editor');
+  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+
+/**
+ * Every keystroke is kept straight away. Nothing waits for a Save press,
+ * so no typing can be lost by tapping elsewhere. Cancel puts the old text
+ * back.
+ */
+function typeDetails(itemKey, text) {
+  var item = findItem(itemKey);
+  if (!item) return;
+  item.details = text;
+  Store.setItem(projectId, unitKey, itemKey, { details: text });
+}
+
+
+function closeDetails(event) {
+  if (event) event.stopPropagation();
+  openEditor = null;
+  render();
+}
+
+
+function cancelDetails(event, itemKey) {
+  event.stopPropagation();
+  var item = findItem(itemKey);
+  if (item) {
+    item.details = editorFrom;
+    Store.setItem(projectId, unitKey, itemKey, { details: editorFrom });
+  }
+  openEditor = null;
+  render();
+}
+
+
+/* ── CLOSE ON A TAP OUTSIDE, OR ON ESCAPE ─────────────────────────── */
+/*
+   The prototype could only close a dropdown by choosing an option. On a
+   phone that traps you, so both ways are added here.
+
+   Every control that must stay open stops the tap from reaching this
+   listener. See the event.stopPropagation() call in each handler above,
+   and on the details box itself.
+*/
+
+function closeAll() {
+  if (openMenu === null && openEditor === null) return;
+  openMenu = null;
+  openEditor = null;
+  render();
+}
+
+document.addEventListener('click', closeAll);
+
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape') closeAll();
+});
+
+
+/* ── HELPERS ──────────────────────────────────────────────────────── */
+
+function findItem(itemKey) {
+  for (var p = 0; p < data.phases.length; p++) {
+    var items = data.phases[p].items;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].key === itemKey) return items[i];
+    }
+  }
+  return null;
+}
+
+
+/** Works out this unit's status again, and remembers it for the Building screen. */
+function refreshRollup() {
+  var all = [];
+  data.phases.forEach(function (phase) {
+    phase.items.forEach(function (item) { all.push(item.status); });
+  });
+  data.overall = worst(all);
+  Store.setUnit(projectId, unitKey, data.overall);
+}
+
+
+/** True when the note is one of the demo building's made-up lines. */
+function isMadeUpNote(text, status) {
+  var list = DEMO_DETAILS[status] || [];
+  return list.indexOf(text) !== -1;
+}
+</script>
+</body>
+</html>

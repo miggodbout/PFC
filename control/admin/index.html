@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Create Job — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  /* Screen-only rules. Anything shared lives in theme.css. */
+  .form { padding: 12px 16px calc(48px + var(--btm-safe)); display: flex; flex-direction: column; gap: 22px; }
+  .phase-block { display: flex; flex-direction: column; }
+  .done {
+    padding: 40px 24px calc(40px + var(--btm-safe));
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .done-mark {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(76,175,109,0.16);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .done-title { font-size: 19px; font-weight: 700; color: var(--fg-1); }
+  .done-text  { font-size: 14px; color: var(--fg-5); line-height: 1.5; }
+  .done .btn:first-of-type { margin-top: 8px; }
+
+  /* The "Edit an existing project" block, closed by default. */
+  .edit-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 2px; width: 100%; text-align: left;
+    border-top: 1px solid var(--line-card);
+    font-size: 15px; font-weight: 700; color: var(--fg-4);
+  }
+  .edit-body { display: flex; flex-direction: column; gap: 18px; padding-bottom: 8px; }
+  .op-card { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .op-title { font-size: 13px; font-weight: 700; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.3px; }
+  .op-msg { font-size: 13px; line-height: 1.45; }
+  .op-msg.good { color: var(--good); }
+  .op-msg.bad  { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <a class="hdr-back press" href="../index.html" aria-label="Go back to the home screen">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles"><h1 class="hdr-title">Create Job</h1></div>
+</header>
+
+<main id="screen"></main>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   ADMIN — create a project, and change an existing project's structure
+   =====================================================================
+   This screen never changes a status or a details note. It only decides
+   which units and which items a project has. Status values are changed on
+   the Unit screen.
+   ===================================================================== */
+
+
+/* ── FORM STATE ───────────────────────────────────────────────────── */
+
+/*
+ * The new project, as the form has it so far.
+ *
+ * IMPORTANT: do not rename this to "form".
+ * An inline handler such as oninput="job.name = this.value" looks the name
+ * up on the element first. Every input element already has a "form"
+ * property, which holds its parent <form> tag, or null. A variable named
+ * "form" would therefore be hidden, and every field would silently do
+ * nothing.
+ */
+var job = {
+  name: '',
+  mode: 'floors',        // 'floors' or 'flat'
+  floorCount: 3,
+  unitsPerFloor: 6,
+  unitCount: 12,
+  ticked: {},            // 'phaseKey|itemLabel' -> true
+  other: {},             // phaseKey -> { on, text, items: [] }
+  error: '',
+  busy: false
+};
+
+// Every standard item starts ticked.
+DEFAULT_PHASES.forEach(function (phase) {
+  phase.items.forEach(function (label) { job.ticked[phase.key + '|' + label] = true; });
+  job.other[phase.key] = { on: false, text: '', items: [] };
+});
+
+var created = null;     // the project, once the server makes it
+var screen = document.getElementById('screen');
+
+
+/* ── DRAW ─────────────────────────────────────────────────────────── */
+
+function render() {
+  screen.innerHTML = created ? doneHtml() : formHtml();
+}
+
+function formHtml() {
+  return '<div class="form">' +
+
+    /* 1. Name */
+    '<div class="field">' +
+      '<label class="field-label" for="f-name">Project name</label>' +
+      '<input class="input" id="f-name" type="text" placeholder="e.g. Elsliger 36-B" ' +
+             'value="' + escapeHtml(job.name) + '" autocomplete="off" ' +
+             'oninput="job.name = this.value">' +
+    '</div>' +
+
+    /* 2. Shape */
+    '<div class="field">' +
+      '<div class="field-label">Building shape</div>' +
+      '<div class="seg">' +
+        '<button type="button" class="press accent-edge" aria-pressed="' + (job.mode === 'floors') + '" ' +
+                'onclick="setMode(\'floors\')">Floors + Units</button>' +
+        '<button type="button" class="press" aria-pressed="' + (job.mode === 'flat') + '" ' +
+                'onclick="setMode(\'flat\')">Flat List</button>' +
+      '</div>' +
+      '<div class="field-note">' +
+        (job.mode === 'floors'
+          ? 'Unit numbers follow the site convention: floor 1 gives 101, 102, 103.'
+          : 'Units get placeholder names. Rename them below once you know the addresses.') +
+      '</div>' +
+    '</div>' +
+
+    /* 3. Counts */
+    (job.mode === 'floors'
+      ? '<div class="row-2">' +
+          numberField('f-floors', 'Floors', job.floorCount, 'job.floorCount = clamp(this.value)') +
+          numberField('f-per', 'Units per floor', job.unitsPerFloor, 'job.unitsPerFloor = clamp(this.value)') +
+        '</div>'
+      : numberField('f-count', 'Unit count', job.unitCount, 'job.unitCount = clamp(this.value)')) +
+
+    /* 4. Items */
+    '<div class="field">' +
+      '<div class="field-label">Items to track</div>' +
+      DEFAULT_PHASES.map(phaseHtml).join('') +
+    '</div>' +
+
+    /* 5. Error and submit */
+    (job.error ? '<div class="form-error">' + escapeHtml(job.error) + '</div>' : '') +
+    '<button type="button" class="btn btn-primary press" id="f-submit" ' +
+            (job.busy ? 'disabled' : '') + ' onclick="submitForm()">' +
+      (job.busy ? 'Creating…' : 'Create project') +
+    '</button>' +
+
+    editSectionHtml() +
+  '</div>';
+}
+
+function numberField(id, label, value, handler) {
+  return '<div class="field">' +
+    '<label class="field-label" for="' + id + '">' + escapeHtml(label) + '</label>' +
+    '<input class="input" id="' + id + '" type="number" min="1" inputmode="numeric" ' +
+           'value="' + value + '" oninput="' + handler + '">' +
+  '</div>';
+}
+
+function phaseHtml(phase) {
+  var other = job.other[phase.key];
+
+  var rows = phase.items.map(function (label) {
+    // jsStr gives a quoted JavaScript string. escapeHtml then makes it safe
+    // to sit inside an HTML attribute.
+    return checkRow(job.ticked[phase.key + '|' + label], escapeHtml(label),
+                    'toggleItem(\'' + phase.key + '\',' + escapeHtml(jsStr(label)) + ')');
+  }).join('');
+
+  var otherRow = checkRow(other.on, 'Other', 'toggleOther(\'' + phase.key + '\')');
+
+  var adder = other.on
+    ? '<div class="add-row">' +
+        '<input class="input input--sm" id="other-' + phase.key + '" type="text" ' +
+               'placeholder="Custom item name" autocomplete="off" ' +
+               'value="' + escapeHtml(other.text) + '" ' +
+               'oninput="job.other[\'' + phase.key + '\'].text = this.value" ' +
+               'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); addOther(\'' + phase.key + '\'); }">' +
+        '<button type="button" class="press" onclick="addOther(\'' + phase.key + '\')">Add</button>' +
+      '</div>'
+    : '';
+
+  var chips = other.items.map(function (name, index) {
+    return '<div class="chip">' +
+             '<span class="chip-name">' + escapeHtml(name) + '</span>' +
+             '<button type="button" class="chip-x press" aria-label="Remove ' + escapeHtml(name) + '" ' +
+                     'onclick="removeOther(\'' + phase.key + '\',' + index + ')">' + ICON.close + '</button>' +
+           '</div>';
+  }).join('');
+
+  return '<div class="phase-block">' +
+           '<div class="phase-sub">' + escapeHtml(phase.label) + '</div>' +
+           rows + otherRow + adder + chips +
+         '</div>';
+}
+
+function checkRow(checked, label, handler) {
+  return '<button type="button" class="check press" role="checkbox" aria-checked="' + (checked ? 'true' : 'false') + '" ' +
+                 'onclick="' + handler + '">' +
+           '<span class="check-box">' + ICON.tick + '</span>' +
+           '<span class="check-label">' + label + '</span>' +
+         '</button>';
+}
+
+function doneHtml() {
+  return '<div class="done">' +
+    '<div class="done-mark">' + ICON.success + '</div>' +
+    '<div class="done-title">Project created</div>' +
+    '<div class="done-text">' + escapeHtml(created.name) +
+      ' is ready to track. All items start as Not Started.</div>' +
+    '<a class="btn btn-primary press" href="../tracker/building.html?p=' + encodeURIComponent(created.id) + '">View building</a>' +
+    '<button type="button" class="btn btn-ghost press" onclick="startOver()">Create another</button>' +
+    (created.url ? '<a href="' + escapeHtml(created.url) + '" target="_blank" rel="noopener" ' +
+                   'style="font-size:13.5px">Open the project Sheet</a>' : '') +
+  '</div>';
+}
+
+
+/* ── FORM ACTIONS ─────────────────────────────────────────────────── */
+
+/* Typing into a field updates the state but does not redraw the screen.
+   A redraw would close the keyboard on a phone. Only a tap redraws. */
+
+function clamp(value) {
+  var n = parseInt(value, 10);
+  return (isNaN(n) || n < 1) ? 1 : n;
+}
+
+function jsStr(text) { return JSON.stringify(String(text)); }
+
+function setMode(mode) { job.mode = mode; job.error = ''; render(); }
+
+function toggleItem(phaseKey, label) {
+  var id = phaseKey + '|' + label;
+  job.ticked[id] = !job.ticked[id];
+  job.error = '';
+  render();
+}
+
+function toggleOther(phaseKey) {
+  var other = job.other[phaseKey];
+  other.on = !other.on;
+  render();
+  if (other.on) {
+    var field = document.getElementById('other-' + phaseKey);
+    if (field) field.focus();
+  }
+}
+
+function addOther(phaseKey) {
+  var other = job.other[phaseKey];
+  var name = String(other.text || '').trim();
+  if (!name) return;             // nothing typed, do nothing
+  other.items.push(name);
+  other.text = '';
+  job.error = '';
+  render();
+  var field = document.getElementById('other-' + phaseKey);
+  if (field) field.focus();
+}
+
+function removeOther(phaseKey, index) {
+  job.other[phaseKey].items.splice(index, 1);
+  render();
+}
+
+/** Collects the ticked items, plus any custom items, into the payload. */
+function collectPhases() {
+  return DEFAULT_PHASES.map(function (phase) {
+    var items = phase.items
+      .filter(function (label) { return job.ticked[phase.key + '|' + label]; })
+      .map(function (label) { return { label: label }; });
+
+    var other = job.other[phase.key];
+    if (other.on) {
+      other.items.forEach(function (name) { items.push({ label: name }); });
+
+      // Text still sitting in the box counts too. Nobody should lose an
+      // item because they did not press Add.
+      var pending = String(other.text || '').trim();
+      if (pending) items.push({ label: pending });
+    }
+
+    return { key: phase.key, label: phase.label, items: items };
+  });
+}
+
+function submitForm() {
+  if (job.busy) return;
+
+  job.error = '';
+  if (!job.name.trim()) { job.error = 'Enter a project name.'; return render(); }
+
+  var phases = collectPhases();
+  var total = phases.reduce(function (sum, p) { return sum + p.items.length; }, 0);
+  if (total === 0) { job.error = 'Select at least one item to track.'; return render(); }
+
+  job.busy = true;
+  render();
+
+  createProject({
+    name: job.name.trim(),
+    mode: job.mode,
+    floorCount: job.floorCount,
+    unitsPerFloor: job.unitsPerFloor,
+    unitCount: job.unitCount,
+    phases: phases
+  }).then(function (result) {
+    job.busy = false;
+    if (!result.ok) {
+      job.error = reasonText(result.reason, result.detail);
+      return render();
+    }
+    created = result.data;
+    render();
+  });
+}
+
+function startOver() {
+  created = null;
+  job.name = '';
+  job.error = '';
+  DEFAULT_PHASES.forEach(function (phase) {
+    phase.items.forEach(function (label) { job.ticked[phase.key + '|' + label] = true; });
+    job.other[phase.key] = { on: false, text: '', items: [] };
+  });
+  job.mode = 'floors';
+  job.floorCount = 3;
+  job.unitsPerFloor = 6;
+  job.unitCount = 12;
+  render();
+  window.scrollTo(0, 0);
+}
+
+
+/* ── EDIT AN EXISTING PROJECT ─────────────────────────────────────── */
+/* Structure only. Add or remove an item. Add or rename a unit.          */
+
+var edit = {
+  open: false,
+  loading: false,
+  projects: [],
+  projectId: '',
+  structure: null,
+  message: '',
+  good: false
+};
+
+function editSectionHtml() {
+  var head = '<button type="button" class="edit-toggle press" onclick="toggleEdit()">' +
+               '<span>Edit an existing project</span>' +
+               '<span class="caret' + (edit.open ? ' open' : '') + '">' + ICON.caret + '</span>' +
+             '</button>';
+
+  if (!edit.open) return head;
+  if (edit.loading) return head + loadingHtml('Loading projects…');
+
+  var choices = edit.projects.filter(function (p) { return !p.demo; });
+
+  if (choices.length === 0) {
+    return head + '<div class="op-card card"><div class="op-msg">' +
+      escapeHtml(API_URL
+        ? 'There are no saved projects yet. Create one above.'
+        : 'Connect the backend first. Demo projects cannot be changed.') +
+      '</div></div>';
+  }
+
+  var picker = '<div class="field">' +
+    '<label class="field-label" for="e-project">Project</label>' +
+    '<select class="input" id="e-project" onchange="pickProject(this.value)">' +
+      '<option value="">Choose a project…</option>' +
+      choices.map(function (p) {
+        return '<option value="' + escapeHtml(p.id) + '"' +
+               (p.id === edit.projectId ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>';
+      }).join('') +
+    '</select></div>';
+
+  var body = '';
+  if (edit.projectId && edit.structure) body = editOpsHtml(edit.structure);
+  else if (edit.projectId) body = loadingHtml('Loading structure…');
+
+  var message = edit.message
+    ? '<div class="op-msg ' + (edit.good ? 'good' : 'bad') + '">' + escapeHtml(edit.message) + '</div>'
+    : '';
+
+  return head + '<div class="edit-body">' + picker + body + message + '</div>';
+}
+
+function editOpsHtml(structure) {
+  var phaseOptions = structure.phases.map(function (phase) {
+    return '<option value="' + escapeHtml(phase.key) + '">' + escapeHtml(phase.label) + '</option>';
+  }).join('');
+
+  var itemOptions = [];
+  structure.phases.forEach(function (phase) {
+    phase.items.forEach(function (item) {
+      itemOptions.push('<option value="' + escapeHtml(phase.key + '::' + item.key) + '">' +
+                       escapeHtml(item.label) + '</option>');
+    });
+  });
+
+  var groupOptions = structure.groups.map(function (group) {
+    return '<option value="' + escapeHtml(group.key) + '">' + escapeHtml(group.label) + '</option>';
+  }).join('');
+
+  var unitOptions = [];
+  structure.groups.forEach(function (group) {
+    group.units.forEach(function (unit) {
+      unitOptions.push('<option value="' + escapeHtml(unit.key) + '">' +
+                       escapeHtml(group.label + ' · ' + unit.label) + '</option>');
+    });
+  });
+
+  return '' +
+    /* Add an item */
+    '<div class="op-card card">' +
+      '<div class="op-title">Add an item</div>' +
+      '<select class="input" id="e-add-phase">' + phaseOptions + '</select>' +
+      '<input class="input" id="e-add-label" type="text" placeholder="Item name" autocomplete="off">' +
+      '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'add-item\')">Add item</button>' +
+    '</div>' +
+
+    /* Remove an item */
+    '<div class="op-card card">' +
+      '<div class="op-title">Remove an item</div>' +
+      '<div class="field-note">The item loses its Status and Details columns. Every other column keeps its values.</div>' +
+      '<select class="input" id="e-remove-item">' + itemOptions.join('') + '</select>' +
+      '<button type="button" class="btn btn-ghost btn-small press" onclick="runOp(\'remove-item\')">Remove item</button>' +
+    '</div>' +
+
+    /* Add a unit */
+    '<div class="op-card card">' +
+      '<div class="op-title">Add a unit</div>' +
+      '<select class="input" id="e-add-group">' + groupOptions + '</select>' +
+      '<input class="input" id="e-add-unit" type="text" placeholder="Unit name (leave empty to number it)" autocomplete="off">' +
+      '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'add-unit\')">Add unit</button>' +
+    '</div>' +
+
+    /* Rename a unit */
+    '<div class="op-card card">' +
+      '<div class="op-title">Rename a unit</div>' +
+      '<select class="input" id="e-rename-unit">' + unitOptions.join('') + '</select>' +
+      '<input class="input" id="e-rename-label" type="text" placeholder="New name" autocomplete="off">' +
+      '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'rename-unit\')">Rename unit</button>' +
+    '</div>';
+}
+
+function toggleEdit() {
+  edit.open = !edit.open;
+  edit.message = '';
+  if (edit.open && edit.projects.length === 0) {
+    edit.loading = true;
+    render();
+    loadProjects().then(function (result) {
+      edit.loading = false;
+      edit.projects = result.projects;
+      render();
+    });
+    return;
+  }
+  render();
+}
+
+function pickProject(id) {
+  edit.projectId = id;
+  edit.structure = null;
+  edit.message = '';
+  render();
+  if (!id) return;
+
+  loadStructure(id).then(function (result) {
+    if (result.source === 'error') {
+      edit.message = reasonText(result.reason, result.detail);
+      edit.good = false;
+    } else {
+      edit.structure = result.data;
+    }
+    render();
+  });
+}
+
+function runOp(op) {
+  var payload = { id: edit.projectId, op: op };
+
+  if (op === 'add-item') {
+    payload.phaseKey = valueOf('e-add-phase');
+    payload.label = valueOf('e-add-label');
+    if (!payload.label.trim()) return setEditMessage('Enter an item name.', false);
+
+  } else if (op === 'remove-item') {
+    var picked = valueOf('e-remove-item').split('::');
+    payload.phaseKey = picked[0];
+    payload.itemKey = picked[1];
+    if (!payload.itemKey) return setEditMessage('Choose an item.', false);
+
+  } else if (op === 'add-unit') {
+    payload.groupKey = valueOf('e-add-group');
+    payload.label = valueOf('e-add-unit');
+
+  } else if (op === 'rename-unit') {
+    payload.unitKey = valueOf('e-rename-unit');
+    payload.label = valueOf('e-rename-label');
+    if (!payload.label.trim()) return setEditMessage('Enter a new name.', false);
+  }
+
+  setEditMessage('Working…', true);
+
+  updateStructure(payload).then(function (result) {
+    if (!result.ok) return setEditMessage(reasonText(result.reason, result.detail), false);
+
+    setEditMessage('Done. The project is updated.', true);
+    // Read the structure back, so the lists show the change.
+    loadStructure(edit.projectId).then(function (fresh) {
+      if (fresh.source !== 'error') edit.structure = fresh.data;
+      render();
+    });
+  });
+}
+
+function setEditMessage(text, good) {
+  edit.message = text;
+  edit.good = !!good;
+  render();
+}
+
+function valueOf(id) {
+  var field = document.getElementById(id);
+  return field ? field.value : '';
+}
+
+
+/* ── START ────────────────────────────────────────────────────────── */
+
+render();
+</script>
+</body>
+</html>

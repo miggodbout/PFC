@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Tracking — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+
+<header class="hdr">
+  <a class="hdr-back press" href="../index.html" aria-label="Go back to the home screen">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles"><h1 class="hdr-title hdr-title--lg">Tracking</h1></div>
+</header>
+
+<main id="screen"></main>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   TRACKING — every project, with its worst status
+   ===================================================================== */
+
+var screen = document.getElementById('screen');
+
+screen.innerHTML = loadingHtml('Loading projects…');
+
+loadProjects().then(function (result) {
+  screen.innerHTML = '<div class="body">' + demoBannerHtml(result) + listHtml(result) + '</div>';
+});
+
+
+function listHtml(result) {
+  if (result.projects.length === 0) return emptyHtml();
+  return result.projects.map(rowHtml).join('');
+}
+
+
+function rowHtml(project) {
+  var tag = project.demo ? '<span class="tag">DEMO</span>' : '';
+
+  return '<a class="card row press" href="building.html?p=' + encodeURIComponent(project.id) + '">' +
+           '<span class="row-main">' +
+             '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
+             '<span class="row-sub">' + escapeHtml(subtitleFor(project)) + '</span>' +
+           '</span>' +
+           pillHtml(project.overall) +
+           ICON.chevron +
+         '</a>';
+}
+
+
+/** "36 units · 3 floors", or just "12 units" when there are no floors. */
+function subtitleFor(project) {
+  var units = project.unitCount + (project.unitCount === 1 ? ' unit' : ' units');
+  if (project.mode === 'flat') return units;
+
+  var floors = project.groupCount + (project.groupCount === 1 ? ' floor' : ' floors');
+  return units + ' · ' + floors;
+}
+
+
+function emptyHtml() {
+  return '<div class="state">' +
+           '<div class="state-title">No projects yet</div>' +
+           '<div class="state-text">Create your first building. Every project gets its own Google Sheet.</div>' +
+           '<a class="btn btn-primary press" style="max-width:240px" href="../admin/index.html">Create Job</a>' +
+         '</div>';
+}
+</script>
+</body>
+</html>

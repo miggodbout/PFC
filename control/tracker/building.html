@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Building — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+
+<header class="hdr">
+  <a class="hdr-back press" href="index.html" aria-label="Go back to the project list">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles">
+    <h1 class="hdr-title" id="title">Building</h1>
+    <div class="hdr-sub" id="subtitle"></div>
+  </div>
+</header>
+
+<main id="screen"></main>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   BUILDING — floors open one at a time, each holding its unit chips
+   ===================================================================== */
+
+var projectId = param('p');
+var screen    = document.getElementById('screen');
+var structure = null;
+
+/* Which floor is open. Floor 1 opens by default on every project, so a
+   new project never opens fully closed. Tap the open floor to close it. */
+var openFloor = 0;
+
+
+if (!projectId) {
+  screen.innerHTML = errorHtml('server', 'No project was given. Go back and choose one.');
+} else {
+  screen.innerHTML = loadingHtml('Loading building…');
+  loadStructure(projectId).then(function (result) {
+    if (result.source === 'error') {
+      screen.innerHTML = errorHtml(result.reason, result.detail);
+      return;
+    }
+    structure = result.data;
+    document.title = structure.name + ' — PFC Control';
+    document.getElementById('title').textContent = structure.name;
+    document.getElementById('subtitle').textContent = subtitleFor(structure);
+    render();
+  });
+}
+
+
+function render() {
+  var banner = structure.demo
+    ? '<div class="banner"><div><b>Demo data.</b> This is an example building. ' +
+      'It is not stored in a Sheet.</div></div>'
+    : '';
+
+  // A flat project has one unnamed group. Show its chips with no floor
+  // header, because there is nothing to open or close.
+  var body = (structure.mode === 'flat' && structure.groups.length === 1)
+    ? '<div class="card"><div class="floor-body" style="padding-top:14px">' +
+        chipsHtml(structure.groups[0]) + '</div></div>'
+    : structure.groups.map(floorHtml).join('');
+
+  screen.innerHTML = '<div class="body">' + banner + body + '</div>';
+}
+
+
+function floorHtml(group, index) {
+  var open = (index === openFloor);
+  var statuses = group.units.map(function (unit) { return unit.status; });
+  var count = group.units.length + (group.units.length === 1 ? ' unit' : ' units');
+
+  return '<section class="card floor">' +
+           '<button type="button" class="floor-head press" aria-expanded="' + open + '" ' +
+                   'onclick="toggleFloor(' + index + ')">' +
+             '<span style="flex:1;min-width:0">' +
+               '<span class="floor-label" style="display:block">' + escapeHtml(group.label) + '</span>' +
+               '<span class="floor-count" style="display:block">' + count + '</span>' +
+             '</span>' +
+             pillHtml(worst(statuses), 'sm') +
+             '<span class="caret' + (open ? ' open' : '') + '">' + ICON.caret + '</span>' +
+           '</button>' +
+           (open ? '<div class="floor-body">' + chipsHtml(group) + '</div>' : '') +
+         '</section>';
+}
+
+
+function chipsHtml(group) {
+  return group.units.map(function (unit) {
+    return '<a class="unit-chip press" ' +
+              'href="unit.html?p=' + encodeURIComponent(projectId) + '&u=' + encodeURIComponent(unit.key) + '" ' +
+              'aria-label="Unit ' + escapeHtml(unit.label) + ', ' + STATUS[safeStatus(unit.status)].label + '">' +
+             '<span class="num">' + escapeHtml(unit.chip || unit.label) + '</span>' +
+             dotHtml(unit.status) +
+           '</a>';
+  }).join('');
+}
+
+
+/** Only one floor stays open. Tapping the open floor closes every floor. */
+function toggleFloor(index) {
+  openFloor = (openFloor === index) ? -1 : index;
+  render();
+}
+
+
+function subtitleFor(project) {
+  var units = project.unitCount + (project.unitCount === 1 ? ' unit' : ' units');
+  if (project.mode === 'flat') return units;
+
+  var floors = project.groups.length + (project.groups.length === 1 ? ' floor' : ' floors');
+  return units + ' · ' + floors;
+}
+</script>
+</body>
+</html>
