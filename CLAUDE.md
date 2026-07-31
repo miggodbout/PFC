@@ -63,7 +63,7 @@ Backend: separate Google Apps Script project from `Code.gs`. Do not merge them.
 
 Data: one Google Sheet per project (building), generated from a master template.
 - Local reference copy: `PFC/reference/PFC_Master_Template.xlsx`
-- Live template (Drive): `PFC/Master Template/PFC_Master_Template.xlsx` (ID: 1WPdo4VNfAIJTd9Nv2KuCPUPSeUDcZegY_7QiVh7JYKk)
+- Live template (Drive): `PFC/Master Template/PFC_Master_Template.xlsx` (ID: 1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M)
 - Generated project Sheets (Drive): `PFC/Projects/`
 
 Branding: dark theme, accent color `#DE7452` (primary), `#A47263` (secondary) — deliberately distinct from the camera app's gold, so the two tools are visually distinguishable.
