@@ -49,11 +49,11 @@ Branding: dark theme, accent color `#C4814E`, Arial font.
 
 Purpose: Miguel's structured deficiency and progress tracking tool. Solves a different problem than the camera app — fast, glanceable, per-unit status lookup, instead of photo documentation.
 
-Location: `PFC/control/`
+Location: `control/` at the repo root.
 
 Structure:
 ```
-PFC/control/
+control/
   index.html          — Hub home (grid of feature cards)
   manifest.json
   shared/               — theme, logo, shared JS
@@ -64,7 +64,7 @@ PFC/control/
 Backend: separate Google Apps Script project from `Code.gs`. Do not merge them.
 
 Data: one Google Sheet per project (building), generated from a master template.
-- Local reference copy: `PFC/reference/PFC_Master_Template.xlsx`
+- Local reference copy: `reference/PFC_Master_Template.xlsx` (repo root)
 - Live template (Drive): `PFC/Master Template/PFC_Master_Template.xlsx` (ID: 1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M)
 - Generated project Sheets (Drive): `PFC/Projects/`
 
@@ -90,27 +90,61 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 
 ## Status Values (PFC Control)
 
-Used at the item level, and rolled up at the phase and unit level:
+**v1 shipped five statuses in one field. v2 splits them into two things.** The
+reason: an item can be complete work with an outstanding problem — all six doors
+hung, one on order. One field cannot hold both facts.
 
-| Status | Meaning |
+**Progress** — the dropdown. Always set by hand. One value per item:
+
+| Value | Meaning |
 |---|---|
 | Not Started | Default, nothing done |
 | In Progress | Work underway |
-| Complete | Done, no issues |
-| Deficiency | Wrong, missing, or damaged |
-| On Hold | Missing or paused (e.g., awaiting materials) |
+| Complete | The work is done |
 
-Rollup logic, worst status wins, in this order: Deficiency > On Hold > In Progress > Not Started > Complete.
+**Flags** — never set by hand. A flag appears while an open record exists in the
+Deficiencies tab, and clears when the last one is fixed:
+
+| Flag | Meaning | Attaches to |
+|---|---|---|
+| Deficiency | Wrong, missing, or damaged | An item |
+| Waiting | Cannot continue yet (painters, delivery, backorder) | An item or a phase |
+
+`On Hold` was renamed **Waiting** in v2, so `In Progress · Waiting on Painters`
+reads without contradiction.
+
+Rollup, worst wins: a Deficiency flag anywhere beats a Waiting flag, which beats
+the worst progress value.
+
+**The rollup rule is under review.** The v1 order made a unit with 17 Complete
+items and 1 Not Started item read "Not Started", which hides a nearly finished
+unit. See `.scratch/pfc-control-v2/issues/11-rollup-rules.md`.
+
+v1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
+`control/shared/common.js`, and `buildRollupFormula` in
+`control/appscript/Code.js`.
 
 ---
 
 ## Roadmap Summary (PFC Control)
 
-- v1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching.
-- v2: Status/detail editing in Tracker, with offline queue-and-retry sync.
-- v3: Structured deficiency entry (item → sub-item → received/needed → optional photo).
+- v1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
+- v2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from v3.
+- v3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script.
 - v4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
 - v5: PDF export, material order summaries.
+
+Two scope moves were made on 2026-08-06, both for the same reason: building the
+save path around free text first means building it twice.
+- Structured deficiency entry moved from v3 into v2.
+- The offline queue stayed in v2 rather than sliding to v3.
+
+Deficiency records dropped the sub-item level and the photo. One record is one
+problem and one needed line, with a count.
+
+**v2 is being planned on a wayfinder map at `.scratch/pfc-control-v2/map.md`.**
+Read that map before any v2 work. Pushed-back work is listed in
+`.scratch/v3-backlog.md`.
 
 Do not build ahead of the current version without explicit instruction. Do leave clean extension points for the versions above.
 
