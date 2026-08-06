@@ -1,0 +1,113 @@
+# PFC Control v2 — map
+
+Labels: wayfinder:map
+
+## Destination
+
+A locked build plan for PFC Control v2. This map closes when every v2 decision
+is settled and written down, ready to hand to one build session. No production
+code is written on this map.
+
+## Notes
+
+Domain: PFC Control, the deficiency and progress tracker in `control/`. It is
+System 2 in this repo. Do not touch the camera app (System 1).
+
+Read `CLAUDE.md` at the repo root before any session on this map.
+
+Skills every session should consult: `/grilling` and `/domain-modeling`.
+Prototype tickets use `/prototype`. Research tickets use `/research`.
+
+Standing preferences for this effort:
+- Miguel is a carpenter, not a coder. Explain every choice in plain language in
+  chat, not only in code comments.
+- Write all prose in ASD-STE100 Simplified Technical English.
+- One question at a time. Give a recommended answer with each question.
+- **Push back.** Miguel asks for it by name and changes course when the argument
+  is good. Do not take the first answer and move on.
+- **He wants to launch, not to study.** His words: the app is vibe-coded, and he
+  wants to learn later. Explain enough to decide. Do not turn an answer into a
+  lesson.
+
+Design principle Miguel stated, on 2026-08-06:
+- **Tracker stays as lean as possible, and the data stays logged.** Looking must
+  not get slower because logging got richer. This drives `12-logger-door`.
+
+Who uses it:
+- Miguel and one coworker, working in the three phases the app knows.
+- Two higher-ups do staircases, which the app cannot hold yet. See
+  `.scratch/v3-backlog.md`.
+
+What v2 covers:
+1. Fast screens, drawn from a local copy on the phone.
+2. Two-way saving, from the app back to the project Sheet.
+3. An offline queue with a visible pending mark. Never a silent loss.
+4. Structured deficiencies. Several records per item. The same treatment for
+   Waiting, which was called On Hold. A new Deficiencies tab in the Sheet, and
+   the screen to enter it.
+
+Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
+- **Progress** — the manual dropdown: Not Started, In Progress, Complete.
+- **Flag** — Deficiency or Waiting. A flag is never set by hand. It appears while
+  an open record exists.
+- **Record** — one problem and one needed line, held in the Deficiencies tab.
+- **Waiting** — the old On Hold. Renamed so `In Progress · Waiting` reads without
+  contradiction.
+
+## Decisions so far
+
+- Destination and v2 scope (this charting session) — v2 = fast local copy,
+  two-way saving, offline queue, structured deficiency and On Hold records with
+  a reworked entry screen. The map delivers a plan, not code.
+- Access stays unlocked. No sign-in. No author recorded. The plan must leave a
+  clean seam for Google login later.
+- No upgrade path for existing Sheets. Change the master template, trash the
+  test Sheet, make the real building fresh from the new template.
+- Custom items stay at building level, as Admin already supports through the
+  "Other" row. Everything new must key off whatever items a project holds. Never
+  a fixed item list.
+- [Browser storage limits for a PWA on iOS Safari](issues/08-ios-pwa-storage-limits.md)
+  — space is not a constraint on iOS 17 and later. `sessionStorage` is out. iOS
+  wipes stored data after 7 days without interaction, but WebKit exempts an
+  installed home screen app. Install is the line between safe storage and storage
+  that disappears.
+- [Apps Script limits on safe Sheet writes](issues/07-apps-script-write-limits.md)
+  — no published cap on web app calls. The existing script lock serialises every
+  write across every project. A busy server and a permanent failure look the same
+  to the app today, which the queue must fix. The existing code is already safe
+  around rollup formulas and already finds a unit row with no extra calls.
+- [What one deficiency record holds](issues/01-deficiency-record-fields.md) — one
+  record is one problem and one needed line, with a count. The needed line stays
+  free text, helped by suggestions and the hint `ex: 32" 6" RH`. The reason list
+  follows the phase, not the item. **Progress and problems split apart:** the
+  dropdown keeps Not Started, In Progress and Complete, while Deficiency and
+  Waiting become flags driven by open records. `On Hold` is renamed **Waiting**.
+  A Waiting record can attach to a phase, not only an item. Records are marked
+  Fixed, never deleted and never moved. No Archive tab. No photo, no author and
+  no promised date in v2.
+
+## Not yet specified
+
+- Whether a Waiting record can attach to a whole unit, for something like no
+  power on site or a locked unit. Only item and phase are settled.
+- What Admin must change to support the new tab. Admin creates the Sheet, so a
+  new tab means Admin work. The size is unknown until the layout is fixed.
+- How the needed-material suggestion list is built and where it is held. The app
+  may build it from records it already has, or it may need storage.
+- How the Service Worker and `CACHE_NAME` handling change once the app holds
+  real data locally. Today the Service Worker caches the app shell only. One fact
+  is now known: `sw.js` must delete old Cache API entries in its `activate`
+  handler, because a worker update does not remove them.
+- How the app finds one deficiency record row again in the new tab. The unit rows
+  have a fixed order from the config, so the code finds them with no search. The
+  new tab has no such order. Revisit inside `02-deficiencies-tab-layout`.
+- Whether a photo belongs on a deficiency record in v2, or later.
+
+## Out of scope
+
+- Per-unit item variation. An item that applies to only some units in a
+  building. This is a structure problem and belongs to Admin. Take it up as its
+  own effort later.
+- Crew identity, sign-in, and Google login. Later version.
+- Two phones changing the same unit, and who wins. Access is unlocked, but
+  Miguel is the only user in practice for v2.
