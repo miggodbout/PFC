@@ -16,6 +16,11 @@ unknown size.
 Admin creates the project Sheet, so a new tab is Admin work. `02` also gave Admin
 a new job it does not have today: refusing a removal.
 
+**One thing this ticket does not have to carry.** `12-logger-door` considered
+structured per-item questions — Style, Width, Depth and Swing on an Interior
+Door — which would have needed a new Admin screen to define them per item. It was
+rejected. The needed line stays free text. No Admin work comes from `12`.
+
 Points to settle:
 - The build work in `handleCreateProject`: make the `Deficiencies` tab, write the
   header row, freeze row 1, add the filter.

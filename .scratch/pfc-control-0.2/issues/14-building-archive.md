@@ -21,8 +21,10 @@ filter over records the phone already holds. No tab, no move.
 
 Nobody wrote down the **building** level. That is this ticket.
 
-`12-logger-door` already lists `Archive` as a candidate door on the Hub home
-screen, so the door may already exist by the time this is answered.
+`12-logger-door` resolved on 2026-08-07 and **did not** add an Archive card to
+the Hub. It added a `Log` card and left `Archive` to this ticket. So the door
+does not exist, and whether it is a Hub card or a filter inside Tracking is still
+open here.
 
 ## The cheap shape, proposed while charting
 
@@ -55,4 +57,6 @@ Complete" is a rollup answer.
 
 - `11-rollup-rules` — the archive rule is a rollup rule, one level up. It cannot
   be written until a unit's Complete is defined.
-- `12-logger-door` — Archive is a door. What doors exist is settled there.
+- `11-rollup-rules` — still open. This is the only thing holding the ticket now.
+- ~~`12-logger-door`~~ — resolved 2026-08-07. Doors are settled: Tracking, Log,
+  Create Job. Archive is not among them, so this ticket adds it or drops it.

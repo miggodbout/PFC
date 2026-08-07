@@ -36,7 +36,8 @@ Standing preferences for this effort:
 
 Design principle Miguel stated, on 2026-08-06:
 - **Tracker stays as lean as possible, and the data stays logged.** Looking must
-  not get slower because logging got richer. This drives `12-logger-door`.
+  not get slower because logging got richer. This drove `12-logger-door`, which
+  answered it by giving logging its own form-shaped door.
 
 Scale to design for, stated on 2026-08-07:
 - Up to about **50 buildings** over the life of the tool. One or two are live at
@@ -64,6 +65,11 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   carries an id made on the phone, and a state: Open, Fixed or Cancelled.
 - **Waiting** — the old On Hold. Renamed so `In Progress · Waiting` reads without
   contradiction.
+
+Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
+- **Tracker** — a tree. Tracking, Building, Floor, Unit. Answers "how is floor 2
+  doing". Holds Progress, and closes records.
+- **Logger** — one form. Answers "this one door is wrong". Writes records only.
 
 ## Decisions so far
 
@@ -117,12 +123,20 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   No staleness clock — the app warns only when a fetch fails. Demo buildings are
   deleted.
 
+- [Does logging get its own door, separate from Tracker?](issues/12-logger-door.md)
+  — yes, and the split is **by task, not by permission**. Tracker stays a tree
+  and keeps its Progress dropdowns. **Logger is a form, not a second tree**: the
+  place is set once at the top, and the record fields under it clear after each
+  save. Logger writes records only. Progress and marking a record Fixed both stay
+  in Tracker, which is where **Fix all** now lives. Structured per-item dropdowns
+  were proposed and rejected: the needed line stays free text, and **suggestions
+  carry the consistency the dropdowns would have bought**. The Hub gains a `Log`
+  card. `Deficiencies` stays greyed out in 0.2.
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.
-- How the needed-material suggestion list is built and where it is held. The app
-  may build it from records it already has, or it may need storage.
 - How the Service Worker and `CACHE_NAME` handling change once the app holds
   real data locally. Today the Service Worker caches the app shell only. One fact
   is now known: `sw.js` must delete old Cache API entries in its `activate`
