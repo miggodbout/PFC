@@ -175,7 +175,7 @@ iOS clears a saved copy after about seven days of no use. Daily use keeps it.
 Open `control/sw.js`. Raise the version number:
 
 ```js
-var CACHE_NAME = 'pfc-control-v1';   // change v1 to v2
+var CACHE_NAME = 'pfc-control-0.1.0';   // raise this on every release
 ```
 
 Phones keep serving the old copy until this number changes.
@@ -212,11 +212,11 @@ demo disappears as soon as the backend answers.
 
 | Version | What it adds |
 |---|---|
-| v1 | This. Create a project. Look at status. |
-| v2 | Save a status and a note. Changes queue when there is no signal, and send when signal returns. |
-| v3 | Deficiency entry, with a sub-item, what was received, what is needed, and a photo. |
-| v4 | A QR menu for trades and GCs, joined to the camera app's QR codes. |
-| v5 | PDF export and material order lists. |
+| 0.1 | This. Create a project. Look at status. |
+| 0.2 | Save a status and a note. Changes queue when there is no signal, and send when signal returns. Structured deficiency entry, moved up from 0.3. |
+| 0.3 | Crew access. Google login, a record of who changed what, and a lock per project. |
+| 0.4 | A QR menu for trades and GCs, joined to the camera app's QR codes. |
+| 0.5 | PDF export and material order lists. |
 
 The place version 2 attaches is marked in two files. Look for `Store` in
 `shared/common.js`, and the note at the end of `appscript/Code.js`.

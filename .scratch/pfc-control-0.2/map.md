@@ -1,10 +1,10 @@
-# PFC Control v2 — map
+# PFC Control 0.2 — map
 
 Labels: wayfinder:map
 
 ## Destination
 
-A locked build plan for PFC Control v2. This map closes when every v2 decision
+A locked build plan for PFC Control 0.2. This map closes when every 0.2 decision
 is settled and written down, ready to hand to one build session. No production
 code is written on this map.
 
@@ -36,9 +36,9 @@ Design principle Miguel stated, on 2026-08-06:
 Who uses it:
 - Miguel and one coworker, working in the three phases the app knows.
 - Two higher-ups do staircases, which the app cannot hold yet. See
-  `.scratch/v3-backlog.md`.
+  `.scratch/0.3-backlog.md`.
 
-What v2 covers:
+What 0.2 covers:
 1. Fast screens, drawn from a local copy on the phone.
 2. Two-way saving, from the app back to the project Sheet.
 3. An offline queue with a visible pending mark. Never a silent loss.
@@ -56,7 +56,7 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
 
 ## Decisions so far
 
-- Destination and v2 scope (this charting session) — v2 = fast local copy,
+- Destination and 0.2 scope (this charting session) — 0.2 = fast local copy,
   two-way saving, offline queue, structured deficiency and On Hold records with
   a reworked entry screen. The map delivers a plan, not code.
 - Access stays unlocked. No sign-in. No author recorded. The plan must leave a
@@ -84,7 +84,7 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   Waiting become flags driven by open records. `On Hold` is renamed **Waiting**.
   A Waiting record can attach to a phase, not only an item. Records are marked
   Fixed, never deleted and never moved. No Archive tab. No photo, no author and
-  no promised date in v2.
+  no promised date in 0.2.
 
 ## Not yet specified
 
@@ -101,7 +101,7 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
 - How the app finds one deficiency record row again in the new tab. The unit rows
   have a fixed order from the config, so the code finds them with no search. The
   new tab has no such order. Revisit inside `02-deficiencies-tab-layout`.
-- Whether a photo belongs on a deficiency record in v2, or later.
+- Whether a photo belongs on a deficiency record in 0.2, or later.
 
 ## Out of scope
 
@@ -110,4 +110,4 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   own effort later.
 - Crew identity, sign-in, and Google login. Later version.
 - Two phones changing the same unit, and who wins. Access is unlocked, but
-  Miguel is the only user in practice for v2.
+  Miguel is the only user in practice for 0.2.

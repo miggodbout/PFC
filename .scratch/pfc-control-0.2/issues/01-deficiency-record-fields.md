@@ -9,19 +9,19 @@ Blocked by: none
 What fields does one deficiency record carry, and does an On Hold record use the
 same shape or a different one?
 
-Context. v2 allows several records under one item. An item such as "Interior
+Context. 0.2 allows several records under one item. An item such as "Interior
 Doors" can cover six real doors, so it can hold several separate problems.
 
 Points to settle:
 - The field list. Candidates: what is wrong, how many, what is needed to fix it,
   a free note, the date, and the state of the record.
 - Whether "what is needed" is free text or a countable line, such as
-  `2 x passage lockset`. v5 adds up material orders, so a countable line matters.
+  `2 x passage lockset`. 0.5 adds up material orders, so a countable line matters.
 - Whether an On Hold record uses the same fields with a different type, or a
   separate shape. Candidates for On Hold: what is awaited, from whom, and an
   expected date.
 - Whether a record can be closed, and what closing it does to the item status.
-- Whether a photo belongs on a record in v2.
+- Whether a photo belongs on a record in 0.2.
 
 ## Answer
 
@@ -31,7 +31,7 @@ Settled with Miguel on 2026-08-06.
 
 One record is one problem and one thing needed. A problem that needs two
 different materials becomes two records. This keeps the screen flat and still
-lets v5 add up materials.
+lets 0.5 add up materials.
 
 Fields:
 
@@ -47,7 +47,7 @@ Fields:
 | Created | date |
 | Fixed | date, blank while open |
 
-No photo in v2. No author. No promised date. Miguel's own example drove the
+No photo in 0.2. No author. No promised date. Miguel's own example drove the
 shape: `Bathroom Door, Wrong Swing, need a 32" (6" Jamb) RH`.
 
 ### What was dropped
@@ -68,8 +68,8 @@ Three things keep the wording consistent instead:
 2. Grey hint text in the empty box: `ex: 32" 6" RH`. Width, jamb, hand. No
    brackets and not the word "Jamb". This teaches the nomenclature to a coworker
    at the moment they need it.
-3. A cleanup step when a material order is exported. That is v5 work and sits on
-   `.scratch/v3-backlog.md`.
+3. A cleanup step when a material order is exported. That is 0.5 work and sits on
+   `.scratch/0.3-backlog.md`.
 
 Miguel accepted that suggestions reduce the variation without removing it.
 
@@ -96,7 +96,7 @@ Backordered, Site Not Ready, Other.
 `Other` always opens an optional free text box.
 
 Store these lists in the project config, not in the app. Admin cannot add a phase
-today, and staircase work will need one. See `.scratch/v3-backlog.md`.
+today, and staircase work will need one. See `.scratch/0.3-backlog.md`.
 
 ### Progress and problems are two separate things
 
@@ -134,7 +134,7 @@ map's fog.
 
 A record is never deleted and never moved. It carries an Open or Fixed state and
 a fixed date. History is kept for three reasons: evidence for a supplier claim,
-so nobody orders the same door twice, and so v5 knows what is still outstanding.
+so nobody orders the same door twice, and so 0.5 knows what is still outstanding.
 
 There is no Archive tab in the Sheet. Miguel will filter the state column when he
 reads the tab directly. An Archive view in the app is a filter over records the

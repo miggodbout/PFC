@@ -271,13 +271,13 @@ function updateStructure(payload) {
 }
 
 
-/* ── LOCAL CHANGES (v1 only) ──────────────────────────────────────── */
+/* ── LOCAL CHANGES (0.1 only) ──────────────────────────────────────── */
 /*
-   v1 does not save a status or a details note to the Sheet. Any change you
+   0.1 does not save a status or a details note to the Sheet. Any change you
    make stays on this phone, in this browser tab, and disappears when the
    tab closes. Every screen that allows a change says so on screen.
 
-   The store below is the exact place v2 replaces. v2 sends each change to
+   The store below is the exact place 0.2 replaces. 0.2 sends each change to
    the backend, keeps it here until the server confirms it, and shows a
    pending mark while it waits.
 */

@@ -1,5 +1,5 @@
 /**
- * PFC CONTROL — Apps Script backend (v1)
+ * PFC CONTROL — Apps Script backend (0.1)
  * =====================================================================
  * This script is SEPARATE from the camera app script (appscript/Code.js).
  * Do not merge the two. They use different Drive folders and different
@@ -10,9 +10,9 @@
  *   - Reads that Sheet back for the Tracker screens.
  *   - Changes a project's structure (items and units) on request.
  *
- * What this script does NOT do in v1:
+ * What this script does NOT do in 0.1:
  *   - It never writes a status value or a details value.
- *     That is v2. See the note at the end of this file.
+ *     That is 0.2. See the note at the end of this file.
  *
  * Deployment: see control/README.md.
  * =====================================================================
@@ -1297,9 +1297,9 @@ function clampCount(value, min) {
 }
 
 
-// ── V2 EXTENSION POINT ────────────────────────────────────────────────
+// ── 0.2 EXTENSION POINT ────────────────────────────────────────────────
 //
-// v2 adds one more action: 'update-item'. It writes a single item's status
+// 0.2 adds one more action: 'update-item'. It writes a single item's status
 // and details for one unit, and stamps the Last Updated column.
 //
 // It must be idempotent, because the app will retry it after a dropped
@@ -1311,4 +1311,4 @@ function clampCount(value, min) {
 //   computeLayout(config)     -> the exact column for any item
 //   indexOfUnit(config, key)  -> the exact row for any unit
 //
-// Do not add it until v2. v1 never writes a status value.
+// Do not add it until 0.2. 0.1 never writes a status value.

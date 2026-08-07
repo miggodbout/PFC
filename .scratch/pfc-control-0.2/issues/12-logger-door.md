@@ -15,7 +15,7 @@ in a menu".
 ## Why it is worth asking
 
 Tracker today is a drill-down built for looking: Tracking, then Building, then
-Floor, then Unit. v2 adds status editing, deficiency records, waiting records,
+Floor, then Unit. 0.2 adds status editing, deficiency records, waiting records,
 and a pending state to that same path. Every one of those makes the looking
 slower.
 
@@ -23,7 +23,7 @@ The standing rule in `CLAUDE.md` supports a split: "Many doors, one system.
 Different users reach the same data through different views. Do not duplicate
 data per view."
 
-A split also lines up with the roadmap. v4 adds a QR door for trades and GCs.
+A split also lines up with the roadmap. 0.4 adds a QR door for trades and GCs.
 That is a third door onto the same data, so the pattern is coming anyway.
 
 ## Points to settle

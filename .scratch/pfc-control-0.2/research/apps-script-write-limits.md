@@ -478,7 +478,7 @@ apply.
    A burst of queued writes is that same pattern spread across executions instead
    of across one loop.
 
-9. **The v2 plan already assumes retries.** The note at line 1300 of `Code.js`
+9. **The 0.2 plan already assumes retries.** The note at line 1300 of `Code.js`
    states that `update-item` "must be idempotent, because the app will retry it
    after a dropped connection", and that the call "carries the final value, not a
    change to apply". That property is what makes a retry safe. It is a design note

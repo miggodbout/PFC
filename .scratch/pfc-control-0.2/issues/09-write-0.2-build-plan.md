@@ -1,4 +1,4 @@
-# Write the v2 build plan
+# Write the 0.2 build plan
 
 Type: task
 Status: open

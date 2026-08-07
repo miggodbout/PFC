@@ -78,8 +78,8 @@ On Hold reasons, one shared list:
 
 - **No Archive tab.** Records are never moved. Filter the State column when you
   read the Deficiencies tab directly.
-- **No photo column.** Photos are not in v2.
-- **No author column.** There is no sign-in in v2.
+- **No photo column.** Photos are not in 0.2.
+- **No author column.** There is no sign-in in 0.2.
 - **No promised or target date column.**
 
 ## 5. Still unknown

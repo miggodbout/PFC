@@ -96,7 +96,7 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 1. **Config drives structure, not code.** Never hardcode a floor count, unit count, or item list. Structure comes from data created in Admin.
 2. **Structure changes go through Admin only.** Never edit Sheet columns/rows to change structure — only through the Admin UI. Direct Sheet edits are for status/detail values only.
    **Escape hatch:** if Admin cannot do what Miguel needs, he is not stuck. Ask first, hand-edit the Sheet, and write down exactly what changed. Then fix Admin to cover that case, so the hatch is not needed twice.
-3. **Offline-aware.** Job sites have unreliable signal. Every fetch call must fail gracefully, never crash blank. Data edits (from v2 onward) queue locally and sync when signal returns, with a visible pending state — never a silent optimistic save that can lose data.
+3. **Offline-aware.** Job sites have unreliable signal. Every fetch call must fail gracefully, never crash blank. Data edits (from 0.2 onward) queue locally and sync when signal returns, with a visible pending state — never a silent optimistic save that can lose data.
 4. **Many doors, one system.** Different users reach the same data through different views. Do not duplicate data per view.
 5. **Expect frequent change.** Miguel will request many incremental changes over time. Favor small, separate files over large ones. Comment clearly.
 
@@ -104,7 +104,7 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 
 ## Status Values (PFC Control)
 
-**v1 shipped five statuses in one field. v2 splits them into two things.** The
+**Version 0.1 shipped five statuses in one field. Version 0.2 splits them into two things.** The
 reason: an item can be complete work with an outstanding problem — all six doors
 hung, one on order. One field cannot hold both facts.
 
@@ -124,41 +124,59 @@ Deficiencies tab, and clears when the last one is fixed:
 | Deficiency | Wrong, missing, or damaged | An item |
 | Waiting | Cannot continue yet (painters, delivery, backorder) | An item or a phase |
 
-`On Hold` was renamed **Waiting** in v2, so `In Progress · Waiting on Painters`
+`On Hold` was renamed **Waiting** in 0.2, so `In Progress · Waiting on Painters`
 reads without contradiction.
 
 Rollup, worst wins: a Deficiency flag anywhere beats a Waiting flag, which beats
 the worst progress value.
 
-**The rollup rule is under review.** The v1 order made a unit with 17 Complete
+**The rollup rule is under review.** The 0.1 order made a unit with 17 Complete
 items and 1 Not Started item read "Not Started", which hides a nearly finished
-unit. See `.scratch/pfc-control-v2/issues/11-rollup-rules.md`.
+unit. See `.scratch/pfc-control-0.2/issues/11-rollup-rules.md`.
 
-v1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
+Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
 `control/shared/common.js`, and `buildRollupFormula` in
 `control/appscript/Code.js`.
 
 ---
 
+## Version Numbers (both systems)
+
+Use `MAJOR.MINOR.PATCH`. Never use `v1`, `v2` style names for a milestone again — a milestone is named by the version it ships as.
+
+- **MINOR** (`0.1` → `0.2`) — a roadmap milestone. New features.
+- **PATCH** (`0.1.1` → `0.1.2`) — fixes only, inside a milestone. No new features.
+- **1.0** — reached when the crew uses PFC Control daily as the primary tool. It marks trust, not a feature count.
+
+Current: PFC Control `0.1`. Camera app `0.1.2`.
+
+`CACHE_NAME` in `control/sw.js` carries the version, as `pfc-control-0.1.0`. Raise it on every release. Phones keep serving old files until it changes.
+
+Two exceptions, both deliberate:
+- `Hub/Log/app_v1.html` and `app_v2.html` keep their names. There `v1` and `v2` mean a second attempt at one file, not a release. The live app links to them.
+- The browser storage key `pfc.control.v1.local` keeps its name. It is an identifier, not a label. Renaming it would orphan changes already saved on a crew phone.
+
+---
+
 ## Roadmap Summary (PFC Control)
 
-- v1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
-- v2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from v3.
-- v3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script.
-- v4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
-- v5: PDF export, material order summaries.
+- 0.1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
+- 0.2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from 0.3.
+- 0.3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script.
+- 0.4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
+- 0.5: PDF export, material order summaries.
 
 Two scope moves were made on 2026-08-06, both for the same reason: building the
 save path around free text first means building it twice.
-- Structured deficiency entry moved from v3 into v2.
-- The offline queue stayed in v2 rather than sliding to v3.
+- Structured deficiency entry moved from 0.3 into 0.2.
+- The offline queue stayed in 0.2 rather than sliding to 0.3.
 
 Deficiency records dropped the sub-item level and the photo. One record is one
 problem and one needed line, with a count.
 
-**v2 is being planned on a wayfinder map at `.scratch/pfc-control-v2/map.md`.**
-Read that map before any v2 work. Pushed-back work is listed in
-`.scratch/v3-backlog.md`.
+**Version 0.2 is being planned on a wayfinder map at `.scratch/pfc-control-0.2/map.md`.**
+Read that map before any 0.2 work. Pushed-back work is listed in
+`.scratch/0.3-backlog.md`.
 
 Do not build ahead of the current version without explicit instruction. Do leave clean extension points for the versions above.
 

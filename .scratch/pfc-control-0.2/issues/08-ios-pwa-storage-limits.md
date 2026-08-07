@@ -49,7 +49,7 @@ The facts that change the plan:
    storage pressure. There is no documented promise of a grant.
 6. **Stored data survives a Service Worker update.** Old Cache API caches are not
    removed automatically. The `activate` handler must delete them.
-7. **`sessionStorage` is the wrong store for v2.** It dies with the page session,
+7. **`sessionStorage` is the wrong store for 0.2.** It dies with the page session,
    and the home screen exemption does not help it, because the exemption blocks
    the 7 day wipe and does not extend a session. Apple publishes no timer for
    when iOS ends a backgrounded web app window, so survival across a background

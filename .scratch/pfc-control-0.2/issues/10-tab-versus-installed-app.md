@@ -13,7 +13,7 @@ This ticket exists because of `08-ios-pwa-storage-limits`. iOS deletes all
 script-written storage after 7 days without user interaction. WebKit exempts an
 installed home screen app. It does not exempt a Safari tab.
 
-The risk is real for v2 and not for v1. v1 keeps nothing that matters. v2 keeps
+The risk is real for 0.2 and not for 0.1. 0.1 keeps nothing that matters. 0.2 keeps
 the local copy and the outbox. A waiting edit that sits in a Safari tab over a
 quiet week can disappear before it ever reaches the Sheet.
 
