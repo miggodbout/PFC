@@ -133,6 +133,18 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   carry the consistency the dropdowns would have bought**. The Hub gains a `Log`
   card. `Deficiencies` stays greyed out in 0.2.
 
+- [How a phase and a unit roll up from their items](issues/11-rollup-rules.md) —
+  **worst wins is deleted.** The rule is unanimity or In Progress, expressed as
+  counts, not as an order: all Complete reads Complete, all Not Started reads Not
+  Started, anything else reads In Progress. **An open flag blocks Complete but
+  never raises Not Started**, so a fully built unit with a door on order reads
+  `In Progress ⚑1`. A hand-set **item** may still read `Complete ⚑1`; only a
+  computed rollup is blocked. Every level shows a count beside the status, such
+  as `14/18`. Both flag kinds show with their own counts, which overrules the
+  Deficiency-beats-Waiting line in `CLAUDE.md`. The phone works the rule out and
+  the app trusts only the phone; the Sheet keeps its own formula so it reads by
+  hand, and any drift is cosmetic.
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no

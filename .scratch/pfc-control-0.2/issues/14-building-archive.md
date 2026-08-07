@@ -26,6 +26,22 @@ the Hub. It added a `Log` card and left `Archive` to this ticket. So the door
 does not exist, and whether it is a Hub card or a filter inside Tracking is still
 open here.
 
+## `11-rollup-rules` resolved on 2026-08-07, and it did most of this ticket's work
+
+**The archive test is now one sentence: a building is archived when it reads
+Complete.**
+
+No second check for open records is needed. `11` ruled that an open flag blocks
+Complete at every computed level, so a building holding one open record cannot
+read Complete in the first place.
+
+`11` also settled that the phone works the rollup out from data it already holds.
+So the "computed, not stored" shape below is confirmed, and it costs no server
+call.
+
+What is left for this ticket is the **door**, not the rule: what Archive shows,
+whether Miguel can force a building in or out, and what happens to a queued edit.
+
 ## The cheap shape, proposed while charting
 
 Archive is **computed, not stored**. A building is archived when every unit reads

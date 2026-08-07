@@ -127,12 +127,28 @@ Deficiencies tab, and clears when the last one is fixed:
 `On Hold` was renamed **Waiting** in 0.2, so `In Progress · Waiting on Painters`
 reads without contradiction.
 
-Rollup, worst wins: a Deficiency flag anywhere beats a Waiting flag, which beats
-the worst progress value.
+**Rollup: worst wins is deleted.** Settled 2026-08-07 in
+`.scratch/pfc-control-0.2/issues/11-rollup-rules.md`. The 0.1 order made a unit
+with 17 Complete items and 1 Not Started item read "Not Started", which hid a
+nearly finished unit.
 
-**The rollup rule is under review.** The 0.1 order made a unit with 17 Complete
-items and 1 Not Started item read "Not Started", which hides a nearly finished
-unit. See `.scratch/pfc-control-0.2/issues/11-rollup-rules.md`.
+The rule is now unanimity or In Progress, counted rather than ordered:
+
+| Test | Reads |
+|---|---|
+| No items | A dash |
+| Every item Complete, no open flag | Complete |
+| Every item Complete, an open flag | In Progress |
+| Every item Not Started | Not Started |
+| Anything else | In Progress |
+
+An open flag blocks Complete. It never raises Not Started. Every level also shows
+a count, such as `14/18`, and both flag kinds show with their own counts. There
+is no contest between Deficiency and Waiting, because neither one is a status.
+
+**One exception, and it looks like a contradiction until you read it twice.** An
+**item's** Progress is set by hand, so an item may read `Complete ⚑1` — all six
+doors hung, one on order. Only a **computed rollup** is blocked by a flag.
 
 Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
 `control/shared/common.js`, and `buildRollupFormula` in

@@ -1,7 +1,8 @@
 # How a phase and a unit roll up from their items
 
 Type: grilling
-Status: open
+Status: resolved
+Resolved: 2026-08-07
 Blocked by: 01, 02
 
 ## Question
@@ -41,18 +42,175 @@ looks exactly like a unit that nobody has entered.
 That is the rule hiding a nearly finished unit. It is very likely the problem
 Miguel remembers.
 
-## Points to settle
+**Confirmed on 2026-08-07.** Miguel's words: "in that case I just want it to show
+in Progress."
 
-- What a mix of Complete and Not Started should read. "In Progress" is the
-  obvious answer, but confirm it.
-- Whether Complete must mean every item is Complete, with no exception.
-- How the two new flags fold in. A Deficiency flag anywhere probably wins, then a
-  Waiting flag, then the worst progress value. Confirm the order.
-- Whether a phase and a unit use the same rule, or different rules.
-- Whether a number would serve better than a status at the unit level, such as
-  "14 of 18". A count cannot hide a nearly finished unit the way a worst-wins
-  status can.
-- What a phase-level Waiting record does to the phase status and to the unit
-  status above it.
-- Where the rule lives. `worst()` in `common.js` and `buildRollupFormula` in
-  `control/appscript/Code.js` both hold a copy today. The two must not drift.
+---
+
+## Resolution, 2026-08-07
+
+### Worst wins is deleted
+
+There is no order of precedence any more. `ROLLUP_ORDER` and `worst()` come out
+of `control/shared/common.js`. The rule is now **unanimity, or In Progress**, and
+it is expressed as counts.
+
+For any group of items — a phase, a unit, a floor, a building — count:
+
+| Symbol | Count of |
+|---|---|
+| `n` | items in the group |
+| `c` | items whose Progress is Complete |
+| `s` | items whose Progress is Not Started |
+| `f` | open flags below the group, of either kind |
+
+Then:
+
+| Test | Reads |
+|---|---|
+| `n = 0` | nothing. A dash. |
+| `c = n` and `f = 0` | **Complete** |
+| `c = n` and `f > 0` | **In Progress** |
+| `s = n` | **Not Started** |
+| anything else | **In Progress** |
+
+Read the tests in order. The first that matches wins.
+
+Counts, not an order, is what makes this safe. A ladder of statuses invites a
+question about which rung beats which. Arithmetic does not.
+
+### An open flag blocks Complete. It never raises Not Started
+
+Miguel chose this on 2026-08-07. A unit with all 18 items Complete and one door
+on order reads **In Progress**, not Complete.
+
+The reason: a unit is not finished while a problem is open. It also makes
+`14-building-archive` much simpler — "every unit reads Complete" is enough on its
+own to archive a building, with no second test for open records, because a unit
+holding an open record cannot read Complete in the first place.
+
+**The flag only blocks Complete. It does not push anything upward.** A unit with
+nothing done and one Waiting record reads `Not Started ⏸1`. That is the truth:
+no work has happened, and something is waiting. Raising it to In Progress would
+be a lie.
+
+### The hand-set item is the exception, and it is not a contradiction
+
+`CLAUDE.md` gives this example: all six doors hung, one on order. That item's
+Progress reads **Complete**, with a Deficiency flag beside it.
+
+That still holds, because an **item's** Progress is set by hand and this ticket
+never touches it. Only a **rollup** is computed, and only a rollup is blocked by
+a flag.
+
+State it plainly, because it will look like a contradiction later:
+
+- An **item** may read `Complete ⚑1`. A person decided the work was done.
+- A **unit, phase, floor or building** may not. The computed answer is
+  `In Progress ⚑1` until the flag clears.
+
+### The count shows beside the status
+
+In Progress covers everything from one item touched to seventeen of eighteen
+done. That is the same blindness as the old rule, moved one step over. So every
+level shows a count of what is Complete below it.
+
+```
+FLOOR 2
+  201  Complete      18/18
+  202  In Progress   18/18  ⚑1
+  203  In Progress   14/18  ⚑3  ⏸2
+  204  In Progress    2/18
+  205  Not Started    0/18
+```
+
+`202` reads oddly at first and then reads exactly right: everything is built, one
+problem is open. That is a different unit from `204`, and the old rule could not
+tell them apart.
+
+**What the count counts, one level down:**
+
+| Level | Count |
+|---|---|
+| Phase | its items |
+| Unit | its items, across every phase |
+| Floor | its units |
+| Building | its units, not its floors |
+
+Building counts units and not floors because "38/56 units" is a useful number and
+"2/4 floors" is not.
+
+*This table is my call, not Miguel's. It was not asked. Change it freely.*
+
+### Both flags show, with counts
+
+A Deficiency and a Waiting mean different things and lead to different actions. A
+Deficiency is Miguel's work. A Waiting is somebody else's. So both show:
+
+```
+203  In Progress  14/18  ⚑3  ⏸2
+```
+
+This overrules the line in `CLAUDE.md` that says a Deficiency flag beats a
+Waiting flag. There is no contest between them any more, because neither one is
+a status. They are two separate counts and both are drawn.
+
+### Where the rule is worked out: both, and the app trusts the phone
+
+Miguel chose the two-implementation answer on 2026-08-07, so the Sheet still
+reads correctly when it is opened directly in Google Sheets. That matters,
+because the `CLAUDE.md` escape hatch depends on the Sheet being readable by hand.
+
+**The drift risk is much smaller than it looked**, for two reasons:
+
+1. `buildRollupFormula` in `control/appscript/Code.js` is **already** built out of
+   `COUNTIF` calls. The new rule is counts. Both sides implement the same
+   arithmetic, not a ladder that one side can order differently.
+2. **The app never reads the Sheet's rollup column.** The phone holds every item
+   and every record from `03-local-copy-rules` and totals them itself. So if the
+   two ever disagree, the disagreement is cosmetic — a wrong word in a spreadsheet
+   nobody's phone is reading — and not a wrong answer in the app.
+
+The phone-side rule is the one that counts, and it must be written **once**, in
+one function in `control/shared/common.js`, called by every screen.
+
+The phone-side rule also updates instantly after an offline edit, before the save
+has been sent. A formula cannot do that, because its answer lives on a server the
+phone cannot reach.
+
+### What changes in the code
+
+- `control/shared/common.js`
+  - `CYCLE` drops to three values: `not_started`, `in_progress`, `complete`.
+  - `STATUS` keeps those three. Deficiency and Waiting move to a separate map,
+    because they are flags and never appear in a dropdown.
+  - `ROLLUP_ORDER` and `worst()` are **deleted**.
+  - One new function replaces them. It takes a list of items plus the open
+    records below them, and returns the status, the count and the two flag
+    counts together. Every screen calls it. Nothing recomputes a rollup itself.
+  - `on_hold` is renamed `waiting` throughout, per `01`.
+
+- `control/appscript/Code.js`
+  - `buildRollupFormula` is rewritten to the count rule. Its `Deficiency` and
+    `On Hold` branches come out.
+  - The flag count comes from a `COUNTIFS` against the Deficiencies tab: the
+    unit key, and a state of `Open`. `02` fixed those columns.
+  - `rebuildDashboard` counts units by the three Progress values, plus one more
+    number: how many units hold an open flag. The old five columns no longer
+    match the model.
+  - Conditional formatting on the Tracker tab drops to three colours. The
+    Deficiency and On Hold fills come out of `STATUS_FILLS`.
+
+### Not decided here
+
+- The exact drawing of the flag marks. `06-deficiency-entry-screen` and
+  `05-pending-state-ui` own how a unit row looks with a flag count and a pending
+  mark on it at the same time.
+- Whether the count shows as a fraction or a bar. A fraction is written above.
+  `05` may argue for a bar once forty units are on one screen.
+
+### What this unblocks
+
+`14-building-archive`. Its archive test is now one sentence: **a building is
+archived when it reads Complete.** No second check for open records is needed,
+because an open record already blocks Complete at every level.
