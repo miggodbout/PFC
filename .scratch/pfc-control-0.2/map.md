@@ -50,7 +50,8 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
 - **Progress** — the manual dropdown: Not Started, In Progress, Complete.
 - **Flag** — Deficiency or Waiting. A flag is never set by hand. It appears while
   an open record exists.
-- **Record** — one problem and one needed line, held in the Deficiencies tab.
+- **Record** — one problem and one needed line, held in the Deficiencies tab. It
+  carries an id made on the phone, and a state: Open, Fixed or Cancelled.
 - **Waiting** — the old On Hold. Renamed so `In Progress · Waiting` reads without
   contradiction.
 
@@ -85,22 +86,27 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   A Waiting record can attach to a phase, not only an item. Records are marked
   Fixed, never deleted and never moved. No Archive tab. No photo, no author and
   no promised date in 0.2.
+- [How the Deficiencies tab lays out](issues/02-deficiencies-tab-layout.md) — one
+  tab, one header row, twelve columns holding keys not labels. **Every record
+  carries an id, and the phone makes it before the save leaves the phone.** That
+  is what makes a retried save safe: the server appends when the id is new and
+  overwrites when it is not, so a retry can never make a duplicate. Rows always
+  go on the bottom. The server finds a row by reading column A whole in one call.
+  A third state, **Cancelled**, was added for a record entered in error, so a
+  typo never looks like a repair. Admin refuses to remove an item that holds an
+  open record. `rebuildTracker` must never touch this tab. The rollup moved out
+  of this ticket into `11-rollup-rules`.
 
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.
-- What Admin must change to support the new tab. Admin creates the Sheet, so a
-  new tab means Admin work. The size is unknown until the layout is fixed.
 - How the needed-material suggestion list is built and where it is held. The app
   may build it from records it already has, or it may need storage.
 - How the Service Worker and `CACHE_NAME` handling change once the app holds
   real data locally. Today the Service Worker caches the app shell only. One fact
   is now known: `sw.js` must delete old Cache API entries in its `activate`
   handler, because a worker update does not remove them.
-- How the app finds one deficiency record row again in the new tab. The unit rows
-  have a fixed order from the config, so the code finds them with no search. The
-  new tab has no such order. Revisit inside `02-deficiencies-tab-layout`.
 - Whether a photo belongs on a deficiency record in 0.2, or later.
 
 ## Out of scope

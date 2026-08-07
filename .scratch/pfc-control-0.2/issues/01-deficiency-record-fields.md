@@ -43,9 +43,9 @@ Fields:
 | Other text | free text, only when Reason is Other |
 | Needed | free text, such as `32" 6" RH`. Optional on a Waiting record |
 | Quantity | a number |
-| State | Open or Fixed |
+| State | Open, Fixed or Cancelled — see the amendment below |
 | Created | date |
-| Fixed | date, blank while open |
+| Closed | date, blank while open |
 
 No photo in 0.2. No author. No promised date. Miguel's own example drove the
 shape: `Bathroom Door, Wrong Swing, need a 32" (6" Jamb) RH`.
@@ -143,6 +143,14 @@ phone already holds, so it costs nothing.
 Moving rows to an Archive tab was rejected on the research in
 `07-apps-script-write-limits`: a move is a write plus a delete, it can half-fail,
 and a retried save must be safe to run twice.
+
+### Amended by `02-deficiencies-tab-layout`, 2026-08-06
+
+The State field gained a third value, **Cancelled**. Open, Fixed and Cancelled.
+Cancelled means the record should never have existed. It came out of the Admin
+case in `02`: closing a mistaken record as Fixed writes a lie into the Sheet, and
+0.5 shows a Fixed record to a supplier as proof of a repair. The Fixed date field
+was renamed **Closed**, because Cancelled fills it too.
 
 ### Newly created by this ticket
 

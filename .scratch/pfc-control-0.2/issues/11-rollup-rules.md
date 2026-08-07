@@ -2,12 +2,26 @@
 
 Type: grilling
 Status: open
-Blocked by: 01
+Blocked by: 01, 02
 
 ## Question
 
 What status does a phase show, and what status does a unit show, once progress
 and problems are two separate things?
+
+**Scope widened on 2026-08-06.** This ticket now owns the whole status model on
+the Unit Tracker tab, not only the worst-wins order. It took the rollup question
+back from `02-deficiencies-tab-layout`, so the decision lives in one place. It
+now waits on `02`, because it cannot say how a flag is worked out until it knows
+how a record is stored.
+
+It also owns:
+- Which columns a unit row holds once Progress is three values and Deficiency and
+  Waiting are flags. The old five-value status column has to change.
+- Whether a flag comes from a Sheet formula that reads the Deficiencies tab, or
+  whether the app works it out from the records it already holds. Formulas are
+  harder to write to safely. See `07-apps-script-write-limits`.
+- What the Dashboard tab counts, once the five columns no longer match the model.
 
 Miguel raised this on 2026-08-06. He remembered that the current rule caused a
 problem but not the exact case.
