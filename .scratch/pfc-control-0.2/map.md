@@ -22,7 +22,12 @@ Standing preferences for this effort:
 - Miguel is a carpenter, not a coder. Explain every choice in plain language in
   chat, not only in code comments.
 - Write all prose in ASD-STE100 Simplified Technical English.
-- One question at a time. Give a recommended answer with each question.
+- **Ask questions with the clickable picker, not as prose.** Miguel answers by
+  tapping. Recommended option first, labelled `(Recommended)`. Two to four
+  questions a round is fine. Put concrete numbers and rough screen sketches in
+  the preview field. `Other` is added by the tool and never shows in the written
+  option list, so say it is there when a question may need a free answer.
+- Define every technical term inside the option that uses it.
 - **Push back.** Miguel asks for it by name and changes course when the argument
   is good. Do not take the first answer and move on.
 - **He wants to launch, not to study.** His words: the app is vibe-coded, and he
@@ -32,6 +37,11 @@ Standing preferences for this effort:
 Design principle Miguel stated, on 2026-08-06:
 - **Tracker stays as lean as possible, and the data stays logged.** Looking must
   not get slower because logging got richer. This drives `12-logger-door`.
+
+Scale to design for, stated on 2026-08-07:
+- Up to about **50 buildings** over the life of the tool. One or two are live at
+  a time. This is why the phone drops old copies, and why a finished building has
+  to leave the Tracking list.
 
 Who uses it:
 - Miguel and one coworker, working in the three phases the app knows.
@@ -96,6 +106,16 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
   typo never looks like a repair. Admin refuses to remove an item that holds an
   open record. `rebuildTracker` must never touch this tab. The rollup moved out
   of this ticket into `11-rollup-rules`.
+- [What the phone keeps locally and when it refreshes](issues/03-local-copy-rules.md)
+  — one new call, `get-project`, returns a whole building in one answer, because
+  the Tracker tab is one grid and the server reads it in one pass either way.
+  Storage is **localStorage**, one key per building, ten buildings kept, least
+  recently opened dropped. `sessionStorage` is out, so `Store` in
+  `control/shared/common.js` is rewritten. A refresh runs on app open (the list
+  only) and on building open, plus pull to refresh. No timer. A stored copy draws
+  instantly under a thin moving bar; a spinner survives only where no copy exists.
+  No staleness clock — the app warns only when a fetch fails. Demo buildings are
+  deleted.
 
 ## Not yet specified
 
