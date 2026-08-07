@@ -36,9 +36,31 @@ So this is not a polish ticket.
 - Whether a near-match is offered. Typing `32" 6 RH` against a stored
   `32" 6" RH` is the exact case the consistency argument depends on. A prompt
   that says "did you mean" costs a tap and saves a bad row.
-- Whether a first-ever building, with no records yet, gets a seed list, and where
-  a seed list would live. This is the case where free text is at its worst.
 - Whether a suggestion can be deleted, once a typo is stored and keeps appearing.
+
+## Settled early, 2026-08-07
+
+**A first-ever building gets a seed list, and Miguel writes the content.** This
+was the last point in the list above. Miguel raised it himself, asking whether
+there was a plan to lay out the variables each item can have — a door is Regular,
+Bi-pass, Bi-fold, Double or Pocket, and hardware and windows divide the same way.
+
+This does **not** reopen `12-logger-door`. The variants become **seed
+suggestions**, not dropdowns and not fields. The needed line stays free text. The
+seed only fills the gap before a building has records of its own, which is the
+one case where free text is at its worst.
+
+Ranking follows from that: a seed outranks nothing. Once a real record exists
+under an item, what Miguel typed before comes first, and the seed falls behind
+it. A seed is a starting point, not a preference.
+
+Order of work, chosen by Miguel: **Interior Doors alone, first.** It is the item
+with the most variants and the one he knows best, so it will expose whatever is
+hard about the format. Windows, Hardware, Baseboards and Trim follow once the
+format holds.
+
+Still open on this ticket: where the seed text is stored, and every mechanical
+point above — scope, ranking, filtering, near-match, deletion.
 
 ## Reference
 
