@@ -52,6 +52,16 @@ column, no Admin switch, and no stored state that can drift from the truth.
 This has to be checked against `11-rollup-rules`, because "every unit reads
 Complete" is a rollup answer.
 
+## A hard requirement, added 2026-08-07
+
+**A finished building can receive new problems, and often does.** Miguel: "GCs
+come and do a final check and find issues," months after completion.
+
+So Archive is not a one-way door, and this ticket may not design it as one. The
+workflow itself is `16-post-completion-deficiencies`, which waits on this ticket.
+What this ticket owes it: a way back in, and a way to get the copy back onto the
+phone after `03-local-copy-rules` deleted it.
+
 ## Points to settle
 
 - The exact rule. Every item Complete, and no open Deficiency or Waiting record.

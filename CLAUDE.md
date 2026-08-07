@@ -105,8 +105,14 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 ## Status Values (PFC Control)
 
 **Version 0.1 shipped five statuses in one field. Version 0.2 splits them into two things.** The
-reason: an item can be complete work with an outstanding problem — all six doors
-hung, one on order. One field cannot hold both facts.
+reason: `In Progress · Waiting on Painters` is two facts about one item, and one
+field cannot hold both. A single field also cannot hold several problems at once,
+and one item often has several, each with its own needed line and count.
+
+An earlier draft justified the split with a different example — six doors hung
+and one on order, called Complete with a flag. Miguel rejected that on
+2026-08-07. An item with an open problem is not Complete. The split stands on the
+two reasons above.
 
 **Progress** — the dropdown. Always set by hand. One value per item:
 
@@ -146,9 +152,17 @@ An open flag blocks Complete. It never raises Not Started. Every level also show
 a count, such as `14/18`, and both flag kinds show with their own counts. There
 is no contest between Deficiency and Waiting, because neither one is a status.
 
-**One exception, and it looks like a contradiction until you read it twice.** An
-**item's** Progress is set by hand, so an item may read `Complete ⚑1` — all six
-doors hung, one on order. Only a **computed rollup** is blocked by a flag.
+**An open flag blocks Complete on an item too, not only on a rollup.** Settled by
+Miguel on 2026-08-07: "Interior Doors cannot be Complete if there is a
+deficiency." The dropdown does not offer Complete while an open flag of either
+kind sits on that item. Fix or cancel the record first.
+
+So the rollup's flag test only has to catch **phase-level Waiting records**. Any
+flag on an item has already stopped that item from reading Complete.
+
+**Undecided, and it matters:** what happens to an item that already reads
+Complete when a flag arrives months later. That is the GC punch-list case and it
+is owned by `.scratch/pfc-control-0.2/issues/16-post-completion-deficiencies.md`.
 
 Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
 `control/shared/common.js`, and `buildRollupFormula` in

@@ -143,7 +143,11 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   as `14/18`. Both flag kinds show with their own counts, which overrules the
   Deficiency-beats-Waiting line in `CLAUDE.md`. The phone works the rule out and
   the app trusts only the phone; the Sheet keeps its own formula so it reads by
-  hand, and any drift is cosmetic.
+  hand, and any drift is cosmetic. **Amended the same day:** a flag blocks
+  Complete on an **item** too, not only on a rollup. The dropdown does not offer
+  Complete while an open flag of either kind sits on the item. What happens to an
+  item that is *already* Complete when a flag lands is deliberately left
+  undefined, and is owned by `16-post-completion-deficiencies`.
 
 ## Not yet specified
 

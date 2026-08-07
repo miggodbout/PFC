@@ -94,20 +94,53 @@ nothing done and one Waiting record reads `Not Started ⏸1`. That is the truth:
 no work has happened, and something is waiting. Raising it to In Progress would
 be a lie.
 
-### The hand-set item is the exception, and it is not a contradiction
+### A flag blocks Complete on an item too. Amended 2026-08-07
 
-`CLAUDE.md` gives this example: all six doors hung, one on order. That item's
-Progress reads **Complete**, with a Deficiency flag beside it.
+An earlier draft of this resolution kept an exception: an **item's** Progress is
+set by hand, so an item could read `Complete ⚑1` — the six-doors-hung example
+from `CLAUDE.md` — while only computed rollups were blocked.
 
-That still holds, because an **item's** Progress is set by hand and this ticket
-never touches it. Only a **rollup** is computed, and only a rollup is blocked by
-a flag.
+**Miguel rejected the exception the same day.** His words: "18/18 with a flag
+should not be possible. Interior Doors cannot be complete if there is a
+deficiency. So Complete should not be an option if there is a deficiency."
 
-State it plainly, because it will look like a contradiction later:
+He confirmed that **Waiting blocks Complete as well**. If work cannot continue,
+it is not done. One rule, no exceptions.
 
-- An **item** may read `Complete ⚑1`. A person decided the work was done.
-- A **unit, phase, floor or building** may not. The computed answer is
-  `In Progress ⚑1` until the flag clears.
+So:
+
+> **The Progress dropdown does not offer Complete on an item that holds an open
+> flag of either kind.** Fix or cancel the record first.
+
+This is enforcement in the dropdown, not a rollup rule. `06-deficiency-entry-screen`
+draws what a blocked Complete looks like on the item row.
+
+**It makes the rollup simpler.** "Every item Complete" now already implies that no
+item carries a flag, because a flagged item cannot be Complete. So the rollup's
+`f > 0` test only has to catch **phase-level Waiting records**, which `01` allows
+to attach to a phase and not to any item. Item-level flags can never reach it.
+
+The count table above is unchanged. It is still correct, and one of its rows —
+every item Complete with an open flag — is now reachable only through a
+phase-level Waiting record.
+
+**The split between Progress and Flags still stands.** It just loses the example
+that was justifying it. Two reasons carry it instead: `In Progress · Waiting on
+Painters` is two facts about one item, and one item often holds several problems
+at once, each with its own needed line and count. One field holds neither.
+
+### Not decided: an item that is already Complete when a flag arrives
+
+Miguel was asked what happens when a deficiency is logged against an item that
+already reads Complete. **He declined to answer here, and he was right to.** His
+words: "if the Building has already moved to the Archive this gets complicated."
+
+The answer depends on whether an archived building can be reopened, and that is
+not settled. It moved to `16-post-completion-deficiencies`.
+
+Until that ticket resolves, the rule above only governs a **new** setting of
+Complete. An item already reading Complete when a flag lands is undefined, and
+nothing in 0.2 may be built on a guess about it.
 
 ### The count shows beside the status
 
