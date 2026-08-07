@@ -20,7 +20,16 @@ Rules:
 
 ## Repo Owner
 
-Miguel Godbout. Finish carpenter at Premier Finish & Construction (PFC), Moncton, New Brunswick. Not a formal foreman, but manages field tracking by choice. Early in his coding experience — write clear, commented, modular code. Explain non-obvious decisions in comments.
+Miguel Godbout. Finish carpenter at Premier Finish & Construction (PFC), Moncton, New Brunswick. Not a formal foreman, but manages field tracking by choice.
+
+Pitch explanations to this level:
+
+- **Strong with computers.** He works in Windows down to the registry, in CMD, and with self-hosted servers. He deduces technical causes well. Do not explain computers to him.
+- **He writes no code.** He reads no JavaScript. He can often deduce what a line does, but not reliably.
+- **So: define coding terms when you use them.** This includes dev-workflow terms — branches, deployments, OAuth, CORS. Explain the intent and the non-obvious parts, then trust him to follow the rest. Do not narrate every line.
+- **He wants to learn, but the launch comes first.** Teach in passing while you build. Do not stop the work for a lesson. Do not pad an answer with background he did not ask for.
+
+Write clear, commented, modular code. Explain non-obvious decisions in comments.
 
 ---
 
