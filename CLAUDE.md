@@ -6,15 +6,18 @@ This file gives Claude Code persistent context for this repo. Read it before mak
 
 ## Writing Standard
 
-Write all prose in ASD-STE100 Simplified Technical English. This applies to documentation, READMEs, commit messages, code comments, and UI text. It does not apply to code syntax or variable names.
+**UI text follows ASD-STE100 Simplified Technical English.** Every word the crew reads on a screen obeys these rules. A worker reads his phone in bad light, in a hurry, wearing gloves. Ambiguity costs him time.
 
-Rules:
 - Short sentences. One instruction per sentence.
 - Active voice. Name the actor.
 - No contractions.
 - Plain common words over jargon, where a plain word exists.
 - No stacked auxiliaries or filler phrases.
 - No marketing adjectives.
+
+This does not apply to code syntax or variable names.
+
+**Everything else — documentation, comments, commit messages, chat — is written plainly, not formally.** The goal is no filler, not stiffness. Contractions are fine. Cut marketing adjectives, hedging, padding, and restated points. Say a thing once and move on.
 
 ---
 
@@ -35,20 +38,21 @@ Write clear, commented, modular code. Explain non-obvious decisions in comments.
 
 ## Two Separate Systems in This Repo
 
-This repo holds two independent systems. Do not let them share code, Apps Script deployments, or Drive folders unless explicitly told to.
+This repo holds two independent systems. Keep them separate until a roadmap milestone bridges them on purpose — the QR Log/Status menu is that planned bridge. Until then, do not share code, Apps Script deployments, or Drive folders unless told to.
 
 ### System 1 — Camera App (live, in daily use by the crew)
 
 Purpose: crew photographs the physical checklist sheet taped to each unit door. Photo uploads to Google Drive, auto-sorted by job/floor/unit.
 
+Status: live, but Miguel expects to scrap or rebuild it. Ask before any large work on it.
+
 **Do not modify these files without explicit instruction:**
 - `Hub/Log/index.html`
 - `Hub/Log/app_v1.html`
 - `Hub/Log/app_v2.html`
-- `Code.gs`
-- `upload.html`
+- `appscript/Code.js` — the Apps Script project calls this file `Code.gs`. It is tracked with `.clasp.json` and `appscript/appsscript.json`.
 
-Path note: in this repo `Code.gs` is the file `appscript/Code.js`, tracked with `.clasp.json` and `appscript/appsscript.json`. `upload.html` is not in this repo. It exists only inside the live Apps Script project.
+`upload.html` is part of the live camera app but is not in this repo. It exists only inside the Apps Script project. Do not look for it here.
 
 Backend: Google Apps Script, deployed as a web app. Redeploy via Manage Deployments → pencil icon → New Version. Never create a new deployment — the URL is embedded in printed QR codes on physical sheets and cannot change.
 
@@ -91,6 +95,7 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 
 1. **Config drives structure, not code.** Never hardcode a floor count, unit count, or item list. Structure comes from data created in Admin.
 2. **Structure changes go through Admin only.** Never edit Sheet columns/rows to change structure — only through the Admin UI. Direct Sheet edits are for status/detail values only.
+   **Escape hatch:** if Admin cannot do what Miguel needs, he is not stuck. Ask first, hand-edit the Sheet, and write down exactly what changed. Then fix Admin to cover that case, so the hatch is not needed twice.
 3. **Offline-aware.** Job sites have unreliable signal. Every fetch call must fail gracefully, never crash blank. Data edits (from v2 onward) queue locally and sync when signal returns, with a visible pending state — never a silent optimistic save that can lose data.
 4. **Many doors, one system.** Different users reach the same data through different views. Do not duplicate data per view.
 5. **Expect frequent change.** Miguel will request many incremental changes over time. Favor small, separate files over large ones. Comment clearly.
@@ -161,7 +166,8 @@ Do not build ahead of the current version without explicit instruction. Do leave
 
 ## Technical Constraints (both systems)
 
-- No frameworks. Vanilla HTML, CSS, JavaScript.
-- No build tools. Must run by opening directly or serving from GitHub Pages.
+- **Default to no frameworks and no build tools.** Vanilla HTML, CSS and JavaScript. The app must run by opening a file directly, or by serving it from static hosting.
+- **This is a strong default, not a ban.** If a framework or a build tool is the obvious fix for a real problem, propose it. State what it solves, what it costs, and what breaks if it is removed later. Miguel decides. Never add one quietly, and never add one for tidiness alone.
+- Known candidate: raising `CACHE_NAME` in `control/sw.js` by hand is easy to forget, and stale phones are the result. A build step that stamps the version automatically would earn its place.
 - Mobile-first. iOS Safari is the primary browser for the camera app. iOS/Android PWA is the primary target for PFC Control.
 - Every fetch call must fail gracefully with a clear message. Never a blank crash.

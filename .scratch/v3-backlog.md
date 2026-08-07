@@ -92,6 +92,22 @@ write the same door two ways, and the totals will split.
 
 ---
 
+## Review later, not tied to one version
+
+### File sprawl in control/
+
+CLAUDE.md says to favour small, separate files over large ones. The rule is
+sound, but it has a failure mode: thirty small files where six would do, and
+nothing is findable.
+
+- **The check:** when `control/` starts feeling scattered, read the folder and
+  ask whether any files exist only because the rule said to split.
+- **Why nothing is done now:** the folder is still small. Acting early would
+  cost more than it saves.
+- **Source:** raised by Miguel 2026-08-06, during a CLAUDE.md review.
+
+---
+
 ## Known and accepted, no action planned
 
 ### The CORS technique carries no promise from Google
