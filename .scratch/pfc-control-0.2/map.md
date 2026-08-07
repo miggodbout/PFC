@@ -146,8 +146,10 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   hand, and any drift is cosmetic. **Amended the same day:** a flag blocks
   Complete on an **item** too, not only on a rollup. The dropdown does not offer
   Complete while an open flag of either kind sits on the item. What happens to an
-  item that is *already* Complete when a flag lands is deliberately left
-  undefined, and is owned by `16-post-completion-deficiencies`.
+  item that is *already* Complete when a flag lands **displays** as In Progress
+  while the flag is open, and returns to Complete when the last record is fixed.
+  This needs no stored state and no automatic write: the Sheet keeps what a
+  person set by hand, and only the display is downgraded.
 
 ## Not yet specified
 
@@ -161,6 +163,13 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 
 ## Out of scope
 
+- [Deficiencies that arrive after a building is finished](issues/16-post-completion-deficiencies.md)
+  — the GC final walk, months after completion. Ruled out of 0.2 by Miguel on
+  2026-08-07 and moved to `.scratch/0.3-backlog.md`. It needs an archived
+  building to reopen, and a deleted local copy to come back, so it is a workflow
+  and not a rule. **One piece was kept in 0.2:** an already Complete item that a
+  flag lands on, which fires in a live building with no archive involved, and is
+  answered in `11-rollup-rules`.
 - Per-unit item variation. An item that applies to only some units in a
   building. This is a structure problem and belongs to Admin. Take it up as its
   own effort later.

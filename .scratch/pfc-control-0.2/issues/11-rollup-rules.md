@@ -129,18 +129,46 @@ that was justifying it. Two reasons carry it instead: `In Progress · Waiting on
 Painters` is two facts about one item, and one item often holds several problems
 at once, each with its own needed line and count. One field holds neither.
 
-### Not decided: an item that is already Complete when a flag arrives
+### An item that is already Complete when a flag arrives
 
-Miguel was asked what happens when a deficiency is logged against an item that
-already reads Complete. **He declined to answer here, and he was right to.** His
-words: "if the Building has already moved to the Archive this gets complicated."
+Settled 2026-08-07, after `16-post-completion-deficiencies` was pushed to 0.3.
 
-The answer depends on whether an archived building can be reopened, and that is
-not settled. It moved to `16-post-completion-deficiencies`.
+Miguel first declined this question, because of the archived-building case: "if
+the Building has already moved to the Archive this gets complicated." He was
+right about the archive. But the case also fires with no archive involved — hang
+a door Tuesday, mark it Complete, a drywaller damages it Thursday, in a live
+building. That is ordinary 0.2 work and it needed an answer.
 
-Until that ticket resolves, the rule above only governs a **new** setting of
-Complete. An item already reading Complete when a flag lands is undefined, and
-nothing in 0.2 may be built on a guess about it.
+**The item drops to In Progress while the flag is open, and returns to Complete
+when the last record is fixed.** Miguel chose the automatic return: the item was
+Complete before the damage, the damage is repaired, so putting it back is the
+truth and it saves a tap on a common case.
+
+### Store what is set. Display what is true
+
+The cheap way to build the rule above, and it needs no new storage.
+
+- The **stored** Progress is whatever a person last set by hand. It never changes
+  on its own. The Sheet cell holds this.
+- The **displayed** Progress is the stored value, with one downgrade: **Complete
+  displays as In Progress while an open flag sits on the item.**
+
+Clear the last record and the display returns to Complete by itself, because the
+stored value was never touched.
+
+What this buys:
+
+- No extra column, and nothing that remembers "this used to be Complete".
+- **No automatic write.** The standing rule that Progress is only ever set by
+  hand stays exactly true. Nothing in the queue, nothing to sync, nothing that
+  can fail.
+- The dropdown rule and this rule become one rule. The dropdown does not offer
+  Complete while flagged, and a stored Complete does not display as Complete
+  while flagged. Same sentence, applied to input and to output.
+
+The Sheet's own rollup formula must compute the **displayed** value, from the
+item cell plus a `COUNTIFS` against the Deficiencies tab. The app computes it on
+the phone, per the section above.
 
 ### The count shows beside the status
 

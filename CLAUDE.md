@@ -160,9 +160,11 @@ kind sits on that item. Fix or cancel the record first.
 So the rollup's flag test only has to catch **phase-level Waiting records**. Any
 flag on an item has already stopped that item from reading Complete.
 
-**Undecided, and it matters:** what happens to an item that already reads
-Complete when a flag arrives months later. That is the GC punch-list case and it
-is owned by `.scratch/pfc-control-0.2/issues/16-post-completion-deficiencies.md`.
+**Store what is set. Display what is true.** The Sheet holds whatever a person
+last set by hand, and it never changes on its own. The app *displays* that value
+with one downgrade: Complete shows as In Progress while an open flag sits on the
+item. Fix the last record and Complete comes back by itself, because the stored
+value was never touched. No extra column, and no automatic write.
 
 Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
 `control/shared/common.js`, and `buildRollupFormula` in

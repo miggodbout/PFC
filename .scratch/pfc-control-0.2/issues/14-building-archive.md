@@ -57,10 +57,17 @@ Complete" is a rollup answer.
 **A finished building can receive new problems, and often does.** Miguel: "GCs
 come and do a final check and find issues," months after completion.
 
-So Archive is not a one-way door, and this ticket may not design it as one. The
-workflow itself is `16-post-completion-deficiencies`, which waits on this ticket.
-What this ticket owes it: a way back in, and a way to get the copy back onto the
-phone after `03-local-copy-rules` deleted it.
+So Archive is not a one-way door, and this ticket may not design it as one.
+
+**The workflow itself was pushed to 0.3** on 2026-08-07. See
+`16-post-completion-deficiencies`, now closed, and `.scratch/0.3-backlog.md`.
+That does not let this ticket off. 0.3 cannot add a way back in if 0.2 designs a
+door that only goes one way, and the phone deleting the copy is a 0.2 decision
+from `03-local-copy-rules`.
+
+**What this ticket owes 0.3: a seam, not a feature.** Do not build the reopen
+flow. Do decide that reopening is possible, and that a dropped building can be
+downloaded again on demand. If either is designed shut here, 0.3 pays to undo it.
 
 ## Points to settle
 

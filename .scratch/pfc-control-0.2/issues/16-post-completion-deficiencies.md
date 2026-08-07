@@ -1,8 +1,19 @@
 # Deficiencies that arrive after a building is finished
 
 Type: grilling
-Status: open
+Status: closed — out of scope for 0.2
+Closed: 2026-08-07
 Blocked by: 14
+
+> **Miguel ruled this out of 0.2 on 2026-08-07.** It moved to
+> `.scratch/0.3-backlog.md`. This file stays as the write-up, because the
+> thinking below is worth keeping. Nothing here is decided.
+>
+> **One piece was carved out and kept in 0.2.** What happens to an already
+> Complete item when a flag lands is answered in `11-rollup-rules`: it displays
+> as In Progress while the flag is open, and returns to Complete when the last
+> record is fixed. That case fires in a live building with no archive involved,
+> so 0.2 could not leave it undefined. Everything else below is 0.3.
 
 ## Question
 
