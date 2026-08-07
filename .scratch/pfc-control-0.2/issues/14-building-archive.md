@@ -69,6 +69,18 @@ from `03-local-copy-rules`.
 flow. Do decide that reopening is possible, and that a dropped building can be
 downloaded again on demand. If either is designed shut here, 0.3 pays to undo it.
 
+## `04-queued-edit-rules` resolved on 2026-08-07, and it settled one of the points below
+
+**A building holding a waiting or held edit is never dropped from the phone.** It
+is exempt from the ten-building limit in `03-local-copy-rules`, and it must be
+exempt from whatever archive drop this ticket decides. Dropping the copy while an
+edit needs it would strand the edit's only description of what it means.
+
+So "what happens to a queued edit for a building that archived while the edit
+waited" now has half an answer: the copy stays until the outbox is clear. What is
+left for this ticket is whether the **building** leaves the Tracking list while
+that edit waits.
+
 ## Points to settle
 
 - The exact rule. Every item Complete, and no open Deficiency or Waiting record.

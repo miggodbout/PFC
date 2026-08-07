@@ -25,8 +25,12 @@ Standing preferences for this effort:
 - **Ask questions with the clickable picker, not as prose.** Miguel answers by
   tapping. Recommended option first, labelled `(Recommended)`. Two to four
   questions a round is fine. Put concrete numbers and rough screen sketches in
-  the preview field. `Other` is added by the tool and never shows in the written
-  option list, so say it is there when a question may need a free answer.
+  the preview field.
+- **The picker's free-text row does not work.** Broken on Miguel's machine as of
+  2026-08-07. Selecting it sends "User refused to answer" and burns a turn. So
+  the written options must cover the whole space, because a missing option is a
+  dead end. If any question in a round needs a typed answer, **ask that whole
+  round in prose instead**. One round cannot mix tapping and typing.
 - Define every technical term inside the option that uses it.
 - **Push back.** Miguel asks for it by name and changes course when the argument
   is good. Do not take the first answer and move on.
@@ -150,6 +154,23 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   while the flag is open, and returns to Complete when the last record is fixed.
   This needs no stored state and no automatic write: the Sheet keeps what a
   person set by hand, and only the display is downgraded.
+
+- [What one queued edit is, and what happens when it fails](issues/04-queued-edit-rules.md)
+  — **the outbox is a keyed shelf, not a line-up.** One job per item, keyed
+  `project|unit|item`, and one job per record, keyed by its id. A second change
+  replaces the first, because every job carries the final value. `update-item` is
+  replaced before it is built by **one action, `save-batch`**, which takes the
+  whole outbox, takes the script lock once, and answers **one result per job**.
+  Every result says `retry: true` or `retry: false`, which fixes the fault `07`
+  found. Retry runs on a backoff, 5s, 15s, 1m, then every 5 minutes, **only while
+  jobs wait** — a deliberate break from `03`'s no-timer rule, because this
+  finishes work already asked for. A failed edit **is held, never dropped**:
+  `retry: false` holds at once, an unnamed error holds after 10 tries, and only
+  Miguel drops one. **A waiting edit paints the screen, a held edit does not**, so
+  a rollup can never read Complete off an edit that will never land. A retap
+  replaces a held edit. The outbox is its own localStorage key, a drain runs
+  before the refresh on app open, and **a building holding any waiting or held
+  edit is never dropped from the phone**.
 
 ## Not yet specified
 
