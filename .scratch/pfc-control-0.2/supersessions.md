@@ -6,9 +6,10 @@ One line per overruled decision. Read this before `09-write-0.2-build-plan`, and
 before trusting any single sentence in a resolved ticket.
 
 **This is a partial pass.** `18` is meant to run last, after `13`, `14` and `15`
-close. Those three are still open. Everything below comes from a ticket that has
-**already** closed, so none of it can be undone by the three that remain. A
-second pass is still owed, and the last section says exactly what it must check.
+close. **`13` closed on 2026-08-08 and added entries 30 to 34.** `14` and `15` are
+still open. Everything below comes from a ticket that has **already** closed, so
+none of it can be undone by the two that remain. A second pass is still owed, and
+the last section says exactly what it must check.
 
 ---
 
@@ -132,6 +133,41 @@ Form: what the old text says · what overruled it · which one wins.
 
 ---
 
+## Added by `13-admin-changes`, 2026-08-08
+
+Same form: what the old text says · what overruled it · which one wins.
+
+30. **`17` wrote its subtype lists against items that do not exist.** It named
+    `Hardware` and `Baseboards`. Both are **phases**. Its four handle types —
+    Passage, Privacy, Dummy, Pocket — were already **three separate items** in
+    Phase 3. `13` rewrote the lists against the real item list. **`13` wins**, and
+    the corrected lists are `template-changes.md` section 5.
+31. **`common.js:78` and the .xlsx template hold seventeen items.** `13` cut them
+    to **fourteen**: Unit Door, Passage, Privacy, Dummy, Spring Stops and Hinge
+    Stops stop being items; Handles, Stops and Bathtub are the new ones.
+    **`13` wins.** See `template-changes.md` section 9.
+32. **`17` and `13`'s own earlier text say "Admin needs Add and never Delete",
+    flatly.** `13` narrowed it: **Add is Add-only, but the reason trim is freely
+    reversible both ways**, because unticking a trim box removes nothing from
+    `_Config`. **`13`'s narrowing wins.**
+33. **`17` assumed the master template updates by hand and left it open. `13`'s
+    own question sheet asked "through Admin or by hand".** Both were built on a
+    wrong picture: `handleCreateProject` never copies the .xlsx. **The seed is
+    `common.js`, the .xlsx is a drawing, and a value added in Admin never leaves
+    its building.** `13` wins.
+34. **`17` took the Logger form from six controls to seven, and entry 17 above
+    records `06`'s six-control budget as already overrun.** `13` added an `Other`
+    text box to the Subtype list, so the worst case is now **nine** controls.
+    Nothing is overruled — the budget is simply gone. The recommended answer, pin
+    Save to the bottom of the screen, is on `13` and on the map's **Not yet
+    specified**. **It needs one line from Miguel at build time.**
+
+Two things `13` **confirmed** rather than overruled, so nothing above changes:
+`rebuildTracker` already cannot reach the Deficiencies tab, and Admin has no
+`remove-unit` operation and gets none in 0.2.
+
+---
+
 ## Not a supersession: one live conflict — SETTLED 2026-08-08
 
 > **Miguel closed this the same day.** A finished building **does** leave Tracker
@@ -173,11 +209,10 @@ limit is the only thing that drops a copy, which is what `03` already builds.
 
 ## What the second pass still owes
 
-Run this after `13`, `14` and `15` close, and before `09`.
+Run this after `14` and `15` close, and before `09`.
 
-- **`13`** will decide where the Admin edit-item screen sits, who writes the
-  default per-item trim, and whether the master template updates through Admin or
-  by hand. All three land in `template-changes.md` section 3.
+- ~~**`13`**~~ **closed 2026-08-08.** Its supersessions are entries 30 to 34
+  above, and `template-changes.md` sections 5 and 9 carry the result.
 - **`14`** will settle the conflict in the section above, and confirm whether
   `03`'s archived-building drop fires in 0.2.
 - **`15`** will decide where the seed suggestion text is stored. If the answer is

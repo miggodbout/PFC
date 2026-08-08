@@ -336,7 +336,12 @@ that is exactly what keeps the outbox safe across an update.
 
 ---
 
-## `control/admin/index.html` — the file ticket 13 still owns
+## `control/admin/index.html` — the file ticket 13 owned
+
+> **`13` closed on 2026-08-08 and answered every question below.** The per-item
+> screen is **a fifth card in the edit block**, named **Lists**, plus a sixth card
+> for **Rename an item**. The full build list is in `13`'s resolution. This
+> section stays because the measurements are still correct.
 
 548 lines. Two halves: the create form (111 to 344) and the "Edit an existing
 project" block (347 to 540).

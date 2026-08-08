@@ -26,11 +26,12 @@ Standing preferences for this effort:
   tapping. Recommended option first, labelled `(Recommended)`. Two to four
   questions a round is fine. Put concrete numbers and rough screen sketches in
   the preview field.
-- **The picker's free-text row does not work.** Broken on Miguel's machine as of
-  2026-08-07. Selecting it sends "User refused to answer" and burns a turn. So
-  the written options must cover the whole space, because a missing option is a
-  dead end. If any question in a round needs a typed answer, **ask that whole
-  round in prose instead**. One round cannot mix tapping and typing.
+- **The picker's free-text row broke on 2026-08-07 and worked again on
+  2026-08-08.** On `13` it carried two answers no listed option would have — a
+  restructure and a missed item. **Still write options that cover the whole
+  space**, because it has failed once, but do not avoid the picker for fear of
+  it. If it fails again, re-ask that one question in prose. One round cannot mix
+  tapping and typing, because answering the picker ends the turn.
 - Define every technical term inside the option that uses it.
 - **Push back.** Miguel asks for it by name and changes course when the argument
   is good. Do not take the first answer and move on.
@@ -99,8 +100,10 @@ Added by `17-reason-list-scope`, 2026-08-08:
 - **Reason** — *what is wrong.* One list of eight per building, trimmed per item.
 - **Needed** — *what would fix it.* Free text, such as `32" 6" RH`.
 - **Subtype** — the kind of thing needed, picked from a list the item defines.
-  Eight door types, four handle types, nothing on an item that defines none. It
-  is part of the needed line, not part of the reason, and it has its own column.
+  It is part of the needed line, not part of the reason, and it has its own
+  column. **Four items define a list**, settled in `13-admin-changes`: Interior
+  Doors, Exterior Door(s), Handles, Stops. Every other item defines none and
+  shows no dropdown. Each list ends with `Other`, which opens a text box.
 - **Defective** — arrived wrong from the factory. Replaces `Warped`. Against
   **Damaged**, which means somebody hurt it after it arrived.
 
@@ -111,10 +114,12 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 
 Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. Read them
 before `09`:
-- **`supersessions.md`** — which decision wins wherever two disagree. 29 entries.
-  First pass 2026-08-08. A second pass is owed after `13`, `14` and `15` close.
-- **`template-changes.md`** — the master template spec. Eight sections, six
-  FINAL. Section 5 waits on `13`. **Not FINAL as a whole yet.**
+- **`supersessions.md`** — which decision wins wherever two disagree. First pass
+  2026-08-08, widened the same day by `13`. A second pass is owed after `14` and
+  `15` close.
+- **`template-changes.md`** — the master template spec. Nine sections. Section 5
+  went FINAL when `13` closed, and section 9, **the default item list**, was added
+  by it. Section 8 still waits on `15`. **Not FINAL as a whole yet.**
 - **`code-inventory.md`** — the 0.1 code read against all seventeen tickets.
   Every rollup call site, everywhere the demo data reaches, the exact lines each
   ticket deletes, and nine things no ticket owns. Written 2026-08-08.
@@ -272,11 +277,36 @@ before `09`:
   from the factory, against `Damaged`, hurt on site. **Lists only grow**: Admin
   needs Add and never Delete, and it touches only the reason and type lists.
   The Waiting list **never varies**, confirmed. The ticket also drew a field
-  nobody had: **a Subtype dropdown**, eight door types and four handle types,
+  nobody had: **a Subtype dropdown**, eight door types and four handle types
+  (**the lists were wrong — `13` rewrote them, see below**),
   which **partly overturns `12`** — one field, not the four it rejected — takes
   **a thirteenth column** in the Deficiencies tab, and takes `06`'s form **from
   six controls to seven**. Admin owns both lists, and a list change must not
   rebuild the Tracker tab.
+
+- [What Admin must change for the Deficiencies tab](issues/13-admin-changes.md)
+  — four decisions and a bigger one nobody asked for. **The `remove-item` refusal
+  offers one bulk button, `Cancel all N records`**, with a confirm and no undo,
+  because removing an item means PFC is not doing that work and every open record
+  on it is Cancelled. It is two steps: cancel, then remove again. **Admin stays one
+  page** — a fifth card, **Lists**, holds the building reason list, an item
+  dropdown, that item's subtypes and its reason trim. A card in an existing screen
+  is not a window, so 0.2 still spends its window on Logger. **`rename-item` is
+  added**, label only, key never moves, because without it a typo orphans every
+  record plus the item's own two lists. **A new value stays in its building**; new
+  buildings seed from defaults in `common.js`, which also answers the master
+  template question — `handleCreateProject` never copies the .xlsx, so the .xlsx
+  is a drawing and the code is the seed. `_Config` gains `reasons` at building
+  level and `types` plus `trim` per item, and its `version` rises to 2. Confirmed
+  without asking: `rebuildTracker` already cannot reach the Deficiencies tab, and
+  `remove-unit` stays out. **The bigger change: Miguel rewrote the item list.**
+  `17` had written its type lists against `Hardware` and `Baseboards`, which are
+  phases, not items — and its four handle types were already three items. He fixed
+  it by collapsing them: Passage, Privacy and Dummy become subtypes of a new item
+  **Handles**, Spring Stops and Hinge Stops become subtypes of **Stops**, Unit Door
+  stops being an item and becomes a subtype, and **Bathtub** joins Phase 1. Ball
+  Catch stays its own item. **14 items, was 17**, and the Tracker tab goes from 41
+  columns to 21. The accepted cost: Passage and Privacy now share one status row.
 
 - **A finished building leaves Tracker in 0.2.** Settled by Miguel on
   2026-08-08, on [14-building-archive](issues/14-building-archive.md). He was
@@ -315,6 +345,13 @@ before `09`:
   Logger and Outbox screens to the `SHELL` list, and the standing habit of
   raising `CACHE_NAME`.
 - Whether a photo belongs on a deficiency record in 0.2, or later.
+- **Where Save sits on the Logger form when both `Other` boxes open.** Raised by
+  `13` on 2026-08-08, when Miguel gave the Subtype list its own `Other` text box.
+  `06` budgeted six controls and warned that more pushes Save under the keyboard.
+  `17` took it to seven. The worst case is now nine, when Subtype-Other and
+  Reason-Other are open together. Recommended answer, written up on `13`: pin Save
+  to the bottom of the screen instead of leaving it in the scroll flow. It needs
+  one line from Miguel at build time and does not gate anything before that.
 - **A record for a problem PFC will never fix.** Found on 2026-08-08 while
   resolving `17`. Miguel: Exterior Doors are patio and entry doors that the
   framer installs, PFC only builds out and trims around them, and "they are often

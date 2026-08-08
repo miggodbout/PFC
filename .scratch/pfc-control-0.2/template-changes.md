@@ -11,13 +11,15 @@ closed.
 | 2. The status column and its dropdown | **FINAL** | nothing |
 | 3. The rollup formulas | **FINAL** | nothing |
 | 4. Remove the Details column | **FINAL** | nothing |
-| 5. The lists held in `_Config` | **draft** | `13-admin-changes` |
+| 5. The lists held in `_Config` | **FINAL** | nothing |
 | 6. The Dashboard tab | **FINAL** | nothing |
 | 7. What is not changing | **FINAL** | nothing |
-| 8. Still unknown | — | `13`, `15` |
+| 8. Still unknown | — | `15` |
+| 9. The default item list | **FINAL** | nothing |
 
-**This file is not marked FINAL as a whole, and must not be until `13`, `14` and
-`15` close.** `18` runs a second pass then. Section 5 is the one that moves.
+**This file is not marked FINAL as a whole, and must not be until `14` and `15`
+close.** `18` runs a second pass then. Section 5 went FINAL and section 9 was
+added when `13-admin-changes` closed on 2026-08-08.
 
 Template in Drive: `PFC/Master Template/PFC_Master_Template.xlsx`
 ID `1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`
@@ -154,7 +156,7 @@ every time — so this is a change in one function plus the four places that rea
 ("status columns C to AK, rollups AM to AP…") becomes wrong and must be rewritten
 with it.
 
-## 5. The lists held in `_Config` — DRAFT, waits on `13-admin-changes`
+## 5. The lists held in `_Config` — FINAL
 
 > **Section 3 of the old file is deleted, not amended.** It defined three
 > per-phase reason lists. `17-reason-list-scope` closed on 2026-08-08 and
@@ -186,10 +188,24 @@ eighteen edits instead of one.
 
 ### Types — per item, feeding the `subtype` column
 
+> **The lists in this block were rewritten by `13-admin-changes` on 2026-08-08.**
+> `17` wrote them against `Hardware` and `Baseboards`, which are **phases, not
+> items**, and its four handle types were already three separate items. Miguel
+> fixed it by collapsing those items into subtypes. See **section 9** for the
+> full new item list.
+
+**Four items define a list. Every other item defines none and shows no dropdown.**
+
 - **Interior Doors** — Regular, Bypass, Bi-fold, Double, Pocket, Double Pocket,
   Dwarf, Unit Door
-- **Hardware** — Passage, Privacy, Dummy, Pocket
-- **Windows, Exterior Doors, Baseboards** — none defined, and no dropdown appears
+- **Exterior Door(s)** — Patio, Entry
+- **Handles** — Passage, Privacy, Dummy, Pocket
+- **Stops** — Spring, Hinge
+
+**Every subtype list ends with `Other`, which opens a text box.** Added by Miguel
+on 2026-08-08, matching what `Other` already does on the reason list. The typed
+text is stored in the `subtype` column as a per-record value. **It does not join
+the list** — a one-off stays a one-off, and making it permanent is an Admin Add.
 
 ### The Waiting reason list — never varies
 
@@ -199,24 +215,67 @@ eighteen edits instead of one.
 Confirmed by `17` as fixed. It can never narrow per item, because a Waiting
 record can attach to a whole phase where there is no item to narrow against.
 
-### What `13-admin-changes` still owes this section
+### The exact shape in `_Config`
 
-1. **The exact shape in `_Config`.** Today `writeConfig` puts the whole config
-   into cell A1 as one JSON string. The lists almost certainly join that object,
-   but `13` has not said so.
-2. **Who writes the default trim per item, and what it holds.** `17` ruled this
-   is content, not a rule, and Miguel writes it. He asked for more time on
-   2026-08-08. **It does not gate 0.2** — a trim lives in `_Config`, so changing
-   it later is an Admin edit or a template edit, with none of the release
-   overhead the PATCH rule exists to avoid. Ship sensible defaults.
-3. **Whether the master template updates through Admin or by hand.** `17` assumed
-   by hand and did not settle it.
+Settled by `13-admin-changes`, 2026-08-08. The lists join the JSON object already
+in cell A1. `writeConfig` and `readConfig` read and write the whole object in one
+call, so nothing about the storage itself changes.
 
-One rule is already firm and belongs to the build: **a list change must not
-rebuild the Tracker tab.** Adding a type or a reason changes no columns. Today
-every branch of `applyStructureOp` is followed by `rebuildTracker`,
-`rebuildDashboard` and `writeConfig`. A list change needs `writeConfig` alone.
-That is a new code path, not a new branch on the old one.
+    {
+      "version": 2,
+      "name": "...", "mode": "floors", "createdAt": "...",
+      "groups": [ ... unchanged ... ],
+      "reasons": ["Wrong Size", "Wrong Type", "Wrong Swing", "Wrong Color",
+                  "Missing", "Damaged", "Defective", "Other"],
+      "phases": [
+        { "key": "phase1", "label": "Phase 1 - Doors & Windows", "items": [
+          { "key": "interior_doors", "label": "Interior Doors",
+            "types": ["Regular", "Bypass", "Bi-fold", "Double",
+                      "Pocket", "Double Pocket", "Dwarf", "Unit Door"],
+            "trim":  [] }
+        ]}
+      ]
+    }
+
+- **`version` rises from 1 to 2.** There is no upgrade path, so the version exists
+  to let the code refuse a version-1 Sheet with a clear message instead of drawing
+  it wrong.
+- **`trim` holds the reason strings the item does not offer**, matched exactly
+  against `reasons`. An empty trim means all eight are offered.
+- **A custom item arrives with `types: []` and `trim: []`.** It offers all eight
+  reasons and shows no subtype dropdown.
+- **The Waiting reason list is not stored per building.** `17` confirmed it never
+  varies, so it is a constant in `common.js`.
+
+### The default trim ships empty
+
+`17` ruled the trim is content and Miguel writes it. He asked for more time on
+2026-08-08, and the item list changed under it the same day, so what he writes is
+now against fourteen items. **It does not gate the build.** Ship every item with
+an empty trim — all eight reasons everywhere — and narrow them afterwards through
+the Admin Lists card. An empty trim is never wrong, only wider than it needs to
+be.
+
+### The master template is a drawing, not a seed
+
+`17` assumed the template updates by hand and did not settle it. `13` settled it,
+and the question was built on a wrong picture. **`handleCreateProject` never
+copies the .xlsx** — see the note at the top of this file, and `Code.js:352`,
+which calls `SpreadsheetApp.create` on an empty file. So:
+
+- **The real seed is `DEFAULT_PHASES` and the default lists beside it in
+  `control/shared/common.js`.** Changing what new buildings get is a code change
+  that ships in a release.
+- **The .xlsx is updated by hand to match**, as the visual specification.
+- **A value added in Admin stays in that building.** It never reaches the next
+  one. `13` rejected a shared defaults store: it is hidden state with no screen,
+  and because lists only grow, one typo would follow every future job.
+
+One rule belongs to the build: **a list change must not rebuild the Tracker tab.**
+Adding a type or a reason changes no columns. Today every branch of
+`applyStructureOp` is followed by `rebuildTracker`, `rebuildDashboard` and
+`writeConfig`. A list change needs `writeConfig` alone. That is a new code path,
+not a new branch on the old one.
 
 ## 6. The Dashboard tab — FINAL
 
@@ -251,3 +310,86 @@ the right number of columns by themselves once the list is three long.
   **dimensions only**, because the type became a dropdown.
 - **Whether `03`'s archived-building drop fires in 0.2.** `14-building-archive`
   owns it. It changes no template column either way. See the note added to `14`.
+
+## 9. The default item list — FINAL
+
+Added by `13-admin-changes` on 2026-08-08. **This is a change to the template's
+own structure, not only to the code that reproduces it.** The template is fixed at
+36 units and 17 items. It becomes 36 units and **14 items**.
+
+### Why it changed
+
+`17-reason-list-scope` wrote its subtype lists against `Hardware` and
+`Baseboards`. Neither is an item — both are phases. Its four "handle types",
+Passage, Privacy, Dummy and Pocket, **were already three separate items** in Phase
+3, so a dropdown of them would have asked the same question twice.
+
+Miguel's fix went further than the error: **collapse the repeating items into
+subtypes.** His words on 2026-08-08 — "listing all door handles as `Handles` keeps
+the tracker lean, `Passage, Privacy, Dummy` is only needed when an issue comes up
+in logger." That is `12-logger-door`'s split, lean to look at and detailed to log,
+applied to the item list itself.
+
+### The list
+
+| Phase | Item | Subtypes |
+|---|---|---|
+| 1 — Doors & Windows | Interior Doors | Regular, Bypass, Bi-fold, Double, Pocket, Double Pocket, Dwarf, Unit Door |
+| 1 | Exterior Door(s) | Patio, Entry |
+| 1 | Windows | — |
+| 1 | Attic Hatch | — |
+| 1 | Handrail | — |
+| 1 | **Bathtub** | — |
+| 2 — Baseboards | Cut | — |
+| 2 | Nailed | — |
+| 3 — Hardware & Accessories | **Handles** | Passage, Privacy, Dummy, Pocket |
+| 3 | Ball Catch | — |
+| 3 | Deadbolts | — |
+| 3 | **Stops** | Spring, Hinge |
+| 3 | Mirrors | — |
+| 3 | Bathroom Accessories | — |
+
+Every subtype list also ends with `Other`, which opens a text box. See section 5.
+
+### What moved
+
+- **`Unit Door` stops being an item** and becomes a subtype of Interior Doors.
+  Miguel: "Unit Door should just be a subtype, we can remove it as an item
+  completely."
+- **`Passage`, `Privacy`, `Dummy` stop being items**, becoming subtypes of a new
+  item, **Handles**.
+- **`Spring Stops` and `Hinge Stops` stop being items**, becoming `Spring` and
+  `Hinge`, subtypes of a new item, **Stops**.
+- **`Ball Catch` stays its own item.** A catch is not a stop. Miguel was offered
+  the thirteen-item version that folds it into Stops and chose against it.
+- **`Bathtub` is added to Phase 1.** Miguel: "I completely missed Bathtub as an
+  item in Phase 1."
+
+### The cost, accepted on purpose
+
+Passage and Privacy share one status row now. You can no longer read that the
+passage handles are done and the privacy handles are not. **Progress got coarser
+so that logging could get finer.** Miguel was shown this before he chose it.
+
+### What it does to the Tracker tab
+
+    0.1 today, 17 items with Details    41 columns
+    0.2, 17 items, no Details           24 columns
+    0.2, 14 items, no Details           21 columns
+
+Column count is `2 + items + phases + 2` — Floor and Unit #, one status column per
+item, one rollup per phase, then Last Updated and Overall Status. The Details
+removal in section 4 does most of the shrinking. Three fewer items does the rest.
+
+The Unit screen scrolls fourteen rows, not seventeen.
+
+### Where it lands in code
+
+`DEFAULT_PHASES` at `control/shared/common.js:78`. The new default subtype lists
+and the eight-value reason list go beside it, so every default a person might want
+changed sits in one file next to the item list it describes. `13` settled that the
+Admin create form sends them up in the payload, the way item labels already are.
+
+**Nothing about this is hardcoded downstream.** The config still drives the
+structure, so a project can still add, remove or rename items afterwards. This
+section only changes what a **new** project starts with.
