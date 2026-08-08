@@ -214,3 +214,136 @@ comment above the function now names the trap by hand, because
 demo data deleted, the rollup function and `pillHtml`, `list-projects` drawn from
 the four numbers, the error branch on Buildings, the two empty messages, the
 four-step Tracking order, pull to refresh, and the header flash.
+
+---
+
+## Session 3 — 2026-08-08
+
+**Step:** 2, code complete. Smoke check run and passed. Step 2 is done.
+**Branch:** `0.2` at `3380012`.
+**Deployed:** yes — script version 4, description `0.2 step 2`. Same deployment
+id, same URL.
+**Merged to main:** yes, `0cbfe8d`. Both branches pushed.
+**CACHE_NAME:** raised to `pfc-control-0.2-step2`. Every front-end file changed,
+so a phone must re-download the shell.
+
+**Landed:** everything on the step 2 list.
+
+- **`get-project`** — one whole building in one answer. The config with every
+  item's `types`, `trim` and `hint`, the building's `reasons`, every unit's item
+  statuses as `status[unitKey][itemKey]`, `lastUpdated` per unit, and the whole
+  Deficiencies tab in every state through a new `readRecords`. One `getValues`
+  over the Tracker grid, one over the records block. No rollup goes out — the
+  phone owns that rule. A six-unit building is **4.4 KB** on the wire.
+- **`Store` rewritten to `localStorage`** — four keys, four lifetimes:
+  `projects`, `project.<id>`, `outbox`, `chips`. One key per building. Ten copies
+  kept, least recently opened dropped first, and never one holding an unsent
+  edit. `dropProject` is the only delete path and it calls
+  `foldNeededLinesIntoChips`, which step 4 fills in.
+- **The outbox shelf, storage only.** Keyed `projectId|unitKey|itemKey`, one job
+  per key, every job carrying the final value. A tap on the Unit screen now
+  survives a tab close. The drain, the backoff, the hold rules and the Outbox
+  window are step 3, as planned. The shelf is memoised per page load — painting
+  48 chips asks for it about 700 times.
+- **The rollup, written once.** `rollup(counts, flags)` plus `rollupOf(statuses,
+  flags)`, returning status, count and both flag counts. `worst()` and
+  `ROLLUP_ORDER` deleted from `common.js`. `displayStatus` applies the one
+  downgrade: Complete displays as In Progress while an open flag sits on the
+  item, and the stored value is never touched. `pillHtml` and `dotHtml` take the
+  rollup object.
+- **The demo buildings deleted** — about 200 lines, plus `demoBannerHtml`,
+  `spread`, `hashStr` and `isDemo`. The `DEMO` tag is gone from Buildings, the
+  banner from the Building screen, and the demo filter from Admin.
+- **The marks of plan section 4** — `barHtml`, `countText`, `flagChipHtml`,
+  `notSavedChipHtml`, `marksHtml` and `marksLabel` in `common.js`, with the
+  classes in `theme.css`. A floor header carries its marks only while closed. A
+  unit chip carries both flag kinds with no numbers, and the corner badge hangs
+  outside its top right corner.
+- **Buildings** — draws its stored list first, refreshes behind, and now has an
+  error branch. Both empty messages. The four-step order for drawing a row, with
+  the already-finished set in `sessionStorage`. A finished building's copy is
+  dropped on the list refresh.
+- **Pull to refresh** on Buildings, Building and Unit, as `enablePullToRefresh`.
+- **The header flash fixed** on `building.html` and `unit.html`. Both ship an
+  empty `<h1>`, and the name comes out of the stored copy, or out of the stored
+  Buildings list when there is no copy yet.
+- `.s-on_hold` renamed `.s-waiting`, and `.s-none` added for a group with
+  nothing in it.
+
+**Four calls made during the build:**
+
+1. **`list-projects` gained a FIFTH number, `unitsNotStarted`.** Plan 2.4 says
+   four numbers. The rollup rule of 3.4 needs `s`, and four numbers cannot tell
+   "every unit Not Started" from "some unit In Progress" — both arrive as
+   `unitsDone: 0`. It is one `.filter()` over an array already in memory, it is
+   still a number and not a verdict, and without it every untouched building on
+   Tracking would have read In Progress. **The plan should be treated as having
+   five numbers there.**
+2. **The Details box was deleted in step 2, not step 3.** Plan 5.4 owns it, but
+   step 1 removed the Details column from the Sheet and `get-project` sends no
+   `details` key, so the box had no data source at all. It went with its column.
+3. **`handleGetUnit` and `handleGetStructure` both stay.** Session 1 predicted
+   both would die here. `get-structure` cannot: Admin calls it for the item list
+   its edit cards offer, and it wants the server's answer rather than a phone
+   copy. `handleGetUnit` is now unused and is left in place with a comment
+   saying so. Neither is on any step's delete list.
+4. **`localOnlyNote()` is kept for one more step.** Plan 5.1 deletes it, but it
+   is still true: step 2 puts a tap on the shelf and nothing sends it. The
+   wording changed from "Preview only / saving arrives in the next version" to
+   "Not sent yet / it reaches the project Sheet in the next step". **Delete it in
+   step 3 when the sync bar lands** — there is a BUILD NOTE on the function.
+
+**Tested:** by me, not by Miguel. Three rounds, no screenshots except one.
+
+- **A node dry run of the rules, 45 assertions, all pass.** Every branch of the
+  rollup including 17-done-1-not; `displayStatus` in both directions; a flagged
+  Complete item; a Fixed record not flagging; a floor counting units and not
+  items; a waiting edit painting and a held edit not painting; one key holding
+  one job; eleven buildings opened keeping ten; a copy with an unsent edit never
+  dropped; and the five-number building rollup, including the case the fifth
+  number exists for.
+- **Against the live web app**, a fresh project `ZZ 0.2 Step 2 Test`: 17
+  assertions on the `get-project` shape and the `list-projects` numbers, all
+  pass.
+- **In Chrome, against the live backend**, on all three screens: Buildings drew
+  its row with the count line and the correct Not Started pill; the Building
+  screen drew both floors, and a waiting edit moved unit 101's dot and bar while
+  a held edit left unit 102 alone and gave it the corner badge; floor marks
+  appeared when the floor closed and went when it opened; the Unit screen drew
+  **14 items instantly from the copy with no spinner and no header flash**, the
+  dropdown held three values, and a tap landed on the shelf and painted. Then
+  with `fetch` broken and `navigator.onLine` false: with a copy it drew all 14
+  items under `Offline. Last updated Sat 8:37 PM.`, and with the copy deleted it
+  read **No copy on this phone**, not a blank screen. One screenshot: colours
+  and layout correct.
+
+**Not landed:**
+
+- **`reference/PFC_Master_Template.xlsx` is still not updated**, and neither is
+  the live copy in Drive (`1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`). Plan
+  1.7. Unchanged since session 1. No code reads it.
+- Everything from step 3 onward.
+
+**Open:**
+
+- **One test Sheet for Miguel to trash: `ZZ 0.2 Step 2 Test`.** I did not delete
+  it. Nothing else was created this session.
+- **The greyed, untappable Complete is not built yet.** It is on step 3's list.
+  It cannot be reached today: no screen creates a record until Logger lands in
+  step 4, so no item can hold an open flag unless the Deficiencies tab is edited
+  by hand.
+- **The chip bar looks long on a desktop window.** The floor grid is four
+  columns of `1fr`, so at 1536px each chip is ~370px wide and its bar stretches
+  with it. On a phone the chips are ~77px and it reads as intended. Pre-existing
+  grid behaviour, not new. Worth one look on his phone.
+- **`.details-btn` and `.details-edit` are still in `theme.css`** with nothing
+  drawing them. Step 6 sweeps the theme classes.
+- PLAN CALL 3 still waits for step 4.
+- The item name in row 5 of the Tracker tab still wraps to two lines over an
+  89px column. Carried from session 1. Cosmetic.
+
+**Next:** start step 3 — `save-batch` on the server with the cache-clear line,
+the drain with its backoff, the hold rules, the sync bar, the Unit marks and the
+red card, the Outbox window, and the greyed Complete. **Step 3 ends at the first
+of the two test rounds, and it is the gate: do not start step 5 before it
+reports back.** Delete `localOnlyNote()` in the same step.
