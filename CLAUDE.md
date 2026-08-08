@@ -208,6 +208,22 @@ Current: PFC Control `0.1.2`. Camera app `0.1.2`.
 
 `CACHE_NAME` in `control/sw.js` carries the version, as `pfc-control-0.1.2`. Raise it on every release. Phones keep serving old files until it changes.
 
+**When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
+releases in one evening. Ship a `0.1.x` only when the defect **costs someone
+time every day**, or when it **blocks releasing at all**. Everything else waits
+for the next MINOR, where the screen is usually being rewritten anyway.
+
+The reason is the overhead, not the fix. A release costs a push, a Pages build,
+a `CACHE_NAME` bump you must remember, and a phone update cycle that can go
+wrong. That cost is the same for a one word fix as for a hundred line one.
+
+The three releases that set the rule:
+- `0.1.1` renamed a header Miguel reads every day. Daily friction. Shipped.
+- `0.1.2` fixed the update path itself. Nothing could ship until it landed.
+  Shipped.
+- The loading header flash annoys for 200ms and costs the crew nothing. **Held
+  for 0.2**, and written into the 0.2 map's Notes instead.
+
 Two exceptions, both deliberate:
 - `Hub/Log/app_v1.html` and `app_v2.html` keep their names. There `v1` and `v2` mean a second attempt at one file, not a release. The live app links to them.
 - The browser storage key `pfc.control.v1.local` keeps its name. It is an identifier, not a label. Renaming it would orphan changes already saved on a crew phone.
