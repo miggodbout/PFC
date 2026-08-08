@@ -17,6 +17,10 @@
   --surface-1: #171514;   /* cards, rows, inputs */
   --surface-2: #1D1A18;   /* unit chips, dropdown panel */
 
+  /* The press flash. Painted over whatever background a control already
+     has, so one value covers a dark card and an orange button. */
+  --press-tint: rgba(255, 255, 255, 0.07);
+
   /* Accents */
   --accent:       #DE7452;   /* primary, PFC Control orange */
   --accent-2:     #A47263;   /* secondary, section labels */
@@ -117,9 +121,34 @@ button {
   cursor: pointer;
 }
 
-/* One press effect, used on everything you can tap. */
-.press { transition: transform 120ms ease, opacity 120ms ease; }
-.press:active { transform: scale(0.95); opacity: 0.75; }
+/* One press effect, used on everything you can tap.
+
+   THE PRESS MUST NEVER MOVE THE CONTROL. This is a hit-target rule, not a
+   taste one. A transform on :active shrinks the box about its own centre,
+   so both edges pull inward the moment you press. A click only fires when
+   the press and the release land on the SAME element — so a release on an
+   edge that has just moved away goes to the card behind instead, and the
+   handler never runs. The centre never moves, so the middle of a control
+   keeps working while its edges are dead.
+
+   0.2 step 2 shipped scale(0.95) here. On a full-width control the dead
+   band is 2.5% of the width on each side, which is 9px on a phone and
+   more than 15px on a desktop card — wide enough to swallow the whole
+   22px checkbox on Admin's Create form and the caret on a floor header.
+   Both sit hard against an edge. Both read as "only the label is
+   tappable". Paint only from here on: no transform, no margin, no width.
+
+   An inset shadow with a large spread floods the padding box, so it tints
+   whatever background is already there, sits under the text, follows the
+   border radius, and changes no geometry.
+
+   On instantly, out over 160ms. A press that fades IN reads as lag, and
+   lag on a job site reads as a dead app. */
+.press { transition: box-shadow 160ms ease; }
+.press:active {
+  box-shadow: inset 0 0 0 999px var(--press-tint);
+  transition: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -713,6 +742,10 @@ select.input {
   padding: 0 4px;
   width: 100%;
   text-align: left;
+  /* The row draws no background of its own. The radius exists only to
+     round the press flash, which would otherwise be a hard-edged band
+     across a rounded card. */
+  border-radius: 10px;
 }
 .check-box {
   width: 22px; height: 22px;
