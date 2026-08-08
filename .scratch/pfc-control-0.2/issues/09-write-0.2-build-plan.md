@@ -1,9 +1,25 @@
 # Write the 0.2 build plan
 
 Type: task
-Status: open — **takeable. Nothing blocks it.**
-Blocked by: **nothing. `18` resolved 2026-08-08**, both passes done. Every 0.2
+Status: **resolved 2026-08-08. The map is closed.**
+Asset: [`../BUILD-PLAN.md`](../BUILD-PLAN.md)
+Blocked by: nothing. `18` resolved 2026-08-08, both passes done. Every 0.2
 ticket is now resolved (13, 14, 15, 17, 18 and 19 all resolved 2026-08-08).
+
+> **Resolved 2026-08-08. The plan is `../BUILD-PLAN.md`, marked LOCKED.**
+> Eleven sections: the Sheet and the data shape, the backend actions, the three
+> phone stores, the marks, the screens file by file, a six-step build order with
+> a test after each step, the login and Archive seams, the release checklist,
+> the known ceilings, and the four PLAN CALLs.
+>
+> **Every item on this ticket landed in the plan.** The small items are in
+> sections 5.2, 5.3, 5.8, 5.10 and 9. `14`'s five handovers are in 2.4, 3.3, 5.2
+> and 5.4. All nine `code-inventory.md` findings are placed. The stale
+> `update-item` comment block is a named deletion in section 2.7.
+>
+> **Four decisions were left to the plan by name and the plan took them**, listed
+> in its section 11. Only one needs Miguel: **pin Save to the bottom of the
+> Logger form**, one line at build time, gating nothing. See the Answer below.
 
 **This is the last ticket on the map.** Read `../supersessions.md` (47 entries),
 `../template-changes.md` (FINAL as a whole) and `../code-inventory.md` first, in
@@ -151,3 +167,72 @@ file under the finding number given.
   when it bites, so it is not discovered on site.
 - **The Hub ships seven cards in a two-across grid**, leaving one alone on the
   last row. Cosmetic. Worth seeing on a phone before it ships.
+
+---
+
+## Answer, 2026-08-08
+
+**`../BUILD-PLAN.md`, marked LOCKED.** It is the destination of the map. A build
+session reads that one file and does not have to read nineteen tickets.
+
+### What was gathered, and from where
+
+Nothing on this ticket was decided by argument. The work was reading the corpus in
+the order `18` set — `supersessions.md`, then `template-changes.md`, then
+`code-inventory.md` — and then the nine tickets that hold build-level mechanics:
+`02`, `03`, `04`, `05`, `06`, `11`, `13`, `15`, `19`. `07`, `08`, `10`, `12`, `14`,
+`16`, `17` and `18` were taken from the map's gists and this ticket's own handover
+sections, which carry their build-facing content in full.
+
+The plan states in its own section 0 that **where a ticket disagrees with it, the
+plan wins**, because it was written last and from `supersessions.md`.
+
+### The one check that was worth running
+
+`code-inventory.md` measured the code at commit `cf68d6d`, and this session ran at
+`b12f77c`. **`git diff cf68d6d HEAD -- control/` is empty**, so every line number
+the inventory recorded still holds and the plan cites them directly. Three were
+spot-read anyway — the `update-item` block at `Code.js:1300`, `emptyHtml()` at
+`tracker/index.html:74`, and `CACHE_NAME` at `sw.js:15`. All three matched.
+
+### The four PLAN CALLs
+
+The plan carries four decisions no ticket had made. They are listed together in
+its section 11 so they are easy to overturn.
+
+1. **`save-batch` down the JSONP fallback** — FINDING 4, the only thing on the
+   whole map that can lose a person's work. The ticket asked for a rule and
+   suggested slicing. The plan makes it exact: POST first, and on the fallback
+   path drain in **slices of 5**, measure the built address and **halve the slice
+   above 6,000 characters**, and hold a single oversized job with `retry:false`
+   and a named reason. It is never dropped and it sends normally the next time a
+   POST works.
+2. **An Outbox row does not tap through to its unit** — `05` left this open and
+   said the row names the unit and the item, which is enough to walk there. A
+   tap-through also has to decide what happens to the Outbox screen behind it.
+   Build the list; add it when somebody asks.
+3. **Save is pinned to the bottom of the Logger form** — the recommended answer
+   already written on `13`. **This is the only call that needs Miguel**, one line
+   on a phone at build time. The plan carries the second option too: Subtype and
+   Count on one row, and the place bar collapsing once a place is set.
+4. **The build order** — six steps, each ending somewhere you can stop, each with
+   what to test. Sheet and server first, then the local copy and the read-only
+   screens, then saving and the outbox, then records and Logger, then Admin, then
+   the finish. Records ride the outbox, so they come after it.
+
+### Two fog entries the plan absorbed
+
+Neither becomes a ticket, because the map closes here.
+
+- **Where Save sits on the Logger form** — now PLAN CALL 3.
+- **The Service Worker and `CACHE_NAME`** — the plan's section 5.11 says exactly
+  what changes (two `SHELL` lines and the version) and repeats what
+  `code-inventory.md` found: the `activate` handler already deletes old caches at
+  `sw.js:53-63`, and 0.2's data is in `localStorage`, which a Service Worker never
+  touches.
+
+### The map is closed
+
+`09` was the last open ticket. Every 0.2 decision is settled, written down, and
+gathered into one file. **No production code was written on this map**, which was
+the rule it set for itself in its Destination.

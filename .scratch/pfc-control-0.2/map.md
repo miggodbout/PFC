@@ -4,9 +4,16 @@ Labels: wayfinder:map
 
 ## Destination
 
+**REACHED, 2026-08-08. The plan is [`BUILD-PLAN.md`](BUILD-PLAN.md) and it is
+marked LOCKED. Every ticket is closed. Read the plan, not this map.**
+
 A locked build plan for PFC Control 0.2. This map closes when every 0.2 decision
 is settled and written down, ready to hand to one build session. No production
-code is written on this map.
+code is written on this map — and none was.
+
+**What the map cost and what it produced:** nineteen tickets, three spec files
+(`supersessions.md`, `template-changes.md`, `code-inventory.md`), three
+throwaway prototypes, two research notes, and one build plan.
 
 ## Notes
 
@@ -502,7 +509,30 @@ sun and colour blindness and hue does not:
   advertises the deleted `update-item` action, because this map writes no
   production code. `09` must fold that deletion into the plan.
 
+- [Write the 0.2 build plan](issues/09-write-0.2-build-plan.md) — **the map is
+  closed.** The plan is [`BUILD-PLAN.md`](BUILD-PLAN.md), marked LOCKED: the Sheet
+  and the data shape, the backend actions, the three phone stores, the marks, the
+  screens file by file, a six-step build order with a test after each step, the
+  login and Archive seams, the release checklist, the known ceilings. **Where a
+  ticket disagrees with the plan, the plan wins**, because it was written last and
+  from `supersessions.md`. Nothing was argued: the work was reading the corpus in
+  `18`'s order and placing every decision. **`git diff cf68d6d HEAD -- control/` is
+  empty**, so every line number `code-inventory.md` recorded still holds and the
+  plan cites them directly. **Four decisions no ticket had made were taken by the
+  plan** and listed together in its section 11: the JSONP drain rule for
+  `save-batch` — slices of 5, halve above 6,000 characters, hold a single
+  oversized job with `retry:false` — which is the only thing on this map that can
+  lose work; **no tap-through on an Outbox row** in 0.2; **Save pinned to the
+  bottom of the Logger form**, the one call that needs Miguel, one line at build
+  time, gating nothing; and the build order itself. Two fog entries were absorbed
+  rather than ticketed, since the map closes here: the Save position, and the
+  Service Worker.
+
 ## Not yet specified
+
+**Empty. The map is closed.** Every entry below is struck or absorbed into
+[`BUILD-PLAN.md`](BUILD-PLAN.md). Nothing here is owed to 0.2.
+
 
 - ~~Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.~~ **Settled by
@@ -530,8 +560,10 @@ sun and colour blindness and hue does not:
   a grammar per item, a screen to edit it, and a way to correct a wrong read. That
   is the four-field form `17` turned down, wearing a coat. Logged in
   `.scratch/0.3-backlog.md`.
-- How the Service Worker and `CACHE_NAME` handling change once the app holds
-  real data locally. Today the Service Worker caches the app shell only.
+- ~~How the Service Worker and `CACHE_NAME` handling change once the app holds
+  real data locally.~~ **Absorbed into the build plan, sections 5.11 and 9, on
+  2026-08-08.** Two `SHELL` lines and the version. Nothing else.
+  Today the Service Worker caches the app shell only.
   **Narrowed on 2026-08-08 by `code-inventory.md`:** the one fact recorded here
   before — that `sw.js` must delete old Cache API entries in its `activate`
   handler — **is already done**, at `sw.js` lines 53 to 63. Every cache whose
@@ -546,7 +578,11 @@ sun and colour blindness and hue does not:
   says "No photo in 0.2", the Decisions entry above repeats it, and
   `template-changes.md` section 7 is FINAL with **no photo column**. Nothing is
   open. A later version is free to revisit it, which is not a 0.2 question.
-- **Where Save sits on the Logger form when both `Other` boxes open.** Raised by
+- ~~**Where Save sits on the Logger form when both `Other` boxes open.**~~
+  **Absorbed into the build plan on 2026-08-08 as PLAN CALL 3, section 5.7.** Save
+  is pinned to the bottom of the screen. **It is the one thing in the whole plan
+  that needs Miguel** — one line, on a phone, at build time. It gates nothing.
+  Raised by
   `13` on 2026-08-08, when Miguel gave the Subtype list its own `Other` text box.
   `06` budgeted six controls and warned that more pushes Save under the keyboard.
   `17` took it to seven. The worst case is now nine, when Subtype-Other and
