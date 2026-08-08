@@ -2,12 +2,66 @@
 
 Type: grilling
 Status: open
-Blocked by: 11, 12
+Blocked by: none — 11 and 12 both resolved 2026-08-07
 
 ## Question
 
 When does a whole building stop being live work, and what does the Archive door
 show?
+
+---
+
+## Read this first — the model below was wrong, corrected 2026-08-08
+
+Miguel corrected this ticket during `06-deficiency-entry-screen`. Everything
+under "Why it is its own ticket" was written from the wrong idea of what Archive
+is, and it is kept only so the correction reads clearly.
+
+**This ticket assumed Archive was a list of finished buildings.** It is not.
+**Archive is the history door**, and it also happens to know which buildings are
+finished. Fixed records go there whether the building is finished or not.
+
+| Case | What Archive holds |
+|---|---|
+| Building still active in Tracking | its fixed records, so Tracker stays lean |
+| Building 100% complete | every fix ever done to it |
+| Finished, then a GC finds a problem months later | it must be possible to pull the building back out and log against it |
+
+**Settled already, on 2026-08-08, so this ticket does not reopen them:**
+
+- **Shape: a tree, like Tracker.** Archive, Building, Floor, Unit, then the
+  closed records on each item.
+- **Active and closed sit in one list**, each row tagged `ACTIVE` or `CLOSED`.
+  No second screen and no separate door.
+- **Nothing moves.** A fixed record keeps its row in the Deficiencies tab. "Moves
+  to Archive" means Tracker stops drawing it and Archive starts drawing it. One
+  store, two views. The Sheet gets no Archive tab, as `01` ruled — Miguel filters
+  the state column when he reads it directly.
+- **An active building appears in both doors at once.** Tracking answers what is
+  wrong now. Archive answers what was fixed.
+
+**The door itself is 0.3.** Miguel proposed a guideline on 2026-08-08 — aim for
+one new window per MINOR release — and called it a suggestion against scope
+creep, not a law. Archive was argued against it and lost on its own size. 0.2
+spends its window on Logger.
+0.2 therefore has no on-site history at all, which Miguel accepted because the
+crew does not start using the app until 0.4 or 0.5.
+
+### What is left for this ticket, and it is smaller now
+
+**The rule and the seam. Not the door.**
+
+- The rule, which `11` already shrank to one sentence: a building is closed when
+  it reads Complete.
+- The seams 0.2 must leave, listed in `06`: `get-project` returns closed records
+  as well as open ones, the Hub carries a greyed `Archive` card, and a dropped
+  local copy can be downloaded again on demand.
+- Whether a building holding a waiting or held edit leaves the Tracking list.
+
+The points below still apply where they touch the rule. The ones about what the
+door shows are answered above or belong to 0.3.
+
+---
 
 Miguel raised this on 2026-08-07, during `03-local-copy-rules`. His words: once
 every single entry for a whole building is Complete, the building should leave

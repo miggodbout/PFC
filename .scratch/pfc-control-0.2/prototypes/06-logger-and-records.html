@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PROTOTYPE — Logger form and record list (ticket 06)</title>
+
+<!-- The real PFC Control theme. Everything here uses the real classes except
+     the prototype scaffolding at the bottom of this file. -->
+<link rel="stylesheet" href="../../../control/shared/theme.css">
+
+<style>
+/* =====================================================================
+   THROWAWAY PROTOTYPE — .scratch/pfc-control-0.2/prototypes/
+   =====================================================================
+   Question (ticket 06): how does a person add, correct and close a
+   deficiency record on a phone?
+
+   Two screens, behind two doors, as ticket 12 settled:
+     LOGGER  — one form. Writes records. Never closes one.
+     TRACKER — the unit screen. Closes records. Holds Progress.
+
+   The blue bar at the bottom is prototype scaffolding. Every toggle on it
+   was an open question. All of them are now settled, and each one starts on
+   the answer Miguel chose on 2026-08-08. The losing side is left switchable
+   so the pick can still be compared.
+
+   Settled:
+     ORDER    Count, then Reason
+     TYPE     a toggle at the top, held for the visit
+     PLACE    building and phase remembered, unit never
+     RECORDS  tap the flag to open. A phase-level Waiting record obeys the
+              same rule as an item — the phase flag is a button too.
+     DETAILS  the old free-text box is dropped
+     FIXED    a fixed record leaves Tracker. It stays greyed with Undo
+              until you leave the unit, then it is gone from the phone.
+              Archive is where it goes, and Archive is 0.3.
+     AFTER    offer Complete once the last record is fixed
+
+   Fake data. Fake server. Nothing is saved. Do not build this into the app.
+   ===================================================================== */
+
+
+/* ── SYNC BAR — settled in ticket 05, rides on every screen ────────── */
+
+.sync-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 16px 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+  width: calc(100% - 32px);
+  text-align: left;
+}
+.sync-bar .t { flex: 1; font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.sync-bar .go { font-size: 12px; font-weight: 700; color: var(--fg-6); }
+.sync-bar--off { background: rgba(255,255,255,0.05); border-color: var(--line-menu); }
+.sync-bar--off .t { color: var(--fg-4); }
+
+.pend-ring {
+  display: block;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-top-color: var(--accent);
+  animation: spin 900ms linear infinite;
+  flex-shrink: 0;
+}
+.pend-ring--sm { width: 10px; height: 10px; border-width: 1.6px; }
+.off-glyph { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--fg-7); flex-shrink: 0; }
+
+
+/* ── LOGGER: the place bar ────────────────────────────────────────── */
+/* Set once, then left alone. Ticket 12: Miguel stands in one unit for a
+   while, so the place must not be asked again for every problem. */
+
+.place {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 16px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-menu);
+  width: calc(100% - 32px);
+  text-align: left;
+}
+/* display:block matters on every span below. The rows are built from spans
+   so a button can hold them, and an inline span ignores margin-top. */
+.place-main { display: block; flex: 1; min-width: 0; }
+.place-t { display: block; font-size: 15.5px; font-weight: 700; color: var(--fg-2); }
+.place-s { display: block; font-size: 12px; color: var(--fg-6); margin-top: 3px; }
+.place-change {
+  flex-shrink: 0;
+  padding: 8px 13px; border-radius: 10px;
+  border: 1px solid var(--accent-chipbd);
+  color: var(--accent);
+  font-size: 12.5px; font-weight: 700;
+}
+.place--empty { border-color: var(--accent-line); background: var(--accent-soft); }
+.place--empty .place-t { color: var(--accent); }
+
+
+/* ── LOGGER: the record fields ────────────────────────────────────── */
+
+.form-card {
+  margin: 0 16px;
+  padding: 16px 14px;
+  border-radius: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-card);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.form-card--off { opacity: 0.35; pointer-events: none; }
+
+/* The hero field. Ticket 01: "the important part is what replacement is
+   needed." It is the only field drawn at full size. */
+.need-input { height: 54px; font-size: 17px; font-weight: 600; }
+
+/* Suggestion chips. Ticket 15 owns where the list comes from. Here they
+   are drawn as if they already work. */
+.sugg { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.sugg::-webkit-scrollbar { display: none; }
+.sugg button {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 11px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+  color: var(--accent);
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap;
+}
+.sugg button .seed { color: var(--fg-7); font-weight: 600; font-size: 11px; margin-left: 6px; }
+
+/* Count. Big targets, because a glove misses a small one. */
+.count { display: flex; align-items: center; gap: 0; }
+.count button {
+  width: 56px; height: 48px;
+  border: 1px solid var(--line-input);
+  background: var(--surface-2);
+  color: var(--fg-2);
+  font-size: 22px; font-weight: 700;
+}
+.count button:first-child { border-radius: 12px 0 0 12px; }
+.count button:last-child  { border-radius: 0 12px 12px 0; }
+.count .n {
+  width: 62px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-top: 1px solid var(--line-input);
+  border-bottom: 1px solid var(--line-input);
+  background: var(--surface-1);
+  font-size: 18px; font-weight: 700; color: var(--fg-2);
+}
+.count-wrap { display: flex; align-items: flex-end; gap: 12px; }
+.count-wrap .field { flex: 1; min-width: 0; }
+
+
+/* ── LOGGER: the "logged here" list ───────────────────────────────── */
+
+.logged { margin: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.logged-head {
+  font-size: 13px; font-weight: 700;
+  color: var(--accent-2);
+  text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 2px 2px 0;
+}
+.lg {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-card);
+}
+.lg-main { display: block; flex: 1; min-width: 0; }
+.lg-t { display: block; font-size: 14.5px; font-weight: 700; color: var(--fg-3); }
+.lg-s { display: block; font-size: 12px; color: var(--fg-6); margin-top: 3px; }
+.lg-x {
+  flex-shrink: 0;
+  padding: 7px 12px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--fg-6);
+  font-size: 12px; font-weight: 700;
+}
+.lg--gone { opacity: 0.45; }
+.lg--gone .lg-t { text-decoration: line-through; }
+.tick { color: var(--good); font-size: 14px; font-weight: 700; flex-shrink: 0; }
+
+
+/* ── The place sheet, opened by [change] ──────────────────────────── */
+
+.scrim {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.62);
+  display: flex; align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line-menu);
+  border-radius: 18px 18px 0 0;
+  padding: 18px 16px calc(22px + var(--btm-safe));
+  display: flex; flex-direction: column; gap: 16px;
+  max-height: 82vh; overflow-y: auto;
+}
+.sheet-title { font-size: 18px; font-weight: 700; color: var(--fg-1); }
+.found { font-size: 12.5px; color: var(--good); }
+.found--bad { color: var(--danger); }
+
+
+/* ── TRACKER: the flag chip and the record list ───────────────────── */
+
+.flag-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(224,82,82,0.16);
+  border: 1px solid rgba(224,82,82,0.40);
+  color: #F08080;
+  font-size: 12px; font-weight: 700;
+}
+.flag-chip--wait {
+  background: rgba(91,141,239,0.18);
+  border-color: rgba(91,141,239,0.40);
+  color: #8CB0FF;
+}
+.flag-chip .caret { margin-left: 1px; }
+
+.recs {
+  margin-top: 9px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.rec {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  background: rgba(224,82,82,0.09);
+  border: 1px solid rgba(224,82,82,0.28);
+}
+.rec--wait { background: rgba(91,141,239,0.10); border-color: rgba(91,141,239,0.30); }
+.rec--done { background: rgba(255,255,255,0.03); border-color: var(--line-soft); opacity: 0.7; }
+.rec-main { display: block; flex: 1; min-width: 0; }
+.rec-need { display: block; font-size: 15px; font-weight: 700; color: var(--fg-3); }
+.rec-need .qty { color: var(--fg-6); font-weight: 600; margin-left: 6px; }
+.rec-why { display: block; font-size: 12px; color: var(--fg-6); margin-top: 3px; }
+.rec--done .rec-need { text-decoration: line-through; color: var(--fg-6); }
+.rec-fix {
+  flex-shrink: 0;
+  min-height: 40px; padding: 0 15px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13.5px; font-weight: 700;
+}
+.rec-done-mark { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--fg-7); }
+
+/* The undo on a record fixed a moment ago. Quiet, because the normal case
+   is that you meant it and you never touch this. */
+.rec-undo {
+  flex-shrink: 0;
+  min-height: 40px; padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--fg-6);
+  font-size: 12.5px; font-weight: 700;
+}
+
+.rec-all {
+  min-height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px; font-weight: 700;
+}
+.rec-more {
+  align-self: flex-start;
+  padding: 6px 2px;
+  font-size: 12.5px; font-weight: 700;
+  color: var(--fg-6);
+}
+
+/* The offer that appears after the last record on an item is fixed. */
+.offer {
+  margin-top: 9px;
+  padding: 12px;
+  border-radius: 11px;
+  background: rgba(76,175,109,0.10);
+  border: 1px solid rgba(76,175,109,0.32);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.offer .t { font-size: 13px; color: #7FD79A; line-height: 1.45; }
+.offer .acts { display: flex; gap: 8px; }
+.offer .acts button { min-height: 40px; padding: 0 15px; border-radius: 10px; font-size: 13.5px; font-weight: 700; }
+.offer .yes { background: var(--good); color: #0D0D0D; }
+.offer .no  { border: 1px solid rgba(255,255,255,0.18); color: var(--fg-5); }
+
+/* Blocked Complete row — settled in ticket 05. Greyed, not removed. */
+.status-opt--off { opacity: 0.45; cursor: default; }
+.status-opt--off .txt { font-weight: 500; }
+.status-opt-note {
+  padding: 8px 14px 10px;
+  font-size: 11px; line-height: 1.4;
+  color: var(--fg-6);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* A phase can hold a Waiting record of its own. Ticket 01 allows it. */
+.phase-head { align-items: center; }
+.phase-recs { margin: 0 0 4px; }
+
+
+/* ── PROTOTYPE SCAFFOLDING — not part of any design ────────────────── */
+
+/* On a desktop the screen would run to 1500px wide and prove nothing. This
+   holds it at phone width. On a phone it does nothing at all. */
+#app { max-width: 420px; margin: 0 auto; }
+
+.pt-pad { height: 210px; }
+
+/* A slab that stands in for the iOS keyboard, so the one-screen claim can
+   be tested on a desktop. On a real phone, tap the Needed box instead and
+   the real keyboard does the same job. */
+.pt-kbd {
+  position: fixed; left: 0; right: 0; z-index: 400;
+  height: 300px;
+  background: #1C1C1E;
+  border-top: 1px solid #3A3A3C;
+  display: flex; align-items: center; justify-content: center;
+  color: #48484A; font-size: 13px; font-weight: 700;
+  font-family: "Courier New", monospace;
+}
+
+.pt-switch {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+  background: #101820;
+  border-top: 2px solid #35C4FF;
+  padding: 7px 10px calc(7px + var(--btm-safe));
+  display: flex; flex-direction: column; gap: 6px;
+  font-family: "Courier New", monospace;
+}
+.pt-line { display: flex; align-items: center; gap: 6px; }
+.pt-line > .lbl { font-size: 9.5px; color: #6FA8C9; width: 58px; flex-shrink: 0; letter-spacing: 0.4px; }
+.pt-line button {
+  flex: 1;
+  padding: 6px 4px;
+  border-radius: 6px;
+  background: rgba(53,196,255,0.10);
+  border: 1px solid rgba(53,196,255,0.30);
+  color: #9FD8F5;
+  font-family: inherit;
+  font-size: 10px; font-weight: 700;
+}
+.pt-line button.on { background: #35C4FF; color: #06121A; border-color: #35C4FF; }
+.pt-fit { text-align: center; font-size: 10.5px; font-weight: 700; padding-top: 1px; }
+.pt-fit.ok  { color: #4CAF6D; }
+.pt-fit.bad { color: #F08080; }
+
+/* Desktop only: hold the fixed bars to the same phone column as #app.
+   This block must stay last, or the rules above win on equal weight. */
+@media (min-width: 460px) {
+  #app { border-left: 1px solid #262626; border-right: 1px solid #262626; min-height: 70vh; }
+  .pt-kbd, .pt-switch { width: 420px; left: 50%; right: auto; transform: translateX(-50%); }
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="pt-pad" id="pad"></div>
+<div class="pt-kbd hidden" id="kbd">iOS keyboard (stand-in)</div>
+<div class="pt-switch" id="switcher"></div>
+
+<script>
+/* =====================================================================
+   FAKE DATA
+   ===================================================================== */
+
+var BUILDINGS = [
+  { id: '1500main', name: '1500 Main St' },
+  { id: 'harbour',  name: 'Harbour View' }
+];
+
+/* Unit labels are not floor numbers. Ticket 12: the app matches the typed
+   text against the labels the local copy holds, and never assumes the
+   first digit is the floor. Harbour View proves it — its units are A1, A2. */
+var UNITS = {
+  '1500main': [
+    { label: '101', floor: 'Floor 1' }, { label: '102', floor: 'Floor 1' },
+    { label: '103', floor: 'Floor 1' }, { label: '104', floor: 'Floor 1' },
+    { label: '201', floor: 'Floor 2' }, { label: '202', floor: 'Floor 2' },
+    { label: '203', floor: 'Floor 2' }, { label: '204', floor: 'Floor 2' },
+    { label: '301', floor: 'Floor 3' }, { label: '302', floor: 'Floor 3' }
+  ],
+  'harbour': [
+    { label: 'A1', floor: 'Ground' }, { label: 'A2', floor: 'Ground' },
+    { label: 'B1', floor: 'Upper' },  { label: 'B2', floor: 'Upper' }
+  ]
+};
+
+/* Admin offers exactly three phases today. The items under them come from
+   the project, never from the code. */
+var PHASES = [
+  { key: 'doors', label: 'Doors & Windows', items: [
+      { key: 'int_doors',  label: 'Interior Doors' },
+      { key: 'closet_dr',  label: 'Closet Doors' },
+      { key: 'win_trim',   label: 'Window Trim' } ] },
+  { key: 'base', label: 'Baseboards', items: [
+      { key: 'baseboard',  label: 'Baseboard' },
+      { key: 'casing',     label: 'Casing' } ] },
+  { key: 'hw', label: 'Hardware & Accessories', items: [
+      { key: 'hardware',   label: 'Door Hardware' },
+      { key: 'closet_shf', label: 'Closet Shelving' } ] }
+];
+
+/* Ticket 01: the reason list follows the phase, not the item. */
+var REASONS = {
+  doors: ['Wrong Swing', 'Wrong Size', 'Wrong Type', 'Damaged', 'Warped', 'Missing', 'Other'],
+  base:  ['Wrong Size or Profile', 'Damaged', 'Warped', 'Missing', 'Other'],
+  hw:    ['Wrong Type', 'Wrong Finish', 'Damaged', 'Defective', 'Missing', 'Other']
+};
+var WAIT_REASONS = ['Waiting on Another Trade', 'Awaiting Delivery', 'Backordered', 'Site Not Ready', 'Other'];
+
+/* Ticket 15: a first-ever building gets a seed list. A seed outranks
+   nothing — a real past record always comes first. */
+var SEEDS = {
+  int_doors:  ['32" 6" RH', '30" 4" LH', '28" 4" RH', '60" bi-pass', '48" bi-fold', '30" pocket'],
+  closet_dr:  ['60" bi-pass', '48" bi-fold', '72" bi-pass'],
+  win_trim:   ['36x48 casing set', '24x36 casing set'],
+  baseboard:  ['4" MDF colonial', '5 1/4" MDF flat'],
+  casing:     ['2 3/4" MDF colonial'],
+  hardware:   ['passage lever, satin', 'privacy lever, satin', 'dummy lever, satin'],
+  closet_shf: ['8\' wire shelf', '4\' wire shelf']
+};
+
+var LABEL = { not_started: 'Not Started', in_progress: 'In Progress', complete: 'Complete' };
+var ORDER = ['not_started', 'in_progress', 'complete'];
+
+/* What the Sheet holds for unit 204, item by item. Set by hand, never
+   changed by a record. */
+var SHEET = {
+  int_doors: 'in_progress', closet_dr: 'complete', win_trim: 'not_started',
+  baseboard: 'complete',    casing: 'complete',
+  hardware:  'not_started', closet_shf: 'complete'
+};
+
+/* Records already on the phone for unit 204. */
+var seq = 100;
+var RECORDS = [
+  { id: 'r1', unit: '204', phase: 'doors', item: 'int_doors', type: 'def',
+    needed: '32" 6" RH', qty: 1, reason: 'Wrong Swing', other: '',
+    state: 'open', created: 'Aug 5', send: 'sent' },
+  { id: 'r2', unit: '204', phase: 'doors', item: 'int_doors', type: 'def',
+    needed: '30" 4" LH', qty: 2, reason: 'Damaged', other: '',
+    state: 'open', created: 'Aug 6', send: 'sent' },
+  { id: 'r3', unit: '204', phase: 'doors', item: 'int_doors', type: 'def',
+    needed: '28" 4" RH', qty: 1, reason: 'Missing', other: '',
+    state: 'fixed', created: 'Jul 30', send: 'sent' },
+  { id: 'r4', unit: '204', phase: 'hw', item: 'hardware', type: 'wait',
+    needed: 'passage lever, satin', qty: 6, reason: 'Backordered', other: '',
+    state: 'open', created: 'Aug 6', send: 'sent' },
+  { id: 'r5', unit: '204', phase: 'base', item: null, type: 'wait',
+    needed: '', qty: 1, reason: 'Waiting on Another Trade', other: 'painters',
+    state: 'open', created: 'Aug 7', send: 'sent' }
+];
+
+
+/* =====================================================================
+   THE TOGGLES — every one of these is an open question on ticket 06
+   ===================================================================== */
+
+var V = {
+  screen:  'logger',       // logger | tracker
+  order:   'count',        // PICK: count = Count then Reason | reason = the other way
+  place:   'set',          // set = unit already chosen | cold = opened fresh today
+  kbd:     'off',          // off | on   (stand-in for the iOS keyboard)
+  list:    'tap',          // PICK: tap = opens on the flag | open = always open
+  after:   'offer',        // PICK: offer Complete after the last fix | silent
+  details: 'drop',         // PICK: drop the old free-text box | keep
+  net:     'online'        // online | offline
+};
+
+
+/* =====================================================================
+   THE LOGGER FORM — its own small state
+   ===================================================================== */
+
+var place = { building: '', unit: '', phase: '' };   // empty until set once
+var draft = { type: 'def', item: '', needed: '', qty: 1, reason: '', other: '' };
+var sheetOpen = false;
+var sheetDraft = null;
+var loggedHere = [];      // record ids saved in this visit, newest first
+
+
+/* =====================================================================
+   FAKE SENDING — the marks come from ticket 05, the rules from ticket 04
+   ===================================================================== */
+
+var sending = [];         // record ids on their way
+var sendTimer = null;
+
+function queueSend(id) {
+  sending.push(id);
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(drain, 1600);
+}
+
+function drain() {
+  if (V.net === 'offline') { sendTimer = setTimeout(drain, 1600); return; }
+  sending.forEach(function (id) {
+    var r = recById(id);
+    if (r) r.send = 'sent';
+  });
+  sending = [];
+  render();
+}
+
+function isSending(id) { return sending.indexOf(id) !== -1; }
+function recById(id) { for (var i = 0; i < RECORDS.length; i++) if (RECORDS[i].id === id) return RECORDS[i]; return null; }
+
+
+/* =====================================================================
+   RULES — ticket 11, worked out on the phone
+   ===================================================================== */
+
+/** Open records sitting on one item of unit 204. */
+function openOn(itemKey) {
+  return RECORDS.filter(function (r) {
+    return r.unit === '204' && r.item === itemKey && r.state === 'open';
+  });
+}
+
+/** Open Waiting records sitting on a whole phase, with no item. */
+function openOnPhase(phaseKey) {
+  return RECORDS.filter(function (r) {
+    return r.unit === '204' && r.phase === phaseKey && r.item === null && r.state === 'open';
+  });
+}
+
+/**
+ * Records closed during THIS visit to the unit, and only those.
+ * A record fixed last week is not on this screen at all — it belongs to
+ * Archive, which is 0.3 work. What is left here is an undo for a mis-tap:
+ * the row stays, greyed, until you leave the unit.
+ */
+var justFixed = {};       // record id -> true
+
+function closedOn(itemKey) {
+  return RECORDS.filter(function (r) {
+    return r.unit === '204' && r.item === itemKey && justFixed[r.id];
+  });
+}
+
+function closedOnPhase(phaseKey) {
+  return RECORDS.filter(function (r) {
+    return r.unit === '204' && r.phase === phaseKey && r.item === null && justFixed[r.id];
+  });
+}
+
+/**
+ * What the screen shows for one item.
+ * Store what is set. Display what is true: a stored Complete reads
+ * In Progress while an open flag sits on the item. Nothing is written.
+ */
+function shownStatus(itemKey) {
+  var stored = SHEET[itemKey];
+  if (stored === 'complete' && openOn(itemKey).length > 0) return 'in_progress';
+  return stored;
+}
+
+/** Ticket 11: unanimity or In Progress, counted. An open flag blocks Complete. */
+function rollup(itemKeys, phaseKey) {
+  if (itemKeys.length === 0) return { key: 'none', done: 0, total: 0 };
+  var done = 0, zero = 0, flags = 0;
+  itemKeys.forEach(function (k) {
+    var s = shownStatus(k);
+    if (s === 'complete') done++;
+    if (s === 'not_started') zero++;
+    flags += openOn(k).length;
+  });
+  if (phaseKey) flags += openOnPhase(phaseKey).length;
+
+  var key = 'in_progress';
+  if (done === itemKeys.length) key = flags > 0 ? 'in_progress' : 'complete';
+  else if (zero === itemKeys.length) key = 'not_started';
+  return { key: key, done: done, total: itemKeys.length };
+}
+
+
+/* =====================================================================
+   SMALL HELPERS
+   ===================================================================== */
+
+function esc(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function attr(t) { return esc(JSON.stringify(String(t))); }
+
+function phaseByKey(k) { for (var i = 0; i < PHASES.length; i++) if (PHASES[i].key === k) return PHASES[i]; return null; }
+function itemLabel(k) {
+  for (var i = 0; i < PHASES.length; i++)
+    for (var j = 0; j < PHASES[i].items.length; j++)
+      if (PHASES[i].items[j].key === k) return PHASES[i].items[j].label;
+  return '';
+}
+function buildingName(id) { for (var i = 0; i < BUILDINGS.length; i++) if (BUILDINGS[i].id === id) return BUILDINGS[i].name; return ''; }
+function findUnit(bid, text) {
+  var list = UNITS[bid] || [];
+  var want = String(text).trim().toLowerCase();
+  for (var i = 0; i < list.length; i++) if (list[i].label.toLowerCase() === want) return list[i];
+  return null;
+}
+
+var CARET = '<svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">' +
+            '<path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+
+/* =====================================================================
+   THE SYNC BAR — ticket 05, unchanged, on both screens
+   ===================================================================== */
+
+function syncBarHtml() {
+  if (sending.length === 0) return '';
+  var n = sending.length;
+  var word = n === 1 ? '1 edit' : n + ' edits';
+
+  if (V.net === 'offline') {
+    return '<button type="button" class="sync-bar sync-bar--off press">' +
+             '<span class="off-glyph"></span>' +
+             '<span class="t">Offline · ' + word + ' wait</span>' +
+             '<span class="go">Outbox &rsaquo;</span>' +
+           '</button>';
+  }
+  return '<button type="button" class="sync-bar press">' +
+           '<span class="pend-ring"></span>' +
+           '<span class="t">Saving ' + word + '…</span>' +
+           '<span class="go">Outbox &rsaquo;</span>' +
+         '</button>';
+}
+
+
+/* =====================================================================
+   SCREEN 1 — THE LOGGER
+   ===================================================================== */
+
+function loggerHtml() {
+  var set = !!(place.building && place.unit && place.phase);
+
+  return '' +
+    '<header class="hdr hdr--tight">' +
+      '<a class="hdr-back press" href="#" aria-label="Go back">' +
+        '<svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">' +
+        '<path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</a>' +
+      '<div class="hdr-titles"><h1 class="hdr-title">Log</h1>' +
+        '<div class="hdr-sub">Record a problem</div></div>' +
+      '<div class="hdr-spacer"></div>' +
+    '</header>' +
+
+    syncBarHtml() +
+    placeHtml(set) +
+    '<div style="height:12px"></div>' +
+    formHtml(set) +
+    loggedHtml() +
+    (sheetOpen ? placeSheetHtml() : '');
+}
+
+
+function placeHtml(set) {
+  /* Nothing remembered at all. A first-ever open, or a new phone. */
+  if (!place.building) {
+    return '<button type="button" class="place place--empty press" onclick="openPlace()">' +
+             '<span class="place-main">' +
+               '<span class="place-t">Choose where you are</span>' +
+               '<span class="place-s">Building, unit and phase. Asked once.</span>' +
+             '</span>' +
+             '<span class="place-change">Set</span>' +
+           '</button>';
+  }
+
+  /* The remembered case. The building and the phase come back on their own.
+     The unit never does — it changes every few minutes, and a wrong unit
+     writes a real door against the wrong door. */
+  if (!place.unit) {
+    return '<button type="button" class="place place--empty press" onclick="openPlace()">' +
+             '<span class="place-main">' +
+               '<span class="place-t">' + esc(buildingName(place.building)) + ' · ____</span>' +
+               '<span class="place-s">' + esc(phaseByKey(place.phase).label) + ' · unit not set</span>' +
+             '</span>' +
+             '<span class="place-change">set unit</span>' +
+           '</button>';
+  }
+  /* Two fixed lines, not one long one. The phase name can run to
+     "Hardware & Accessories", which wraps and moves the whole form down. */
+  var u = findUnit(place.building, place.unit);
+  return '<button type="button" class="place press" onclick="openPlace()">' +
+           '<span class="place-main">' +
+             '<span class="place-t">' + esc(buildingName(place.building)) + ' · ' +
+                esc(place.unit) + '</span>' +
+             '<span class="place-s">' + esc(phaseByKey(place.phase).label) +
+                (u ? ' · ' + esc(u.floor) : '') + '</span>' +
+           '</span>' +
+           '<span class="place-change">change</span>' +
+         '</button>';
+}
+
+
+function formHtml(set) {
+  var phase = set ? phaseByKey(place.phase) : PHASES[0];
+  var waiting = (draft.type === 'wait');
+
+  /* Ticket 12 left this open: a Waiting record may sit on a whole phase,
+     with no item. The Item dropdown carries that as its first row. */
+  var itemRows = '';
+  if (waiting) {
+    itemRows += '<option value="__phase__"' + (draft.item === '__phase__' ? ' selected' : '') + '>' +
+                'Whole phase — ' + esc(phase.label) + '</option>';
+  }
+  itemRows += '<option value=""' + (draft.item === '' ? ' selected' : '') + '>Choose an item…</option>';
+  itemRows += phase.items.map(function (it) {
+    return '<option value="' + esc(it.key) + '"' + (draft.item === it.key ? ' selected' : '') + '>' +
+           esc(it.label) + '</option>';
+  }).join('');
+
+  var reasons = waiting ? WAIT_REASONS : REASONS[phase.key];
+  var reasonRows = '<option value="">Choose a reason…</option>' +
+    reasons.map(function (r) {
+      return '<option value="' + esc(r) + '"' + (draft.reason === r ? ' selected' : '') + '>' + esc(r) + '</option>';
+    }).join('');
+
+  var itemField =
+    '<div class="field">' +
+      '<label class="field-label">Item</label>' +
+      '<select class="input" onchange="setDraft(\'item\', this.value)">' + itemRows + '</select>' +
+    '</div>';
+
+  var neededField =
+    '<div class="field">' +
+      '<label class="field-label">Needed' + (waiting ? ' <span style="color:var(--fg-7);font-weight:600">— optional</span>' : '') + '</label>' +
+      '<input class="input need-input" id="need" placeholder=\'ex: 32" 6" RH\' ' +
+             'value="' + esc(draft.needed) + '" ' +
+             'oninput="setDraft(\'needed\', this.value)">' +
+      suggHtml() +
+    '</div>';
+
+  var countField =
+    '<div class="field" style="flex:0 0 auto">' +
+      '<label class="field-label">Count</label>' +
+      '<div class="count">' +
+        '<button type="button" class="press" onclick="bumpQty(-1)">−</button>' +
+        '<div class="n">' + draft.qty + '</div>' +
+        '<button type="button" class="press" onclick="bumpQty(1)">+</button>' +
+      '</div>' +
+    '</div>';
+
+  var reasonField =
+    '<div class="field">' +
+      '<label class="field-label">Reason</label>' +
+      '<select class="input" onchange="setDraft(\'reason\', this.value)">' + reasonRows + '</select>' +
+      (draft.reason === 'Other'
+        ? '<input class="input input--sm" placeholder="Say what it is" value="' + esc(draft.other) + '" ' +
+                 'oninput="setDraft(\'other\', this.value)">'
+        : '') +
+    '</div>';
+
+  /* The open question: does the Reason belong above the Count? */
+  var pair = (V.order === 'count')
+    ? countField + reasonField
+    : reasonField + countField;
+
+  return '<div class="form-card' + (set ? '' : ' form-card--off') + '">' +
+
+    '<div class="field">' +
+      '<label class="field-label">Type</label>' +
+      '<div class="seg">' +
+        '<button type="button" class="press" aria-pressed="' + (!waiting) + '" onclick="setType(\'def\')">Deficiency</button>' +
+        '<button type="button" class="press" aria-pressed="' + waiting + '" onclick="setType(\'wait\')">Waiting</button>' +
+      '</div>' +
+    '</div>' +
+
+    itemField +
+    neededField +
+    pair +
+
+    '<button type="button" class="btn btn-primary press" id="save" onclick="saveRecord()">Save</button>' +
+  '</div>';
+}
+
+
+/**
+ * Suggestion chips. Ticket 15 owns where the list comes from; this draws
+ * it as if it works. Past records under the same item come first, then the
+ * seed list. Typing filters them.
+ */
+function suggHtml() {
+  var key = draft.item;
+  if (!key || key === '__phase__') return '';
+
+  var past = [];
+  RECORDS.forEach(function (r) {
+    if (r.item === key && r.needed && past.indexOf(r.needed) === -1) past.push(r.needed);
+  });
+  var seed = (SEEDS[key] || []).filter(function (s) { return past.indexOf(s) === -1; });
+
+  var typed = draft.needed.trim().toLowerCase();
+  var list = past.map(function (t) { return { t: t, seed: false }; })
+       .concat(seed.map(function (t) { return { t: t, seed: true }; }))
+       .filter(function (o) { return !typed || o.t.toLowerCase().indexOf(typed) !== -1; })
+       .slice(0, 4);
+
+  if (list.length === 0) return '';
+
+  return '<div class="sugg">' + list.map(function (o) {
+    return '<button type="button" class="press" onclick="pickSugg(' + attr(o.t) + ')">' +
+             esc(o.t) + (o.seed ? '<span class="seed">seed</span>' : '') +
+           '</button>';
+  }).join('') + '</div>';
+}
+
+
+/**
+ * What was logged in this visit. Ticket 12: this list can Cancel a record,
+ * because a typo made ten seconds ago must be undone here. It can never
+ * mark one Fixed — a repair belongs to Tracker.
+ */
+function loggedHtml() {
+  if (loggedHere.length === 0) return '';
+  var rows = loggedHere.map(function (id) {
+    var r = recById(id);
+    if (!r) return '';
+    var gone = (r.state === 'cancelled');
+    var where = r.item ? itemLabel(r.item) : 'Whole phase — ' + phaseByKey(r.phase).label;
+
+    var mark = gone
+      ? '<span class="rec-done-mark">Cancelled</span>'
+      : (isSending(r.id)
+          ? (V.net === 'offline' ? '<span class="off-glyph"></span>' : '<span class="pend-ring pend-ring--sm"></span>')
+          : '<span class="tick">✓</span>');
+
+    return '<div class="lg' + (gone ? ' lg--gone' : '') + '">' +
+             '<span class="lg-main">' +
+               '<span class="lg-t">' + esc(where) + (r.needed ? ' · ' + esc(r.needed) : '') +
+                 '<span style="color:var(--fg-6);font-weight:600"> ×' + r.qty + '</span></span>' +
+               '<span class="lg-s">' + esc(r.reason) + (r.other ? ' · ' + esc(r.other) : '') + '</span>' +
+             '</span>' +
+             mark +
+             (gone ? '' : '<button type="button" class="lg-x press" onclick="cancelRec(' + attr(r.id) + ')">Cancel</button>') +
+           '</div>';
+  }).join('');
+
+  return '<div style="height:18px"></div>' +
+         '<div class="logged">' +
+           '<div class="logged-head">Logged here</div>' + rows +
+         '</div>';
+}
+
+
+function placeSheetHtml() {
+  var d = sheetDraft;
+  var u = d.building && d.unit ? findUnit(d.building, d.unit) : null;
+
+  var found = '';
+  if (d.unit.trim()) {
+    found = u
+      ? '<div class="found">Found in ' + esc(u.floor) + '.</div>'
+      : '<div class="found found--bad">No unit ' + esc(d.unit) + ' in this building.</div>';
+  }
+
+  return '<div class="scrim" onclick="closePlace()">' +
+    '<div class="sheet" onclick="event.stopPropagation()">' +
+      '<div class="sheet-title">Where are you?</div>' +
+
+      '<div class="field">' +
+        '<label class="field-label">Building</label>' +
+        '<select class="input" onchange="setPlace(\'building\', this.value)">' +
+          '<option value="">Choose a building…</option>' +
+          BUILDINGS.map(function (b) {
+            return '<option value="' + esc(b.id) + '"' + (d.building === b.id ? ' selected' : '') + '>' +
+                   esc(b.name) + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+
+      '<div class="field">' +
+        '<label class="field-label">Unit</label>' +
+        '<input class="input" inputmode="text" placeholder="ex: 204" value="' + esc(d.unit) + '" ' +
+               'oninput="setPlace(\'unit\', this.value)">' +
+        found +
+      '</div>' +
+
+      '<div class="field">' +
+        '<label class="field-label">Phase</label>' +
+        '<select class="input" onchange="setPlace(\'phase\', this.value)">' +
+          '<option value="">Choose a phase…</option>' +
+          PHASES.map(function (p) {
+            return '<option value="' + esc(p.key) + '"' + (d.phase === p.key ? ' selected' : '') + '>' +
+                   esc(p.label) + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+
+      '<button type="button" class="btn btn-primary press" onclick="applyPlace()"' +
+              (u && d.phase ? '' : ' disabled') + '>Use this place</button>' +
+      '<button type="button" class="btn btn-ghost press" onclick="closePlace()">Cancel</button>' +
+    '</div>' +
+  '</div>';
+}
+
+
+/* ── LOGGER ACTIONS ───────────────────────────────────────────────── */
+
+function openPlace() {
+  sheetDraft = { building: place.building || '1500main', unit: place.unit, phase: place.phase };
+  sheetOpen = true;
+  render();
+}
+function closePlace() { sheetOpen = false; render(); }
+function setPlace(field, value) {
+  sheetDraft[field] = value;
+  if (field === 'building') sheetDraft.unit = '';
+  render();
+}
+function applyPlace() {
+  place = { building: sheetDraft.building, unit: sheetDraft.unit.trim(), phase: sheetDraft.phase };
+  /* A new place starts a new kind of work, so the Type toggle goes back to
+     Deficiency. It holds across saves inside one place, and no further. */
+  draft = { type: 'def', item: '', needed: '', qty: 1, reason: '', other: '' };
+  sheetOpen = false;
+  render();
+}
+
+function setType(type) {
+  draft.type = type;
+  draft.reason = '';                                  // the two lists never share a value
+  if (type === 'def' && draft.item === '__phase__') draft.item = '';
+  render();
+}
+function setDraft(field, value) {
+  draft[field] = value;
+  if (field === 'needed') { renderSuggOnly(); return; }   // typing must not redraw the box
+  render();
+}
+function pickSugg(text) { draft.needed = text; render(); }
+function bumpQty(n) { draft.qty = Math.max(1, draft.qty + n); render(); }
+
+function saveRecord() {
+  var ok = draft.item && draft.reason &&
+           (draft.type === 'wait' || draft.needed.trim());
+  if (!ok) { alertLine('Fill the item, the needed line and the reason.'); return; }
+
+  var id = 'n' + (++seq);
+  RECORDS.push({
+    id: id, unit: place.unit, phase: place.phase,
+    item: draft.item === '__phase__' ? null : draft.item,
+    type: draft.type,
+    needed: draft.needed.trim(), qty: draft.qty,
+    reason: draft.reason, other: draft.other,
+    state: 'open', created: 'today', send: 'waiting'
+  });
+  loggedHere.unshift(id);
+  queueSend(id);
+
+  /* Ticket 12: the place stays, the record fields clear. */
+  draft = { type: draft.type, item: '', needed: '', qty: 1, reason: '', other: '' };
+  render();
+}
+
+function cancelRec(id) {
+  var r = recById(id);
+  if (r) r.state = 'cancelled';
+  render();
+}
+
+function alertLine(text) {
+  var el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = 'position:fixed;left:16px;right:16px;bottom:230px;z-index:600;padding:12px 14px;' +
+    'border-radius:12px;background:rgba(224,82,82,0.18);border:1px solid rgba(224,82,82,0.45);' +
+    'color:#F08080;font-size:13px;font-weight:700;text-align:center';
+  document.body.appendChild(el);
+  setTimeout(function () { el.remove(); }, 2200);
+}
+
+
+/* =====================================================================
+   SCREEN 2 — THE TRACKER UNIT SCREEN
+   ===================================================================== */
+
+var openMenu = null;      // item key of the open Progress dropdown
+var openRecs = {};        // item key -> true, for the tap-to-open variant
+var offerOn = null;       // item key that just had its last record fixed
+
+function trackerHtml() {
+  var all = [];
+  PHASES.forEach(function (p) { p.items.forEach(function (i) { all.push(i.key); }); });
+  var unit = rollup(all, null);
+
+  return '' +
+    '<header class="hdr hdr--tight">' +
+      '<a class="hdr-back press" href="#" aria-label="Go back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">' +
+      '<path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>' +
+      '<div class="hdr-titles"><h1 class="hdr-title">Unit 204</h1>' +
+        '<div class="hdr-sub">1500 Main St · Floor 2</div></div>' +
+      '<div class="hdr-spacer"></div>' +
+      '<span class="pill pill--md s-' + unit.key + '">' +
+        '<span class="dot"></span><span class="txt">' + LABEL[unit.key] + ' ' + unit.done + '/' + unit.total + '</span>' +
+      '</span>' +
+    '</header>' +
+
+    syncBarHtml() +
+
+    '<div class="body body--flush">' +
+      PHASES.map(phaseHtml).join('') +
+    '</div>';
+}
+
+
+function phaseHtml(phase) {
+  var keys = phase.items.map(function (i) { return i.key; });
+  var r = rollup(keys, phase.key);
+
+  /* A Waiting record on the phase itself. Ticket 01 allows it, and this is
+     the only place in Tracker where it can be seen or closed.
+
+     It obeys the same rule as an item: the flag is a button, and the list
+     stays shut until it is tapped. A phase drawn open would undo the whole
+     point of tap-to-open, because a phase sits above seven items. */
+  var open   = openOnPhase(phase.key);
+  var done   = closedOnPhase(phase.key);
+  var panelKey = 'phase:' + phase.key;
+
+  var listOpen = (V.list === 'open')
+    ? (open.length > 0 || done.length > 0)
+    : (!!openRecs[panelKey] || (done.length > 0 && open.length === 0));
+
+  var recsHtml = '';
+  if (listOpen) {
+    recsHtml = '<div class="recs phase-recs">' +
+      open.map(function (rec) { return recHtml(rec); }).join('') +
+      (open.length > 1
+        ? '<button type="button" class="rec-all press" onclick="fixAllPhase(' + attr(phase.key) + ')">' +
+            'Fix all ' + open.length + ' ✓</button>'
+        : '') +
+      done.map(function (rec) { return recHtml(rec); }).join('') +
+    '</div>';
+  }
+
+  return '<section class="phase">' +
+           '<div class="phase-head">' +
+             '<h2 class="phase-label">' + esc(phase.label) + '</h2>' +
+             (open.length ? flagChip(panelKey, 'wait', open.length) : '') +
+             '<span class="pill pill--xs s-' + r.key + '">' +
+               '<span class="dot"></span><span class="txt">' + LABEL[r.key] + ' ' + r.done + '/' + r.total + '</span>' +
+             '</span>' +
+           '</div>' +
+           recsHtml +
+           phase.items.map(itemHtml).join('') +
+         '</section>';
+}
+
+
+function itemHtml(item) {
+  var shown = shownStatus(item.key);
+  var open  = openOn(item.key);
+  var done  = closedOn(item.key);
+  var defs  = open.filter(function (r) { return r.type === 'def'; }).length;
+  var waits = open.filter(function (r) { return r.type === 'wait'; }).length;
+
+  /* Ticket 11: both flag kinds show, each with its own count. */
+  var chips = '';
+  if (defs)  chips += flagChip(item.key, 'def', defs);
+  if (waits) chips += flagChip(item.key, 'wait', waits);
+
+  /* Always-open needs a reason to be open. Tap-to-open needs a tap — except
+     after the last fix, where the panel must stay put or the Undo row and
+     the Complete offer would vanish under the thumb that made them. */
+  var listOpen = (V.list === 'open')
+    ? (open.length > 0 || done.length > 0)
+    : (!!openRecs[item.key] || (done.length > 0 && open.length === 0));
+
+  var rows = '';
+  if (listOpen) {
+    rows = '<div class="recs">' +
+      open.map(function (r) { return recHtml(r); }).join('') +
+      (open.length > 1
+        ? '<button type="button" class="rec-all press" onclick="fixAll(' + attr(item.key) + ')">' +
+            'Fix all ' + open.length + ' ✓</button>'
+        : '') +
+      done.map(function (r) { return recHtml(r); }).join('') +
+    '</div>';
+  }
+
+  var offer = (offerOn === item.key && V.after === 'offer')
+    ? '<div class="offer">' +
+        '<div class="t">Every record on ' + esc(item.label) + ' is fixed. Set it to Complete?</div>' +
+        '<div class="acts">' +
+          '<button type="button" class="yes press" onclick="setComplete(' + attr(item.key) + ')">Set Complete</button>' +
+          '<button type="button" class="no press" onclick="dismissOffer()">Not yet</button>' +
+        '</div>' +
+      '</div>'
+    : '';
+
+  return '<div class="item">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + esc(item.label) + '</span>' +
+             (V.details === 'keep'
+               ? '<button type="button" class="details-btn press">Details</button>' : '') +
+             chips +
+             statusControl(item, shown, open.length > 0) +
+           '</div>' +
+           rows +
+           offer +
+         '</div>';
+}
+
+
+/** panelKey is an item key, or 'phase:<key>' for a whole-phase record. */
+function flagChip(panelKey, kind, n) {
+  var cls = 'flag-chip' + (kind === 'wait' ? ' flag-chip--wait' : '');
+  if (V.list === 'open') {
+    return '<span class="' + cls + '">⚑ ' + n + '</span>';
+  }
+  return '<button type="button" class="' + cls + ' press" onclick="toggleRecs(event,' + attr(panelKey) + ')">' +
+           '⚑ ' + n + '<span class="caret' + (openRecs[panelKey] ? ' open' : '') + '">' + CARET + '</span>' +
+         '</button>';
+}
+
+
+function recHtml(r) {
+  var doneRec = (r.state !== 'open');
+  var where = r.item ? '' : 'Whole phase · ';
+  return '<div class="rec' + (r.type === 'wait' ? ' rec--wait' : '') + (doneRec ? ' rec--done' : '') + '">' +
+           '<span class="rec-main">' +
+             '<span class="rec-need">' + esc(where + (r.needed || r.reason)) +
+               (r.needed ? '<span class="qty">×' + r.qty + '</span>' : '') + '</span>' +
+             '<span class="rec-why">' + esc(r.needed ? r.reason : (r.other || '')) +
+               (r.other && r.needed ? ' · ' + esc(r.other) : '') +
+               ' · ' + esc(r.created) + '</span>' +
+           '</span>' +
+           (doneRec
+             ? '<button type="button" class="rec-undo press" onclick="undoRec(' + attr(r.id) + ')">' +
+                 'Fixed · Undo</button>'
+             : '<button type="button" class="rec-fix press" onclick="fixRec(' + attr(r.id) + ')">Fixed</button>') +
+         '</div>';
+}
+
+
+/** The real dropdown, with ticket 05's greyed Complete row. */
+function statusControl(item, shown, blocked) {
+  var isOpen = (openMenu === item.key);
+
+  var panel = '';
+  if (isOpen) {
+    var rows = ORDER.map(function (value) {
+      if (blocked && value === 'complete') {
+        return '<div class="status-opt status-opt--off s-complete">' +
+                 '<span class="dot"></span><span class="txt">Complete</span></div>';
+      }
+      return '<button type="button" class="status-opt press s-' + value +
+               (value === shown ? ' on' : '') + '" ' +
+               'onclick="chooseStatus(event,' + attr(item.key) + ',\'' + value + '\')">' +
+               '<span class="dot"></span><span class="txt">' + LABEL[value] + '</span></button>';
+    }).join('');
+
+    var note = blocked
+      ? '<div class="status-opt-note">Fix the open flag first. Then Complete comes back.</div>' : '';
+
+    panel = '<div class="status-menu" id="menu-' + esc(item.key) + '">' + rows + note + '</div>';
+  }
+
+  return '<span class="status-wrap">' +
+           '<button type="button" class="status-trigger press s-' + shown + '" ' +
+                   'onclick="toggleMenu(event,' + attr(item.key) + ')">' +
+             '<span class="dot"></span><span class="txt">' + LABEL[shown] + '</span>' +
+             '<span class="caret' + (isOpen ? ' open' : '') + '">' + CARET + '</span>' +
+           '</button>' + panel +
+         '</span>';
+}
+
+
+/* ── TRACKER ACTIONS ──────────────────────────────────────────────── */
+
+function toggleMenu(event, key) {
+  event.stopPropagation();
+  openMenu = (openMenu === key) ? null : key;
+  render();
+}
+function chooseStatus(event, key, value) {
+  event.stopPropagation();
+  SHEET[key] = value;
+  openMenu = null;
+  render();
+}
+function toggleRecs(event, key) {
+  event.stopPropagation();
+  openRecs[key] = !openRecs[key];
+  render();
+}
+function fixRec(id) {
+  var r = recById(id);
+  if (!r) return;
+  r.state = 'fixed';
+  r.created = 'today';
+  justFixed[r.id] = true;
+  if (r.item && openOn(r.item).length === 0) offerOn = r.item;
+  render();
+}
+function fixAll(key) {
+  openOn(key).forEach(function (r) {
+    r.state = 'fixed'; r.created = 'today'; justFixed[r.id] = true;
+  });
+  offerOn = key;
+  render();
+}
+
+/* A phase has no Progress dropdown of its own, so there is nothing to offer
+   Complete on. Clearing the last record just clears the phase flag. */
+function fixAllPhase(phaseKey) {
+  openOnPhase(phaseKey).forEach(function (r) {
+    r.state = 'fixed'; r.created = 'today'; justFixed[r.id] = true;
+  });
+  render();
+}
+function undoRec(id) {
+  var r = recById(id);
+  if (!r) return;
+  r.state = 'open';
+  delete justFixed[r.id];
+  if (offerOn === r.item) offerOn = null;   // the item is not clear after all
+  render();
+}
+
+/** Stands in for walking out of unit 204 and coming back to it later. */
+function leaveUnit() {
+  justFixed = {};
+  openRecs = {};
+  offerOn = null;
+  render();
+}
+function setComplete(key) { SHEET[key] = 'complete'; offerOn = null; render(); }
+function dismissOffer() { offerOn = null; render(); }
+
+document.addEventListener('click', function () {
+  if (openMenu === null) return;
+  openMenu = null;
+  render();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { openMenu = null; sheetOpen = false; render(); }
+});
+
+
+/* =====================================================================
+   DRAW
+   ===================================================================== */
+
+function render() {
+  var app = document.getElementById('app');
+  var focusId = document.activeElement ? document.activeElement.id : '';
+  var caret = 0;
+  if (focusId === 'need' && document.activeElement.selectionStart != null) {
+    caret = document.activeElement.selectionStart;
+  }
+
+  app.innerHTML = (V.screen === 'logger') ? loggerHtml() : trackerHtml();
+
+  if (focusId === 'need') {
+    var box = document.getElementById('need');
+    if (box) { box.focus(); box.setSelectionRange(caret, caret); }
+  }
+
+  document.getElementById('kbd').classList.toggle('hidden', V.kbd !== 'on');
+  document.getElementById('kbd').style.bottom = switcherHeight() + 'px';
+  document.getElementById('pad').style.height = (V.kbd === 'on' ? 480 : 210) + 'px';
+
+  drawSwitcher();
+  measureFit();
+}
+
+
+/** Typing must not redraw the whole form, or the box loses focus. */
+function renderSuggOnly() {
+  var box = document.getElementById('need');
+  if (!box) { render(); return; }
+  var holder = box.parentNode.querySelector('.sugg');
+  var fresh = suggHtml();
+  if (holder) {
+    if (fresh) { holder.outerHTML = fresh; } else { holder.remove(); }
+  } else if (fresh) {
+    box.insertAdjacentHTML('afterend', fresh);
+  }
+}
+
+
+/* =====================================================================
+   SCAFFOLDING — the blue bar, and the one-screen test
+   ===================================================================== */
+
+function switcherHeight() {
+  var el = document.getElementById('switcher');
+  return el ? el.offsetHeight : 120;
+}
+
+/**
+ * The claim ticket 12 rests on: the whole Logger form fits one screen with
+ * the keyboard open, so Save is reachable without scrolling. This measures
+ * it instead of guessing. On a real phone the real keyboard shrinks
+ * visualViewport, so the same number stays honest.
+ */
+function measureFit() {
+  var line = document.getElementById('fitline');
+  if (!line) return;
+  var save = document.getElementById('save');
+  if (V.screen !== 'logger' || !save) { line.textContent = ''; line.className = 'pt-fit'; return; }
+
+  var viewH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  var floorY = viewH - switcherHeight() - (V.kbd === 'on' ? 300 : 0);
+  var gap = Math.round(floorY - save.getBoundingClientRect().bottom);
+
+  /* The view height is printed too. On a desktop it is large and the answer
+     means nothing. Open this on the phone for the number that counts. */
+  var tail = ' (view ' + Math.round(viewH) + 'px)';
+  if (gap >= 0) { line.className = 'pt-fit ok';  line.textContent = 'Save fits · ' + gap + 'px to spare' + tail; }
+  else          { line.className = 'pt-fit bad'; line.textContent = 'Save is ' + (-gap) + 'px below the fold' + tail; }
+}
+window.addEventListener('resize', measureFit);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', measureFit);
+
+
+/* The chosen side of every settled toggle is listed first. */
+var SWITCH = [
+  { key: 'screen',  label: 'SCREEN',  opts: [['logger','Logger'], ['tracker','Tracker item']] },
+  { key: 'order',   label: 'ORDER',   opts: [['count','Count → Reason'], ['reason','Reason → Count']], only: 'logger' },
+  { key: 'place',   label: 'PLACE',   opts: [['set','unit set'], ['cold','opened fresh']],            only: 'logger' },
+  { key: 'kbd',     label: 'KEYBOARD',opts: [['off','no keyboard'], ['on','keyboard up']],            only: 'logger' },
+  { key: 'list',    label: 'RECORDS', opts: [['tap','tap the flag'], ['open','always open']],         only: 'tracker' },
+  { key: 'after',   label: 'AFTER FIX',opts:[['offer','offer Complete'], ['silent','say nothing']],   only: 'tracker' },
+  { key: 'details', label: 'DETAILS', opts: [['drop','drop the box'], ['keep','keep the box']],       only: 'tracker' },
+  { key: 'net',     label: 'NETWORK', opts: [['online','online'], ['offline','offline']] }
+];
+
+function drawSwitcher() {
+  var html = SWITCH.filter(function (row) { return !row.only || row.only === V.screen; })
+    .map(function (row) {
+      return '<div class="pt-line"><span class="lbl">' + row.label + '</span>' +
+        row.opts.map(function (o) {
+          return '<button type="button" class="' + (V[row.key] === o[0] ? 'on' : '') + '" ' +
+                 'onclick="setV(\'' + row.key + '\',\'' + o[0] + '\')">' + o[1] + '</button>';
+        }).join('') + '</div>';
+    }).join('');
+
+  /* Tracker gets one extra control. There is no way to judge the Undo rule
+     without walking out of the unit and back in. */
+  if (V.screen === 'tracker') {
+    html += '<div class="pt-line"><span class="lbl">VISIT</span>' +
+            '<button type="button" onclick="leaveUnit()">leave 204 and come back</button></div>';
+  }
+
+  document.getElementById('switcher').innerHTML = html + '<div class="pt-fit" id="fitline"></div>';
+}
+
+function setV(key, value) {
+  V[key] = value;
+  if (key === 'net' && value === 'online') drain();
+  if (key === 'place') {
+    /* Cold start = what the phone remembers on its own: the building and
+       the phase, never the unit. */
+    place = (value === 'cold')
+      ? { building: '1500main', unit: '',    phase: 'doors' }
+      : { building: '1500main', unit: '204', phase: 'doors' };
+    draft = { type: 'def', item: '', needed: '', qty: 1, reason: '', other: '' };
+  }
+  render();
+}
+
+
+/* Start with the unit set, so the form can be judged straight away. Flip
+   PLACE to "opened fresh" to see what the phone remembers by itself. */
+place = { building: '1500main', unit: '204', phase: 'doors' };
+render();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 02, 06
+Blocked by: 02 (resolved), 06 (resolved 2026-08-08)
 
 ## Question
 
@@ -38,3 +38,22 @@ Points to settle:
 - What `rebuildTracker` must be changed to guarantee. `02` ruled it must never
   touch the Deficiencies tab. Confirm nothing in the current clear-and-redraw
   path can reach it.
+
+## Added by `06-deficiency-entry-screen`, 2026-08-08
+
+`06` resolved, so this ticket is unblocked. Two things came out of it.
+
+- **The Details column leaves the Tracker tab in the master template.** The 0.1
+  Details box is dropped. Miguel: 0.1 is not usable and the button was only a
+  placeholder. A column the app never reads is a trap, because a note typed on a
+  computer would be invisible on every phone. This is template work, so it lands
+  here and in `09-write-0.2-build-plan`.
+- **The reason-list question is now shared.** The point above — "does Admin let
+  Miguel edit those lists" — is also a point on `17-reason-list-scope`, which
+  asks whether a list narrows to the item at all. **Answer it once.** `17` should
+  settle what a list covers; this ticket should settle who edits it and where the
+  Admin screen sits.
+
+`06` added no other Admin work. The refusal screen for `remove-item` is still
+this ticket's, and it can now be answered: `06` built the record list and the
+Fixed action, so the refusal screen has a shape to borrow from.

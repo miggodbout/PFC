@@ -43,6 +43,16 @@ Design principle Miguel stated, on 2026-08-06:
   not get slower because logging got richer. This drove `12-logger-door`, which
   answered it by giving logging its own form-shaped door.
 
+Guideline Miguel proposed on 2026-08-08, and called a suggestion, not a rule:
+- **Aim for one new window per MINOR release.** A window is a screen you reach
+  from the Hub or from a door of its own. It exists to hold back scope creep, so
+  a second window is an argument to have, never a refusal. **Push back, show both
+  sides, let Miguel decide.**
+- 0.2 spends its window on **Logger**. The **Archive** window moved to 0.3 on the
+  strength of this. The **Outbox** from `05-pending-state-ui` was argued through
+  as necessary, because `04` ruled that only Miguel drops a held edit, and that
+  needs a screen with a Drop button on it.
+
 Known 0.1 defect to fix inside 0.2, reported by Miguel on 2026-08-07:
 - **The header flashes a wrong word while a screen loads.**
   `control/tracker/building.html` ships the literal word `Building` in its HTML
@@ -214,6 +224,22 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   open: the blocked Complete row is **greyed with a reason, not removed**.
   Asset: `prototypes/05-pending-state.html`.
 
+- [What the Logger form and the record list look like](issues/06-deficiency-entry-screen.md)
+  — the form gains a field nobody had drawn: **Type**, Deficiency or Waiting,
+  above everything else, because `01`'s two reason lists share no value. Order is
+  Type, Item, Needed, Count, Reason, Save, and **six controls is the whole
+  budget** — anything added pushes Save under the keyboard. The place bar is two
+  lines and **the phone remembers the building and the phase, never the unit**. A
+  phase-level Waiting record is the first row of the Item dropdown, `Whole phase
+  — Doors & Windows`. On Tracker: **tap the flag to open** the record list, the
+  0.1 **Details box is dropped** and its column leaves the template, and `Fix
+  all` is the bulk action. The "prompt when the dropdown moves to Complete"
+  candidate is **impossible**, not rejected — `05` and `11` made Complete
+  untappable while a flag is open — so the shortcut moved to a card that offers
+  Complete after the last fix. **A fixed record leaves Tracker**, staying greyed
+  with Undo only until you leave the unit. Asset:
+  `prototypes/06-logger-and-records.html`.
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
@@ -226,6 +252,16 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 
 ## Out of scope
 
+- **The Archive window.** Ruled out of 0.2 by Miguel on 2026-08-08 under his own
+  one-window-per-MINOR rule, since 0.2 already spends its window on Logger. The
+  model is settled and written on
+  [14-building-archive](issues/14-building-archive.md) — a tree like Tracker,
+  holding fixed records for active and finished buildings alike, each row tagged
+  ACTIVE or CLOSED. **Ticket 14 stays open**, because 0.2 still owes the rule and
+  the seams. Only the door is out. The cost, accepted on purpose: **0.2 has no
+  on-site history** — a fixed record leaves the phone and is readable only by
+  filtering the state column in the Deficiencies tab. The crew does not start
+  using the app until 0.4 or 0.5, so nobody pays for it yet.
 - [Deficiencies that arrive after a building is finished](issues/16-post-completion-deficiencies.md)
   — the GC final walk, months after completion. Ruled out of 0.2 by Miguel on
   2026-08-07 and moved to `.scratch/0.3-backlog.md`. It needs an archived

@@ -101,6 +101,15 @@ Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
 3. **Offline-aware.** Job sites have unreliable signal. Every fetch call must fail gracefully, never crash blank. Data edits (from 0.2 onward) queue locally and sync when signal returns, with a visible pending state — never a silent optimistic save that can lose data.
 4. **Many doors, one system.** Different users reach the same data through different views. Do not duplicate data per view.
 5. **Expect frequent change.** Miguel will request many incremental changes over time. Favor small, separate files over large ones. Comment clearly.
+6. **Aim for one new window per MINOR release. This is a guideline, not a rule.**
+   Miguel proposed it on 2026-08-08 while planning 0.2, and said plainly it is a
+   suggestion to hold back scope creep, not a law. A window is a screen reached
+   from the Hub or from a door of its own.
+   **How to use it:** when a release wants a second window, do not refuse it —
+   **push back, make the case both ways, and let Miguel decide.** That is what he
+   wants the guideline to buy. 0.2 spends its window on **Logger**, argued the
+   **Outbox** through as necessary, and moved the **Archive** window to 0.3 on
+   the strength of it.
 
 ---
 
