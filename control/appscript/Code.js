@@ -1356,16 +1356,23 @@ function openFlagCount(unitKey, phaseKey) {
  * many records there are. Pass a phase key to count one phase, or nothing
  * to count the building.
  *
- * FILTER answers #N/A when nothing matches, so IFERROR turns an empty
- * Deficiencies tab into a zero.
+ * COUNTUNIQUEIFS answers 0 by itself when nothing matches, so no error
+ * wrapper is needed.
+ *
+ * DO NOT go back to IFERROR(COUNTA(UNIQUE(FILTER(...))),0). It reads 1 on
+ * an empty Deficiencies tab. FILTER answers #N/A when nothing matches, but
+ * COUNTA counts an error as one value, so it returns 1 and IFERROR never
+ * fires. Found by the step 1 test round, 2026-08-08.
  */
 function unitsWithOpenFlagFormula(phaseKey) {
-  var test = '(' + deficiencyRange(DEF_COL.state) + '="Open")';
+  var parts = [
+    deficiencyRange(DEF_COL.unit),
+    deficiencyRange(DEF_COL.state), '"Open"'
+  ];
   if (phaseKey) {
-    test += '*(' + deficiencyRange(DEF_COL.phase) + '="' + phaseKey + '")';
+    parts.push(deficiencyRange(DEF_COL.phase), '"' + phaseKey + '"');
   }
-  return '=IFERROR(COUNTA(UNIQUE(FILTER(' +
-         deficiencyRange(DEF_COL.unit) + ',' + test + '))),0)';
+  return '=COUNTUNIQUEIFS(' + parts.join(',') + ')';
 }
 
 
