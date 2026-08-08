@@ -382,7 +382,11 @@ before `09`:
   doors. **Miguel changed the nomenclature itself to `32 6 RH`**, no inch marks,
   and the box gains a **grey `Size Jamb Swing` placeholder** held per item in
   `_Config` and edited in Admin's Lists card. **No control was added to the
-  Logger form.**
+  Logger form.** Three consequences are written at the end of that ticket and
+  nowhere else: **the phone now holds three separate stores** with three different
+  lifetimes; **a brand new phone has no chips at all**, which is the real price of
+  deleting the seed; and **counts never decay**, which rests on Miguel's stated
+  bet that a standard door size stays standard.
 
 ## Not yet specified
 

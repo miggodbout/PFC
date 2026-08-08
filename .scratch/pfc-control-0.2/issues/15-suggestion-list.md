@@ -374,3 +374,48 @@ The reason it is not cheap: a parser must guess. `5 1/4 MDF` on a baseboard and
 `32 6 RH` on a door are both numbers, and nothing tells them apart without a
 grammar per item, a screen to edit that grammar, and a way to correct it when it
 reads wrong. That is the four-field form `17` turned down, wearing a coat.
+
+### Consequences that are not written anywhere else
+
+Added at the end of the session, on a check for undocumented context.
+
+**The phone now holds three separate stores, not one.** `03` rewrote `Store` in
+`common.js` from `sessionStorage` to `localStorage`, `04` gave the outbox its own
+key, and `15` adds a third. They have different lifetimes and the build must not
+merge them:
+
+| Store | Holds | Lifetime |
+|---|---|---|
+| One key per building | The whole building copy | Dropped at ten buildings, or when the building finishes, per `14` |
+| The outbox | Waiting and held edits | Until every job lands or Miguel drops it |
+| The history index | Chip lines from **dropped** buildings only | Capped at 20 per group, pruned least-used first |
+
+The index needs a name. `CLAUDE.md` sets the rule for it: a storage key is an
+identifier, not a label, so it is named once and never renamed, because renaming
+orphans what is already on a crew phone. Follow the existing
+`pfc.control.v1.local` form.
+
+**A brand new phone has no chips at all, and that is the real price of deleting
+the seed.** The history index lives in `localStorage`, so a fresh install or a
+reinstall starts empty, and there is no seed behind it any more. Until that phone
+downloads a building holding records, or logs some itself, the chip row is blank
+and every needed line is typed by hand.
+
+This was accepted, not overlooked. Two reasons it is small: the crew is Miguel
+and one coworker, both already installed per `10`, and the first `get-project`
+after an install pulls a live building whole — records included, per this
+ticket — so the chips fill from the server, not from local history. The empty
+case is a genuinely new phone opening a genuinely new job.
+
+**Counts never decay, and that rests on a bet Miguel stated.** His words on
+2026-08-08: "most common suggestions will probably sort themselves well so I'd
+like to keep the history, but it should probably have a limit so we don't end up
+with 1000's of chips."
+
+So the index keeps a use count forever and nothing ages out on a clock — a
+twelve-month expiry was offered and turned down. **The assumption is that a
+standard door size stays standard.** If it ever stops being true, the symptom is
+specific and easy to name: a size that was standard years ago sits first in the
+row and will not move, because ordering is by count and the count only ever grows.
+The fix at that point is the expiry rule that was turned down here, not a redesign.
+Nothing else in the build depends on it.

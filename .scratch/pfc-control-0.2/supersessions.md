@@ -130,6 +130,18 @@ Form: what the old text says · what overruled it · which one wins.
     `prototypes/05-pending-state.html` was built after `11` closed and draws the
     three-value dropdown correctly. It needs nothing.
 
+    **Widened by `15`, 2026-08-08. Its `suggHtml()` function is now wrong in five
+    ways**, and it is the one part of the prototype a build session is most likely
+    to copy, because it looks finished:
+    - It holds a **`SEEDS` constant**. No seed list exists any more.
+    - It groups on **item alone**. The key is now Type · item · subtype.
+    - It draws **four chips**. Three.
+    - It filters on **plain substring**. Filtering now normalises — strip spaces,
+      quote marks and slashes, then lowercase.
+    - It has **no near-match prompt** on Save, and no history index behind it.
+
+    Read `15`'s resolution, not this function.
+
 ---
 
 ## Added by `13-admin-changes`, 2026-08-08
