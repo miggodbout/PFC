@@ -170,7 +170,8 @@ before `09`:
 - **`supersessions.md`** — which decision wins wherever two disagree. First pass
   2026-08-08, widened the same day by `13`. **`14` and `15` have both closed, so
   the second pass is now takeable.** That is `18`, and it is the last thing before
-  `09`.
+  `09` — but **`19` opened on 2026-08-08 and goes first.** It would close after
+  `18` and make the sweep stale again. **Order: `19`, then `18`, then `09`.**
 - **`template-changes.md`** — the master template spec. Nine sections. Section 5
   went FINAL when `13` closed, and section 9, **the default item list**, was added
   by it. **Section 8 is now empty**: `15` took no template change for the
@@ -179,6 +180,21 @@ before `09`:
 - **`code-inventory.md`** — the 0.1 code read against all seventeen tickets.
   Every rollup call site, everywhere the demo data reaches, the exact lines each
   ticket deletes, and nine things no ticket owns. Written 2026-08-08.
+
+Opened 2026-08-08, after every other ticket had closed:
+- **[`19-building-and-floor-markers`](issues/19-building-and-floor-markers.md)** —
+  a prototype ticket. Three marks now land on the same two controls, and nobody
+  drew them together: **completion**, **flags** and a **failed save**, on the
+  Building screen's floor headers and unit chips. `11` line 267 deferred the
+  drawing of the flag marks to `06` and `05`, and both drew only what their own
+  question needed — `06` the Unit screen, `05` the pending marks. The Building
+  screen was never covered.
+- It became urgent when Miguel ruled out a whole-unit Waiting level: a blocked
+  unit is a **phase-level Waiting record on Phase 1**, so with no mark on the
+  chip it looks exactly like a unit nobody has started.
+- It also picks up two things left open elsewhere: **fraction or bar** for the
+  count, deferred by `11` line 270, and the **red-on-red collision** between
+  `05`'s held-edit dot and `06`'s Deficiency chip.
 
 ## Decisions so far
 

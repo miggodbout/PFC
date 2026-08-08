@@ -3,10 +3,13 @@
 Type: task
 Status: **first pass done 2026-08-08, widened by 13, 14 and 15 the same day.
 The second pass is now owed and nothing blocks it.**
-Blocked by: nothing. **`15` closed 2026-08-08 and was the last one.** 17, 13, 14
-and 15 all resolved that day. This runs last, right before
+Blocked by: **`19-building-and-floor-markers`, opened 2026-08-08.** `15` closed
+that day and was the last of the original set, but `19` opened after it and will
+close after this ticket would have. This runs last, right before
 `09-write-0.2-build-plan`. Run it earlier and the tickets that close after it
-make it stale again.
+make it stale again — which is exactly what `19` would do.
+
+**Order: `19`, then `18`, then `09`.**
 
 **What `15` added to the sweep**, beyond the three supersessions already written
 into `supersessions.md` as entries 35 to 37:

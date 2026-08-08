@@ -2,8 +2,9 @@
 
 Type: task
 Status: open
-Blocked by: 18 — every other 0.2 ticket is resolved (17, 13, 14 and 15 all
-resolved 2026-08-08)
+Blocked by: **19, then 18.** `19` decides the Building screen's markers, opened
+2026-08-08. `18` sweeps last so nothing makes it stale. Every other 0.2 ticket is
+resolved (17, 13, 14 and 15 all resolved 2026-08-08).
 
 ## Question
 
@@ -56,7 +57,10 @@ them.
 - **`get-project` must return closed records, not only open ones.** Filtering
   them out to save space would force Archive to invent a new server call later.
   Settled in `06`, and it is a rule about `03`'s answer, not a change to `03`.
-- **Nobody drew the flag marks on the unit chip.** Found 2026-08-08, while Miguel
+- ~~**Nobody drew the flag marks on the unit chip.**~~ **Moved to
+  `19-building-and-floor-markers` on 2026-08-08, the same day it was found.** It
+  turned out to be a design question with four sub-questions and a colour
+  collision, not a line item. Kept below so the reasoning is not lost. Found while Miguel
   settled the whole-unit Waiting question. The **rule** is settled — `11` says
   every level shows both flag kinds with their own counts — but `11` line 267
   handed **the exact drawing** to `06` and `05`, and neither drew it above the
