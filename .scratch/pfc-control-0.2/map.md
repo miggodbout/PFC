@@ -155,6 +155,18 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   This needs no stored state and no automatic write: the Sheet keeps what a
   person set by hand, and only the display is downgraded.
 
+- [What happens when the app runs in a Safari tab, not the installed icon](issues/10-tab-versus-installed-app.md)
+  — **one signal only: installed or not**, checked via `display-mode: standalone`.
+  Installed shows nothing. Not installed shows a small dismissible note, once
+  per tab-mode open, with a step-by-step install tutorial. `navigator.storage.persist()`
+  runs silently in the background either way — **the earlier idea of a separate
+  warning when it is refused was dropped**, since there is no action the crew
+  can take about a refusal. The tab/installed data-isolation problem gets no
+  separate handling; the install nudge is the fix for both. Miguel and his
+  coworker are already installed today, so this is a safety net, not an active
+  fix. GC/trade access stays out of scope here — that is the 0.4 QR-based
+  Log/Status menu.
+
 - [What one queued edit is, and what happens when it fails](issues/04-queued-edit-rules.md)
   — **the outbox is a keyed shelf, not a line-up.** One job per item, keyed
   `project|unit|item`, and one job per record, keyed by its id. A second change
