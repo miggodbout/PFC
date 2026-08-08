@@ -425,8 +425,22 @@ before `09`:
 
 ## Not yet specified
 
-- Whether a Waiting record can attach to a whole unit, for something like no
-  power on site or a locked unit. Only item and phase are settled.
+- ~~Whether a Waiting record can attach to a whole unit, for something like no
+  power on site or a locked unit. Only item and phase are settled.~~ **Settled by
+  Miguel on 2026-08-08: no third level. Item and phase are the whole model.**
+  A blocked unit takes a **phase-level Waiting record on Phase 1**, which already
+  exists per `01` and draws on the phase header per `06`. His words: "Phase 1 can
+  be set as waiting and that signals that is waiting and not started."
+  - **The unit then reads `Not Started 0/18` with a blue Waiting chip.** He asked
+    whether the colour-coded dot turns blue and thought it already would. **The
+    colour is right and the carrier is not.** `theme.css:78` has the blue —
+    `.s-on_hold { --dot: #6C9CFF }` — but in 0.1 On Hold is a *status*, so it
+    drives the dot. In 0.2 Waiting is a **flag**, and the dot shows Progress only.
+    The blue moves to the **flag chip**, already settled in `06`: a red chip for
+    Deficiency, a blue one for Waiting.
+  - **Two marks say more than one recoloured dot could.** A blue dot can only
+    report one fact. A grey dot beside a blue chip reports both of the ones he
+    named — not started, and waiting.
 - **A parser that reads a loose needed line and prints the standard form.** Raised
   by Miguel on 2026-08-08 while resolving `15`, and ruled out of 0.2 by him in the
   same breath. It is not urgent, because 0.2 already cleans every line typed

@@ -56,6 +56,20 @@ them.
 - **`get-project` must return closed records, not only open ones.** Filtering
   them out to save space would force Archive to invent a new server call later.
   Settled in `06`, and it is a rule about `03`'s answer, not a change to `03`.
+- **Nobody drew the flag marks on the unit chip.** Found 2026-08-08, while Miguel
+  settled the whole-unit Waiting question. The **rule** is settled — `11` says
+  every level shows both flag kinds with their own counts — but `11` line 267
+  handed **the exact drawing** to `06` and `05`, and neither drew it above the
+  Unit screen. `06` drew the item row and the phase header. `05` drew the pending
+  marks. The Building screen's unit chips were never covered.
+  - This matters because of what Miguel just decided: a blocked unit is a
+    **phase-level Waiting record on Phase 1**, and if the chip carries no flag
+    mark you must open the unit to learn the unit is blocked. That is the one
+    case where the mark earns its place.
+  - **Watch for a red-on-red collision.** `05` puts a **red dot** on the unit chip
+    and the floor header for a **held edit**. `06` makes a Deficiency flag a **red
+    chip**. Both land on the same small chip and mean different things. Decide the
+    two marks together, on a phone, before either ships.
 
 ## Handed over by `14-building-archive`, 2026-08-08
 
