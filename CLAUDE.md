@@ -174,6 +174,23 @@ dropdown, dimmed and not tappable, with one line under the panel: "Fix the open
 flag first. Then Complete comes back." A row that silently disappears reads as a
 broken app.
 
+**An item is never removed from the Unit screen either.** Settled by Miguel on
+2026-08-08 in `.scratch/pfc-control-0.2/issues/14-building-archive.md`. Every item
+a unit holds is drawn, whatever its Progress. **Complete is a mark on a row, never
+a reason to remove the row.**
+
+A planning session read the principle "Tracker stays as lean as possible" as
+licence to hide finished items, and got as far as recommending it. Miguel
+overruled the whole branch: "an item should never dissapear, just be marked
+complete." Lean means fewer **flags and records** on the screen. It never means
+fewer items.
+
+The reason is recovery. The row is the control you set Progress with, so hiding it
+takes away the only way to undo a wrong tap. What *does* leave the screen is a
+**record**: a record marked Fixed stays greyed and struck through with
+`Fixed · Undo` while you are on that unit, then it is gone. Do not propose hiding
+finished items again.
+
 So the rollup's flag test only has to catch **phase-level Waiting records**. Any
 flag on an item has already stopped that item from reading Complete.
 

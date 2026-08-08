@@ -85,8 +85,16 @@ Open an eleventh and the least recently opened one is deleted. About 1 MB agains
 a 5 MB cap. Nothing is lost: a deleted copy is only a copy, and it downloads
 again on the next open.
 
-An archived building is dropped as well, ahead of the ten limit. That rule is
-written here but not final. `14-building-archive` owns it and must confirm it.
+An archived building is dropped as well, ahead of the ten limit. **Confirmed and
+final, 2026-08-08.** `14-building-archive` owned this rule and Miguel shipped it in
+0.2, so the drop fires. Two things it added:
+
+- **The drop runs on app open**, with the refresh. That is also when a finished
+  building's greyed row leaves the Tracking list, so the row is always tappable for
+  as long as it is drawn.
+- **`04`'s exemption still wins.** A building holding a waiting or held edit is
+  never dropped, archived or not. That is a **storage** rule. Leaving the Tracking
+  list is a **drawing** rule. Keep them as two separate tests in the build.
 
 ### When a refresh runs
 

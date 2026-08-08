@@ -43,6 +43,12 @@ Design principle Miguel stated, on 2026-08-06:
 - **Tracker stays as lean as possible, and the data stays logged.** Looking must
   not get slower because logging got richer. This drove `12-logger-door`, which
   answered it by giving logging its own form-shaped door.
+- **Bounded on 2026-08-08 by `14`, after a session read it too widely.** Lean
+  means fewer **flags and records** on the screen. It does **not** mean fewer
+  items. **Every item a unit holds is always drawn on the Unit screen, whatever
+  its Progress.** Complete is a mark on a row, never a reason to remove the row —
+  the row is the control you set Progress with, so hiding it takes away the only
+  way to correct a mis-tap. Do not propose hiding finished items again.
 
 Guideline Miguel proposed on 2026-08-08, and called a suggestion, not a rule:
 - **Aim for one new window per MINOR release.** A window is a screen you reach
@@ -308,29 +314,32 @@ before `09`:
   Catch stays its own item. **14 items, was 17**, and the Tracker tab goes from 41
   columns to 21. The accepted cost: Passage and Privacy now share one status row.
 
-- **A finished building leaves Tracker in 0.2.** Settled by Miguel on
-  2026-08-08, on [14-building-archive](issues/14-building-archive.md). He was
-  offered the safer reading — hold the rule for 0.3, when the Archive door exists
-  — and chose against it. **The accepted cost: 0.2 has no door onto a finished
-  building.** It leaves the Tracking list, and the only way to read it is to open
-  the project Sheet directly. Nothing is lost, it is hidden from the app. This
-  closes the conflict `18` found: `03`'s archived-building drop **does** fire in
-  0.2. **Two rules must stay separate in the build** — leaving the Tracking list
-  is about what the app *draws*, and dropping the local copy is about what the
-  phone *stores*. `04`'s rule that a building holding a waiting or held edit is
-  never dropped is a storage rule and survives untouched.
+- [When a building leaves Tracking and enters Archive](issues/14-building-archive.md)
+  — **a finished building leaves Tracker in 0.2, and an item never leaves at all.**
+  The item half was a misunderstanding, and Miguel closed it as a rule, not an
+  option: **every item is always drawn on the Unit screen, whatever its Progress.**
+  Complete is a mark on a row, never a reason to remove the row. What he meant is
+  the **flag and its records** leaving, which `06` already built. Reading A is
+  dead, and with it the empty-phase-header problem at `unit.html:91`. On the
+  building half he was offered the safer reading — hold the rule for 0.3 — and
+  chose against it, so **0.2 has no door onto a finished building**: the only way
+  to read one is to open the project Sheet. This closes the conflict `18` found —
+  `03`'s archived-building drop **does** fire in 0.2. Four rules ship: a building
+  **keeps its row while any waiting or held edit is on the phone**, because it
+  reads Complete off values the Sheet has not accepted; **no force switch**, so an
+  abandoned job never leaves (now 0.3 work); **`list-projects` sends counts and the
+  phone applies `11`'s rule**, because a drift that hides a live building is not
+  cosmetic, and `Code.js:189` already opens every Sheet so it costs one read; and
+  **the row stays greyed until the next app open**, `06`'s Undo shape one level up,
+  which lines up with `03`'s drop for free. Tracking gains a **second empty
+  message** for the all-finished case, since today's one reads as data loss. A
+  Cancelled record counts as closed, confirmed without asking. **Two rules must
+  stay separate in the build** — leaving the Tracking list is what the app *draws*,
+  dropping the local copy is what the phone *stores*. `04`'s exemption is a storage
+  rule and survives untouched.
 
 ## Not yet specified
 
-- **What "a finished item leaves Tracker" means.** The other half of Miguel's
-  2026-08-08 answer, and it is a bigger change than the building half. Either a
-  Complete item stops being drawn on the Unit screen, or he meant the fixed
-  **record**, which `06` already settled. The direction follows his own "Tracker
-  stays as lean as possible" principle, so it is not in doubt — the mechanism is.
-  **The hole:** you cannot undo a mistaken Complete on a row that is no longer
-  drawn. Recommended answer, written up on `14`: hide it, using `06`'s existing
-  greyed-with-Undo-until-you-leave-the-unit treatment, which solves the hole with
-  a pattern already decided for the same screen. Needs one sentence from Miguel.
 - Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.
 - How the Service Worker and `CACHE_NAME` handling change once the app holds
@@ -382,6 +391,14 @@ before `09`:
   and not a rule. **One piece was kept in 0.2:** an already Complete item that a
   flag lands on, which fires in a live building with no archive involved, and is
   answered in `11-rollup-rules`.
+- **An abandoned job never leaves the Tracking list.** Ruled to 0.3 by Miguel on
+  2026-08-08, on [14-building-archive](issues/14-building-archive.md), when he
+  turned down a force-close switch in Admin. A job cancelled at 60% never reads
+  Complete, so its row stays forever. He was told the switch was nearly free —
+  `13` already raises `_Config` to version 2 — and chose against it, because a
+  stored flag can disagree with the numbers and 0.2 has no Archive door to find a
+  wrongly hidden building in. Logged in `.scratch/0.3-backlog.md`. It grows one
+  dead row per abandoned job, and one or two buildings are live at a time.
 - Per-unit item variation. An item that applies to only some units in a
   building. This is a structure problem and belongs to Admin. Take it up as its
   own effort later.

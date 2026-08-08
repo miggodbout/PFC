@@ -1,7 +1,7 @@
 # When a building leaves Tracking and enters Archive
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: none — 11 and 12 both resolved 2026-08-07
 
 ## Question
@@ -115,6 +115,12 @@ downloadable again on demand. Nothing above closes that door.
 ---
 
 ## The other half of Miguel's answer: a finished **item**
+
+> **Settled 2026-08-08. Reading A is dead and Reading B is right.** Miguel:
+> "I think this was a misunderstanding, I meant that a flag / reason leaves the
+> tracker screen an item should never dissapear, just be marked complete."
+> Everything below is kept only so the correction reads clearly. See the
+> **Answer** section at the bottom of this file.
 
 Same sentence, and it is a bigger change than the building half. It is recorded
 here rather than lost, but **it is not settled**, because "leaves Tracker" has
@@ -254,14 +260,191 @@ that edit waits.
 
 ## Blocked by
 
-> **Nothing blocks this ticket. Corrected 2026-08-08.** Both entries below are
-> stale. `11-rollup-rules` resolved on 2026-08-07, which the header of this file
-> already says. The `12-logger-door` question is answered too: `06` added the
-> greyed `Archive` card to the Hub, so the seam exists. What is left here is the
-> **rule and the seams, not the door** — see the section above.
+**Nothing. Cleared 2026-08-08 when this ticket resolved.** The two stale
+`11-rollup-rules` entries and the `12-logger-door` entry that used to sit here are
+deleted, which closes item 25 of `supersessions.md`. `11` resolved 2026-08-07,
+and `06` added the greyed `Archive` card to the Hub, so nothing was left waiting.
 
-- `11-rollup-rules` — the archive rule is a rollup rule, one level up. It cannot
-  be written until a unit's Complete is defined.
-- `11-rollup-rules` — still open. This is the only thing holding the ticket now.
-- ~~`12-logger-door`~~ — resolved 2026-08-07. Doors are settled: Tracking, Log,
-  Create Job. Archive is not among them, so this ticket adds it or drops it.
+---
+
+## Answer
+
+Resolved 2026-08-08. Six questions, all answered by Miguel. One correction that
+kills a whole branch, and four rules that ship in 0.2.
+
+### 1. An item never disappears from Tracker
+
+**This is the correction, and it is the biggest thing on the ticket.** Miguel's
+words: *"I think this was a misunderstanding, I meant that a flag / reason leaves
+the tracker screen an item should never dissapear, just be marked complete."*
+
+So **Reading A is dead**, and it is dead as a rule, not as one rejected option:
+
+> **Every item a unit holds is drawn on the Unit screen, whatever its Progress.**
+> Complete is a mark on a row. It is never a reason to remove the row.
+
+Write this down so nobody proposes hiding finished items again. It reads against
+"Tracker stays as lean as possible", and Miguel drew the line himself: leanness
+means fewer **flags and records** on the screen, not fewer items. An item row is
+the control you set Progress with. Take it away and you take away the only way to
+correct it.
+
+What he actually meant was already built. `06-deficiency-entry-screen` settled it:
+a record marked Fixed leaves Tracker, staying in place greyed and struck through
+with `Fixed · Undo` for exactly one visit, then gone when you leave the unit. The
+same holds for a phase-level Waiting record on the phase header. Nothing new to
+design.
+
+**Two stale things die with Reading A:**
+
+- The ticket's own example above — *"Eighteen items, fourteen Complete, and the
+  screen shows four"* — was already wrong. `13-admin-changes` cut the default
+  list to **14 items** in three phases on 2026-08-08. The example is left in place
+  above only as history.
+- A problem found while grilling and now moot: `control/tracker/unit.html:91`
+  skips a phase only when it holds **zero** items, so filtering Complete items out
+  would have drawn a phase header and pill with nothing under it. Reading A would
+  have owed a rule for that. It owes nothing now.
+
+### 2. A building stays in the Tracking list until its edits land
+
+**A building that reads Complete keeps its row while the phone holds any waiting
+or held edit for it.** The row goes when the outbox is clear for that building.
+
+The reason is honesty, not convenience. A building reads Complete off values that
+have not reached the Sheet yet. If a held edit never lands, the Sheet says
+In Progress while the app has already hidden the building. That is the one failure
+0.2 must not have.
+
+The cost, accepted: the row shows `Complete` with the sync bar reporting the edit.
+Per `05-pending-state-ui`, **the count lives in the sync bar and nowhere else**, so
+the row itself carries no extra mark.
+
+**This is still a separate test from `04`'s storage rule**, as the table above
+demands. `04` says the phone never *drops the copy* of a building holding a waiting
+or held edit. This says the app never *stops drawing* it. The two happen to agree
+here. The build must still keep them as two tests, or a later change to one
+silently changes the other.
+
+### 3. No force switch in 0.2
+
+**The rule stays computed. Nothing but the numbers moves a building out of the
+Tracking list, and nothing can move one back in.** No stored flag, no Admin
+checkbox.
+
+A stored flag can disagree with the numbers, and 0.2 has no Archive door, so a
+mis-tapped flag would hide a live job with no way back inside the app. A two-way
+switch in Admin was offered — `13` already raises `_Config` to version 2, so the
+flag itself would have been nearly free — and Miguel chose against it.
+
+**The accepted cost, and it is new fog for 0.3: an abandoned job never leaves.**
+A job cancelled at 60% never reads Complete, so its row sits in Tracking forever.
+With one or two live buildings at a time this grows slowly, and 0.3's Archive door
+is the right place to put a closed building. Logged in `.scratch/0.3-backlog.md`.
+
+### 4. The server sends the numbers, the phone applies the rule
+
+`list-projects` gains three numbers per building: **items Complete, items total,
+and open flags.** The phone runs `11-rollup-rules` on them. The Sheet's own
+`overall` word is not what decides whether a building disappears.
+
+This keeps `11`'s rule in one place, and it matters more here than anywhere else.
+`11` called drift between the Sheet's formula and the phone's answer *cosmetic*.
+It is not cosmetic on this screen: a wrong formula would hide a live building from
+the only list that names it.
+
+**The cost is close to nothing, and that was checked in the code.**
+`handleListProjects` at `control/appscript/Code.js:189` already opens every
+project Sheet, and at line 195 to 204 it reads the overall column and works the
+building status out in **server JavaScript**, not from a formula. Reading the
+Deficiencies tab in the same pass adds one read to a call that already has the
+file open. The server's `worst(statuses)` call at line 204 has to be rewritten for
+`11` regardless, because worst-wins is deleted.
+
+### 5. Tracking gets a second empty message
+
+Today `control/tracker/index.html:74` has one empty state: **"No projects yet /
+Create your first building."** After this rule ships, that message appears while
+five finished buildings sit in Drive, which reads as data loss.
+
+So there are two, and the list answer already tells them apart — it either came
+back empty, or came back holding buildings that all read Complete.
+
+| Case | What the screen says |
+|---|---|
+| No buildings exist | **No projects yet.** Create your first building. Every project gets its own Google Sheet. |
+| Buildings exist, all finished | **Nothing to track.** Every building is finished. Open the project Sheet to read one. |
+
+Both keep the `Create Job` button.
+
+A third option was offered and Miguel turned it down: a greyed **Finished**
+section at the bottom of Tracking. It would have bought back the missing door,
+and that is exactly the problem — it is the Archive window in a smaller coat, and
+it was already ruled out of 0.2 under the one-window guideline.
+
+### 6. The row stays greyed until the next app open
+
+**Set the last item Complete and the building keeps its row for the rest of the
+session, greyed, reading Complete. Close the app and open it again and the row is
+gone.**
+
+This is `06`'s greyed-with-Undo shape, one level up, and Miguel asked for it on
+the same grounds he used in answer 1 — nothing should vanish under your thumb. It
+matters more at building level than at item level, because answer 3 gives no force
+switch and there is no Archive door: without this, one wrong tap puts a building
+out of reach until 0.3, and the only fix is Google Sheets on a computer.
+
+**It costs one thing the phone remembers for the session** — which buildings it
+watched go Complete. Not stored, not synced, gone when the app closes.
+
+**It lines up with the local copy drop for free.** `03-local-copy-rules` line 88
+drops an archived building ahead of the ten-building limit, and a refresh runs on
+app open. The row goes on app open and the copy goes on app open, so the greyed
+row is always tappable while it is drawn.
+
+### The order of tests, for one building on the Tracking list
+
+Read top to bottom and stop at the first match:
+
+1. Does the phone hold a waiting or held edit for it? → **draw a normal row.**
+2. Does it read Complete, by the phone's rule on the server's numbers?
+   - It was already Complete on this session's first list answer → **do not draw it.**
+   - It went Complete during this session → **draw a greyed row.**
+3. Otherwise → **draw a normal row.**
+
+**The storage test is separate and runs on app open:** delete the local copy of a
+building that reads Complete, ahead of the ten-building limit, **unless** `04`
+exempts it for holding a waiting or held edit.
+
+### Confirmed without asking
+
+**A Cancelled record counts as closed.** `02-deficiencies-tab-layout` gives a
+record three states — Open, Fixed, Cancelled — and `11-rollup-rules` says only an
+**open** flag blocks Complete. A Cancelled record raises no flag, so it cannot hold
+a building out of Archive. This was on the Points-to-settle list above and needed
+no decision.
+
+### The seams 0.2 still owes 0.3, unchanged
+
+None of the above closes a door, which was the requirement:
+
+1. `get-project` returns closed records as well as open ones (`06`, seam 1).
+2. The Hub carries a greyed `Archive` card (`06`, seam 2, already decided).
+3. A dropped local copy can be downloaded again on demand (`06`, seam 3).
+4. Reopening a finished building is possible. `16-post-completion-deficiencies`
+   owns the workflow in 0.3; this ticket only promises not to design it shut. It
+   does not: nothing is stored, so nothing has to be un-stored.
+
+### What this hands `09-write-0.2-build-plan`
+
+Five items, all small:
+
+1. `list-projects` sends Complete, total and open-flag counts per building, and
+   its server-side `worst()` at `Code.js:204` goes.
+2. The Tracking list runs the four-step order of tests above.
+3. `control/tracker/index.html:74` gains a second empty message.
+4. The phone remembers, for the session only, which buildings it watched go
+   Complete.
+5. **A rule to write into the plan, not code:** every item is always drawn on the
+   Unit screen. There is no hide-finished-items work in 0.2, and there should be
+   none proposed later.

@@ -113,10 +113,9 @@ Form: what the old text says · what overruled it · which one wins.
     the end of `control/appscript/Code.js`" as the model for idempotence. The
     idempotence rule it describes is right and still applies. Only the action
     name is wrong. Corrected in place.
-25. **`14-building-archive`, line 159.** A `Blocked by` line reads
-    "`11-rollup-rules` — still open. This is the only thing holding the ticket
-    now." `11` closed on 2026-08-07, and the header of the same file already says
-    so. Corrected in place.
+25. ~~**`14-building-archive`, line 159.**~~ **Cleared 2026-08-08.** The stale
+    `Blocked by` lines were deleted outright when `14` resolved, rather than
+    annotated. Nothing left to correct.
 26. **`01-deficiency-record-fields`, line 141.** The Archive-costs-nothing
     sentence, item 12 above. Corrected in place.
 27. **`12-logger-door`, lines 83 to 114.** The form sketch and its field list.
@@ -168,6 +167,36 @@ Two things `13` **confirmed** rather than overruled, so nothing above changes:
 
 ---
 
+## Added by `14-building-archive`, 2026-08-08
+
+35. **The map read "Tracker stays as lean as possible" as licence to hide finished
+    items.** The map's own **Not yet specified** section recommended it, and `14`
+    wrote it up as Reading A with `06`'s greyed-and-Undo treatment. Miguel
+    overruled the whole branch: *"an item should never dissapear, just be marked
+    complete."* **Miguel wins.** Lean means fewer **flags and records**, never
+    fewer items. The map's principle now carries the boundary, and `14`'s Reading A
+    section is marked dead in place. **Nothing in 0.2 hides an item.**
+36. **`03-local-copy-rules`, line 88, marks the archived-building drop "not
+    final".** It is final now. `14` shipped the rule in 0.2, so the drop fires.
+    **`14` wins**, and the line should stop calling itself provisional. The drop
+    runs on app open, which is also when the greyed Tracking row goes, so the row is
+    always tappable while it is drawn.
+37. **`11-rollup-rules` says the app trusts only the phone, and calls Sheet drift
+    cosmetic.** That holds inside a building the phone has a copy of. It cannot hold
+    for the **Tracking list**, where the phone has no copy of a building it never
+    opened. `14` narrowed it: **`list-projects` sends Complete, total and open-flag
+    counts, and the phone applies `11`'s rule to those numbers.** The Sheet's
+    `overall` word no longer decides whether a building disappears, because drift
+    that hides a live building is not cosmetic. **`14`'s narrowing wins.** The
+    server's own `worst(statuses)` at `control/appscript/Code.js:204` goes, which it
+    had to anyway once worst-wins was deleted.
+
+One thing `14` **confirmed** rather than overruled: a **Cancelled** record counts
+as closed. `02` gives a record three states and `11` blocks Complete on an **open**
+flag only, so Cancelled raises no flag and cannot hold a building out of Archive.
+
+---
+
 ## Not a supersession: one live conflict — SETTLED 2026-08-08
 
 > **Miguel closed this the same day.** A finished building **does** leave Tracker
@@ -209,12 +238,15 @@ limit is the only thing that drops a copy, which is what `03` already builds.
 
 ## What the second pass still owes
 
-Run this after `14` and `15` close, and before `09`.
+Run this after `15` closes, and before `09`. **Only `15` is left.**
 
 - ~~**`13`**~~ **closed 2026-08-08.** Its supersessions are entries 30 to 34
   above, and `template-changes.md` sections 5 and 9 carry the result.
-- **`14`** will settle the conflict in the section above, and confirm whether
-  `03`'s archived-building drop fires in 0.2.
+- ~~**`14`**~~ **closed 2026-08-08.** It confirmed that `03`'s archived-building
+  drop **does** fire in 0.2, so `03` line 88 stops being "not final". It also
+  superseded three things the sweep should carry, listed in the new section below.
+  No template change: the counts it adds to `list-projects` are a server change and
+  take no new column.
 - **`15`** will decide where the seed suggestion text is stored. If the answer is
   the `_Config` tab, `template-changes.md` gains a section. If the answer is
   "built from records the phone already holds", section 5 loses its last item.

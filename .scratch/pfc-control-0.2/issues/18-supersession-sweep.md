@@ -1,9 +1,9 @@
 # Sweep the 0.2 notes for decisions that were later overruled
 
 Type: task
-Status: **first pass done 2026-08-08, widened by 13 the same day. Second pass
-owed after 14 and 15.**
-Blocked by: 14, 15 — every other 0.2 ticket. 17 and 13 resolved 2026-08-08. This
+Status: **first pass done 2026-08-08, widened by 13 and again by 14 the same day.
+Second pass owed after 15, which is the last one left.**
+Blocked by: 15 — every other 0.2 ticket. 17, 13 and 14 resolved 2026-08-08. This
 runs last, right before `09-write-0.2-build-plan`. Run it earlier and the
 tickets that close after it make it stale again.
 

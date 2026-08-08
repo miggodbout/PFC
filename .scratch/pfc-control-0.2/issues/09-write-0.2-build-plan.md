@@ -2,7 +2,7 @@
 
 Type: task
 Status: open
-Blocked by: 14, 15, 18 — all others resolved (17 and 13 resolved 2026-08-08)
+Blocked by: 15, 18 — all others resolved (17, 13 and 14 resolved 2026-08-08)
 
 ## Question
 
@@ -19,8 +19,9 @@ cross-references. Read that output first.
 **Two of those files exist already, from the sweep's first pass on 2026-08-08:**
 
 - `../supersessions.md` — which decision wins wherever two disagree.
-- `../template-changes.md` — rewritten, six of eight sections FINAL. Section 5
-  waits on `13`.
+- `../template-changes.md` — rewritten, now nine sections. Section 5 went FINAL
+  when `13` closed, and section 9, the default item list, was added by it.
+  **Section 8 still waits on `15`.**
 - `../code-inventory.md` — **read this one before writing the file-by-file
   section below.** It is the 0.1 code measured against all seventeen tickets:
   every call site of the rollup, every place the demo data reaches, the exact
@@ -54,6 +55,37 @@ them.
 - **`get-project` must return closed records, not only open ones.** Filtering
   them out to save space would force Archive to invent a new server call later.
   Settled in `06`, and it is a rule about `03`'s answer, not a change to `03`.
+
+## Handed over by `14-building-archive`, 2026-08-08
+
+Five items. The full reasoning is in that ticket's **Answer** section.
+
+- **`list-projects` sends counts, not a word.** Three numbers per building: items
+  Complete, items total, open flags. The phone applies `11`'s rule to them. The
+  server's own `worst(statuses)` at `control/appscript/Code.js:204` goes, which
+  `11` required anyway. This lands in the same pass that FINDING 7 below describes,
+  so the file is already open — the extra cost is one read of the Deficiencies tab.
+- **The Tracking list runs a four-step order of tests**, first match wins:
+  1. The phone holds a waiting or held edit for it → draw a normal row.
+  2. It reads Complete and was already Complete on this session's first list answer
+     → do not draw it.
+  3. It reads Complete and went Complete during this session → draw a greyed row.
+  4. Otherwise → draw a normal row.
+
+  **Keep this separate from the storage test.** Deleting the local copy is `03`'s
+  rule with `04`'s exemption, and it runs on app open. Two tests, not one.
+- **`control/tracker/index.html:74` gains a second empty message.** `emptyHtml()`
+  today says *"No projects yet — Create your first building."* That is wrong once
+  buildings exist and all of them read Complete, and it reads as data loss. The
+  finished case says: **"Nothing to track. Every building is finished. Open the
+  project Sheet to read one."** Both keep the `Create Job` button.
+- **The phone remembers, for the session only, which buildings it watched go
+  Complete.** Not stored, not synced, gone when the app closes. It is what keeps the
+  greyed row on screen until the next app open.
+- **A rule for the plan, not for code: every item is always drawn on the Unit
+  screen.** There is no hide-finished-items work in 0.2. Miguel closed that branch
+  on 2026-08-08 and the map's Notes carry the boundary. If a later session proposes
+  it, the answer is already no.
 
 ## Found by `code-inventory.md`, 2026-08-08
 
