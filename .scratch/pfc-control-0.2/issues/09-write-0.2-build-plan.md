@@ -2,7 +2,8 @@
 
 Type: task
 Status: open
-Blocked by: 15, 18 — all others resolved (17, 13 and 14 resolved 2026-08-08)
+Blocked by: 18 — every other 0.2 ticket is resolved (17, 13, 14 and 15 all
+resolved 2026-08-08)
 
 ## Question
 

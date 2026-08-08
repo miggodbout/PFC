@@ -1,7 +1,8 @@
 # Where the needed-line suggestions come from
 
 Type: grilling
-Status: open
+Status: resolved
+Resolved: 2026-08-08
 Blocked by: none
 
 ## Question
@@ -94,3 +95,282 @@ scope, the ranking, the filtering, the near-match prompt, and deletion. Note tha
 `17` settled Add-only for the **reason and type** lists. It said nothing about
 suggestions, which are generated rather than curated, so deletion is still a live
 question here.
+
+---
+
+## Resolution, 2026-08-08
+
+### The seed list is deleted
+
+**No seed ships.** The point that killed it: the phone already holds up to ten
+buildings, per `03-local-copy-rules`, and a needed line under `interior_doors` is
+just as useful whichever building it was typed in. Draw the chips from **every
+building on the phone**, this building's own lines first. A new job then inherits
+the whole vocabulary on day one, which is exactly the gap the seed existed to
+fill.
+
+So the "Settled early, 2026-08-07" section above is **dead**. Miguel writes no
+seed content, `common.js` holds no seed constant, and `_Config` holds no seed
+list. `template-changes.md` section 8 loses its first unknown: **the suggestion
+pool takes no template change at all.**
+
+`17` had already cut the seed down to dimensions only. Cross-building sourcing
+finished it off.
+
+### The pool, and how it is grouped
+
+A chip is one **needed line**. Lines are grouped, and the chip row only ever
+shows one group.
+
+The group key is **Type, item, subtype**:
+
+| Part | Why |
+|---|---|
+| Type | A Deficiency line is a door size. A Waiting line is a trade or a delivery. Mixed, the row offers `painters to finish` while you log a broken door |
+| item | `32 6 RH` under Baseboards is noise |
+| subtype | `17`'s own example splits `Bypass` to `60 6` from `Pocket` to `30 4 9/16 LH` |
+
+**Type splitting is a find, not a detail.** No ticket had noticed that the two
+record types write completely different kinds of text into one box. It is the
+same shape of miss that `06` found when it drew the Type control itself.
+
+Rules that fall out of the key:
+
+- **An item that defines no subtype** — ten of the fourteen, per `13` — groups on
+  Type and item alone. Nothing changes for it.
+- **A phase-level Waiting record has no item**, per `02` column D. It groups on
+  **Type and phase**: `Waiting, Doors & Windows`.
+- **A typed `Other` subtype** — `13` gives every subtype list an `Other` box —
+  groups under one **`Other`** bucket per item, whatever was typed. It does not
+  get a group per typed word. That keeps the group count bounded: an unbounded
+  group count is one typo away from a group nobody can ever reach again.
+
+About 60 groups in total, against 14 items and 16 listed subtypes.
+
+### Ranking, and what a use count counts
+
+**Most used first. A tie breaks on the newest record.** Three chips.
+
+**One record is one use. The `quantity` column is ignored.** A record for twelve
+doors is one use, not twelve. The chips are a typing shortcut, so they order by
+how often the wording gets typed, not by how much material it represents. Sum the
+quantity instead and one big order pins a size to the front of the row forever,
+even if it is never typed again.
+
+Three chips, not the four the `06` prototype drew. One row above the keyboard
+wraps at about four, and `06` measured that the wrapped row is the row Save
+needs.
+
+### Which records feed a chip
+
+**`get-project` returns the whole Deficiencies tab**, every state. The phone
+keeps all of it and filters on the phone. `03` never settled this and the chips
+forced it.
+
+- Simplest server: return the tab. No filter to write, and none to get wrong when
+  a later version wants a state the filter dropped.
+- Size is not the constraint. About 300 records at ~120 bytes is ~36 KB, against
+  a building copy of ~100 KB and a localStorage cap of ~5 MB.
+- **Open-records-only was rejected and is worth naming.** The pool would shrink
+  exactly as the job improved: forty chips in week one, almost none in week six.
+  Backwards.
+
+Then, on the phone:
+
+| Record state | Feeds a chip |
+|---|---|
+| Open | Yes |
+| Fixed | Yes |
+| Cancelled | **Never** |
+| Waiting to send, in the outbox | **Yes** |
+| Held, per `04` | No |
+
+**Cancelled is how a bad chip is removed, and that is the whole deletion answer.**
+A typo enters the pool through a record, so cancelling that record takes it back
+out. Both Cancel buttons already exist — `06` puts one on every row of the Logged
+here list, and `02` and `06` put one in the Tracker record list. **No delete
+control is built anywhere, and no per-chip hide list is stored.** Cancelling also
+stops the Sheet showing a typo as real work, so one tap fixes both problems.
+
+The outbox rule is `04` and `05` applied unchanged: **a waiting edit paints the
+screen, a held edit does not.** Log four doors in a basement with no signal and
+the chips work from the second door. A held edit may never land, so it may never
+become a chip.
+
+### The history: chips outlive the job that made them
+
+`03` and `14` delete a finished building's local copy on the next app open, which
+would take its chips with it. Miguel kept the history, with a cap.
+
+**Two sources, and they do not overlap:**
+
+| Source | Read how |
+|---|---|
+| A building still on the phone | Counted live, from scratch, every time |
+| A building the phone has dropped | Read from the history index |
+
+Live buildings are **never** written into the index. This is what makes Cancel
+exact: cancel a record on a live job and the chip goes at once, because that job
+is recounted from nothing. A single flat index that every save writes into would
+need Cancel to hunt down and un-count its own line, and a missed one is a
+cancelled typo that is a chip forever.
+
+A dropped job cannot be cancelled anyway. It is finished.
+
+**The index:** one new localStorage key, separate from the per-building keys and
+from the outbox. Each row holds **item, subtype, type, needed line, use count,
+last used**. No unit, no reason, no dates beyond the last-used one. It is
+generated by the phone and never written by hand, so it is not a curated list and
+`17`'s Add-only rule does not apply to it.
+
+**The cap is 20 lines per group.** Per group, not one shared budget: Interior
+Doors logs far more than Attic Hatch, and a shared budget lets the busy item
+starve the quiet one, so the quiet item's chip row empties first. Worst case is
+about 60 groups times 20 lines times ~50 bytes, near **60 KB**. Only three chips
+ever show, so 20 is about six times what the row can hold, with the rest
+reachable by typing.
+
+**Pruning: least used goes first, ties broken by oldest last-used.** The same
+rule that orders the chips, so the line that leaves is always the one furthest
+from the row. A twelve-month expiry was offered and turned down. It can throw
+away the most-used line in the group after one slow season.
+
+**When the fold happens:** a building's lines are folded into the index
+immediately **before** its copy is deleted, in the same step, whether the copy is
+dropped by the ten-building limit or by `14`'s archive rule.
+
+**One rule chosen in the build, not by Miguel:** a dropped building can be
+downloaded again, and its lines are then in **both** places. Do not add the two
+counts. **Take the larger of the live count and the history count.** Adding them
+double-counts. This affects chip order only, never chip content, and the history
+does not record which building a line came from, so nothing better is available
+without making the index per-building.
+
+### The near-match prompt is built
+
+Miguel overruled the recommendation to drop it, and his reason is better than the
+recommendation: with no seed and a pool spanning every building, **the chips are
+the only thing holding the wording together**, so guarding what enters the pool
+matters more, not less.
+
+**How close is measured: strip every space, quote mark and slash, then lowercase,
+then compare for an exact match.** Not an edit distance.
+
+    typed   32 6 RH    ->  326rh
+    stored  32" 6" RH  ->  326rh      MATCH
+
+    typed   32 6 LH    ->  326lh
+    stored  32 6 RH    ->  326rh      NO MATCH
+
+Edit distance was rejected on one example: `32 6 LH` and `32 6 RH` are one
+character apart and are two genuinely different doors. A fuzzy rule offers the
+wrong one, and tapping Use it writes the wrong door into the Sheet. The
+normalising rule cannot make that mistake, because a real difference is always a
+different digit or letter.
+
+**It fires on Save, not while typing.** Two buttons, `Use it` and `Keep mine`.
+Either one then saves. Live matching would put the prompt in the same strip of
+screen as the chip row, and `06` measured that strip as the one Save needs.
+
+**It compares against the same group the chips came from** — Type, item, subtype,
+live buildings plus history. So the prompt can only ever offer a line the chip
+row would have offered. If two lines both match, offer the most used.
+
+### Filtering, and the nomenclature
+
+**Typing filters the chips using the same normalising compare.** One rule,
+written once, used in two places.
+
+    stored  32" 6" RH
+    type 326   -> chip shows
+    type 326r  -> chip shows
+    type 32 6  -> chip shows
+
+Tap the chip and the **stored** line is what gets saved, punctuation and all. So
+you type loose and store clean.
+
+**Miguel changed the nomenclature itself.** `32" 6" RH` was a throwaway he set
+early. It reads well on a keyboard, but the inch mark is on the second keyboard
+page on iOS and you reach it twice per door, in gloves. **The standard is now
+`32 6 RH`**, no inch marks, everything on the first page.
+
+This is content, not code. The box is free text either way and nothing in the
+build changes. Two consequences:
+
+- **Lines already typed the old way stay in the history the old way**, so both
+  forms sit in the pool for a while. The normalising compare treats them as the
+  same string, so the near-match offers the old form against a new typing and the
+  two never split into two chips.
+- Every `32" 6" RH` example in `01`, `02`, `17` and `template-changes.md` is now
+  stale text. Logged for `18`.
+
+### The hint: Size, Jamb, Swing
+
+`32 6 RH` is unreadable to anyone who does not already know the order, so the box
+has to say what each number means. Miguel's words for it: **Size, Jamb, Swing** —
+crew vocabulary, not the width, depth and swing this map had been writing.
+
+**It is the placeholder inside the empty box**, in grey, gone the moment the
+first character lands. **Not a line under the box and not part of the label.** A
+separate line costs a row, and `06` measured six controls as the budget before
+Save falls under the keyboard, with `17` already at seven. The placeholder costs
+zero height, and it disappears exactly when it stops being needed.
+
+**The text lives per item, in `_Config`, edited in Admin.** The item object that
+`13` already gives `types` and `trim` gains a third key, **`hint`**. Admin's
+**Lists** card, which `13` already builds and which already shows subtypes and
+the reason trim for a picked item, gains one text box for it.
+
+- `common.js` seeds it, the same way `13` settled that `DEFAULT_PHASES` is the
+  real seed and the .xlsx is a drawing.
+- Ship it filled where it is obvious and blank elsewhere, following `13`'s
+  precedent for the trim. A blank hint is never wrong, only less helpful.
+- A custom item added mid-job can be given one without a release. Code-only hints
+  were rejected for exactly that reason.
+
+**One hint per item. It does not change with the subtype.** Miguel took this one
+reluctantly — "I don't like this but adding 8 different hints is egregious" — and
+he is right on the count: per-subtype hints go from fourteen strings to about
+thirty, and every subtype added in Admin then needs one more. A bypass door has
+no swing, so its hint names a term it does not use. The hint is a reminder, not a
+rule, and the Subtype dropdown sits directly above the box so you can see which
+kind of door you picked. **Logged to `.scratch/0.3-backlog.md`** as an optional
+per-subtype override, which the `_Config` shape already leaves room for.
+
+### What this ticket did NOT add to the form
+
+Nothing. The chip row and the placeholder were both already drawn in the `06`
+prototype. **The control count stays at seven**, so the Save-under-the-keyboard
+problem in the map's Not yet specified is untouched by this ticket.
+
+### What the build owes
+
+1. `get-project` returns the whole Deficiencies tab, every state.
+2. One normalising function — strip spaces, quote marks and slashes, lowercase —
+   used by the chip filter and by the near-match. Write it once.
+3. The chip pool: live building copies plus the history index, grouped on Type,
+   item and subtype, ordered most-used then newest, three shown.
+4. The history index: a new localStorage key, folded in immediately before a
+   building copy is deleted, 20 lines per group, least-used pruned first, larger
+   count wins on a re-download.
+5. The near-match prompt on Save, matching within the current group only.
+6. `hint` as a third per-item key in `_Config`, seeded in `common.js`, with one
+   text box in Admin's Lists card, drawn as the placeholder in the needed box.
+7. `_Config` version is already going to 2 for `13`. The `hint` key rides along
+   and needs no further bump.
+
+### Still not answered, on purpose
+
+**A parser that reads loose text and prints the standard form.** Miguel raised it
+and then ruled it out of 0.2 himself. It is written up in the map fog and in
+`.scratch/0.3-backlog.md`.
+
+The reason it is not urgent: **0.2 already cleans every line that has been typed
+before.** Tap a chip and the stored text is saved. Type loose and the Save prompt
+offers the stored text. The only line that goes in raw is a size logged for the
+very first time, a handful per job, and fewer every job as the history grows.
+
+The reason it is not cheap: a parser must guess. `5 1/4 MDF` on a baseboard and
+`32 6 RH` on a door are both numbers, and nothing tells them apart without a
+grammar per item, a screen to edit that grammar, and a way to correct it when it
+reads wrong. That is the four-field form `17` turned down, wearing a coat.

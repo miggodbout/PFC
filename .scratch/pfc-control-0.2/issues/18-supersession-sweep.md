@@ -1,11 +1,20 @@
 # Sweep the 0.2 notes for decisions that were later overruled
 
 Type: task
-Status: **first pass done 2026-08-08, widened by 13 and again by 14 the same day.
-Second pass owed after 15, which is the last one left.**
-Blocked by: 15 — every other 0.2 ticket. 17, 13 and 14 resolved 2026-08-08. This
-runs last, right before `09-write-0.2-build-plan`. Run it earlier and the
-tickets that close after it make it stale again.
+Status: **first pass done 2026-08-08, widened by 13, 14 and 15 the same day.
+The second pass is now owed and nothing blocks it.**
+Blocked by: nothing. **`15` closed 2026-08-08 and was the last one.** 17, 13, 14
+and 15 all resolved that day. This runs last, right before
+`09-write-0.2-build-plan`. Run it earlier and the tickets that close after it
+make it stale again.
+
+**What `15` added to the sweep**, beyond the three supersessions already written
+into `supersessions.md` as entries 35 to 37:
+- **Every `32" 6" RH` in the repo is stale text.** `15` dropped the inch marks
+  and the standard needed line is now `32 6 RH`. Known sites: `01`'s hint text,
+  `02` column H, `17`, `template-changes.md`.
+- `template-changes.md` **section 8 is now empty**, so the file needs only this
+  sweep before it is marked FINAL.
 
 ---
 

@@ -104,7 +104,7 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
 
 Added by `17-reason-list-scope`, 2026-08-08:
 - **Reason** — *what is wrong.* One list of eight per building, trimmed per item.
-- **Needed** — *what would fix it.* Free text, such as `32" 6" RH`.
+- **Needed** — *what would fix it.* Free text, such as `32 6 RH`.
 - **Subtype** — the kind of thing needed, picked from a list the item defines.
   It is part of the needed line, not part of the reason, and it has its own
   column. **Four items define a list**, settled in `13-admin-changes`: Interior
@@ -112,6 +112,21 @@ Added by `17-reason-list-scope`, 2026-08-08:
   shows no dropdown. Each list ends with `Other`, which opens a text box.
 - **Defective** — arrived wrong from the factory. Replaces `Warped`. Against
   **Damaged**, which means somebody hurt it after it arrived.
+
+Added by `15-suggestion-list`, 2026-08-08:
+- **Chip** — one past needed line, offered as a tap target under the needed box.
+  Generated from records, never curated. A chip is not a list Admin owns.
+- **Group** — the key a chip belongs to: **Type · item · subtype**. The chip row
+  only ever shows one group.
+- **The nomenclature dropped its inch marks.** The standard needed line for a door
+  is now **`32 6 RH`**, not `32" 6" RH`. Miguel changed it because the inch mark
+  is on the second iOS keyboard page and you reach it twice per door, in gloves.
+  It is content, not code — the box is free text either way. **Every `32" 6" RH`
+  example in `01`, `02`, `17` and `template-changes.md` is stale text**, logged
+  for `18`.
+- **Hint** — grey placeholder text inside the empty needed box, naming what each
+  part means: `Size   Jamb   Swing`. One per item, held in `_Config`, edited in
+  Admin. It is crew vocabulary — **Size** and **Jamb**, not width and depth.
 
 Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 - **Tracker** — a tree. Tracking, Building, Floor, Unit. Answers "how is floor 2
@@ -121,11 +136,14 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. Read them
 before `09`:
 - **`supersessions.md`** — which decision wins wherever two disagree. First pass
-  2026-08-08, widened the same day by `13`. A second pass is owed after `14` and
-  `15` close.
+  2026-08-08, widened the same day by `13`. **`14` and `15` have both closed, so
+  the second pass is now takeable.** That is `18`, and it is the last thing before
+  `09`.
 - **`template-changes.md`** — the master template spec. Nine sections. Section 5
   went FINAL when `13` closed, and section 9, **the default item list**, was added
-  by it. Section 8 still waits on `15`. **Not FINAL as a whole yet.**
+  by it. **Section 8 is now empty**: `15` took no template change for the
+  suggestion pool, and `14` answered the archive drop. The file needs only `18`'s
+  sweep before it is FINAL.
 - **`code-inventory.md`** — the 0.1 code read against all seventeen tickets.
   Every rollup call site, everywhere the demo data reaches, the exact lines each
   ticket deletes, and nine things no ticket owns. Written 2026-08-08.
@@ -338,10 +356,48 @@ before `09`:
   dropping the local copy is what the phone *stores*. `04`'s exemption is a storage
   rule and survives untouched.
 
+- [Where the needed-line suggestions come from](issues/15-suggestion-list.md) —
+  **the seed list is deleted, and the chips are sourced from every building on the
+  phone.** `03` already keeps ten, and a door size is just as useful whichever job
+  it was typed on, so a new building inherits the whole vocabulary on day one —
+  which is the only gap a seed ever filled. Miguel writes no seed content and
+  **the template takes no change at all.** A find nobody had noticed: **Type
+  splits the pool.** A Deficiency line is a door size and a Waiting line is a
+  trade, so the group key is **Type · item · subtype**, about 60 groups; a
+  phase-level Waiting groups on Type and phase, and a typed `Other` subtype lands
+  in one `Other` bucket per item so the group count stays bounded. Ordering is
+  **most used, ties to newest, three chips**, and **one record is one use** — the
+  `quantity` column is ignored, or one big order pins a size to the front forever.
+  `get-project` now returns **the whole Deficiencies tab, every state**, which
+  `03` never settled; Open and Fixed feed a chip, **Cancelled never does**, and a
+  waiting outbox record does while a held one does not, per `04`. **Cancelling the
+  record is the whole deletion answer** — no delete button and no hide list is
+  built. Chips outlive the job: **a building's lines fold into a capped history
+  index just before its copy is deleted**, 20 lines per group, least-used pruned
+  first; live buildings are recounted from scratch and never written into it,
+  which is what makes Cancel exact. The **near-match prompt is built** — Miguel
+  overruled the case for dropping it, correctly, since the chips are now the only
+  thing holding the wording together. It **normalises rather than fuzzy-matches**:
+  edit distance would offer `32 6 RH` against `32 6 LH`, two real and different
+  doors. **Miguel changed the nomenclature itself to `32 6 RH`**, no inch marks,
+  and the box gains a **grey `Size Jamb Swing` placeholder** held per item in
+  `_Config` and edited in Admin's Lists card. **No control was added to the
+  Logger form.**
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.
+- **A parser that reads a loose needed line and prints the standard form.** Raised
+  by Miguel on 2026-08-08 while resolving `15`, and ruled out of 0.2 by him in the
+  same breath. It is not urgent, because 0.2 already cleans every line typed
+  before: tap a chip and the stored text is saved, or type loose and the Save
+  prompt offers the stored text. Only a size logged for the **first time ever**
+  goes in raw. It is not cheap, because a parser must guess — `5 1/4 MDF` on a
+  baseboard and `32 6 RH` on a door are both numbers, and telling them apart needs
+  a grammar per item, a screen to edit it, and a way to correct a wrong read. That
+  is the four-field form `17` turned down, wearing a coat. Logged in
+  `.scratch/0.3-backlog.md`.
 - How the Service Worker and `CACHE_NAME` handling change once the app holds
   real data locally. Today the Service Worker caches the app shell only.
   **Narrowed on 2026-08-08 by `code-inventory.md`:** the one fact recorded here

@@ -238,7 +238,8 @@ limit is the only thing that drops a copy, which is what `03` already builds.
 
 ## What the second pass still owes
 
-Run this after `15` closes, and before `09`. **Only `15` is left.**
+Run this before `09`. **`13`, `14` and `15` have all closed, so the second pass is
+takeable now. Nothing blocks it.**
 
 - ~~**`13`**~~ **closed 2026-08-08.** Its supersessions are entries 30 to 34
   above, and `template-changes.md` sections 5 and 9 carry the result.
@@ -247,9 +248,38 @@ Run this after `15` closes, and before `09`. **Only `15` is left.**
   superseded three things the sweep should carry, listed in the new section below.
   No template change: the counts it adds to `list-projects` are a server change and
   take no new column.
-- **`15`** will decide where the seed suggestion text is stored. If the answer is
-  the `_Config` tab, `template-changes.md` gains a section. If the answer is
-  "built from records the phone already holds", section 5 loses its last item.
+- ~~**`15`**~~ **closed 2026-08-08.** The answer was "built from records the phone
+  already holds", so **`template-changes.md` section 8 is now empty** and the file
+  is one sweep away from FINAL. `15` added a `hint` key to section 5 and
+  superseded three things, listed below.
 - Re-check that nothing in `13`, `14` or `15` quotes a Deficiencies-tab column
   letter, a five-status list, or the word `Warped`.
+- **Sweep every `32" 6" RH` in the repo.** `15` dropped the inch marks and the
+  standard is now `32 6 RH`. Known sites: `01` (the hint text), `02` (column H),
+  `17`, `template-changes.md`, and `CLAUDE.md` if it carries one.
 - Then, and only then, mark `template-changes.md` **FINAL**.
+
+---
+
+## Superseded by `15-suggestion-list`, 2026-08-08
+
+35. `15`'s whole **"Settled early, 2026-08-07"** section plans a seed suggestion
+    list that Miguel writes, Interior Doors first. **The resolution deletes it.**
+    Chips come from records across every building on the phone, so a new job
+    inherits the vocabulary on day one and the seed has no gap to fill. Entry 18
+    above said `17` had *narrowed* the seed. It is now **gone**, not narrowed.
+    Miguel writes no seed content and no seed ships in `common.js` or `_Config`.
+36. `01` set the needed-line hint as **`ex: 32" 6" RH`**, and `02`, `17` and
+    `template-changes.md` copy the form. **`15` wins twice over.** The inch marks
+    are dropped — the standard is **`32 6 RH`** — and the hint is no longer an
+    example at all. It is a **per-item placeholder naming the parts**:
+    `Size   Jamb   Swing`, in crew words, held as a `hint` key in `_Config`.
+37. `03-local-copy-rules` never said which record states `get-project` sends.
+    **`15` settles it: the whole Deficiencies tab, every state.** This is an
+    addition to `03`, not a contradiction of it, but the build plan must read it
+    here — `03`'s own text does not mention records at all.
+
+One thing `15` deliberately did **not** overrule: `06`'s control budget. The chip
+row and the placeholder were both already drawn in the `06` prototype, so the
+Logger form **stays at seven controls**. The Save-under-the-keyboard question in
+the map's Not yet specified is untouched.

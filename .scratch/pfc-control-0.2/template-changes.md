@@ -232,7 +232,8 @@ call, so nothing about the storage itself changes.
           { "key": "interior_doors", "label": "Interior Doors",
             "types": ["Regular", "Bypass", "Bi-fold", "Double",
                       "Pocket", "Double Pocket", "Dwarf", "Unit Door"],
-            "trim":  [] }
+            "trim":  [],
+            "hint":  "Size   Jamb   Swing" }
         ]}
       ]
     }
@@ -242,8 +243,21 @@ call, so nothing about the storage itself changes.
   it wrong.
 - **`trim` holds the reason strings the item does not offer**, matched exactly
   against `reasons`. An empty trim means all eight are offered.
-- **A custom item arrives with `types: []` and `trim: []`.** It offers all eight
-  reasons and shows no subtype dropdown.
+- **`hint` holds the placeholder text for the needed box**, added by
+  `15-suggestion-list` on 2026-08-08. It names what each part of the needed line
+  means, in crew words: `Size   Jamb   Swing`, not width and depth. It is grey
+  text **inside** the empty box, so it costs no screen height and disappears at
+  the first character — `06` measured the control budget and `17` already spent
+  the last of it. **One hint per item, never per subtype.** A bypass door has no
+  swing, and that is accepted: the hint is a reminder, not a rule, and thirty
+  per-subtype strings against fourteen per-item ones was not worth it. An optional
+  per-subtype override is logged in `.scratch/0.3-backlog.md`; this shape leaves
+  room for it.
+- **A custom item arrives with `types: []`, `trim: []` and `hint: ""`.** It offers
+  all eight reasons, shows no subtype dropdown, and shows no placeholder. Ship
+  `hint` filled where it is obvious and blank elsewhere, the same rule as the
+  trim below. A blank hint is never wrong, only less helpful, and Admin fills it
+  in without a release.
 - **The Waiting reason list is not stored per building.** `17` confirmed it never
   varies, so it is a constant in `common.js`.
 
@@ -301,15 +315,25 @@ the right number of columns by themselves once the list is three long.
   leaves the job.
 - **The six header rows on the Unit Tracker tab.** The printed look is unchanged.
 
-## 8. Still unknown
+## 8. Nothing left unknown — FINAL
 
-- **Where the needed-line suggestion text is stored.** `15-suggestion-list` owns
-  it and is open. If the answer is `_Config`, this file gains a section. If the
-  answer is "built from the records the phone already holds", this item goes away
-  and the template needs nothing. `17` narrowed the question: seeds now cover
-  **dimensions only**, because the type became a dropdown.
-- **Whether `03`'s archived-building drop fires in 0.2.** `14-building-archive`
-  owns it. It changes no template column either way. See the note added to `14`.
+Both items that sat here are answered. **This section is now empty on purpose.**
+
+- ~~Where the needed-line suggestion text is stored.~~ **Answered by
+  `15-suggestion-list`, 2026-08-08. The template takes no change.** The seed list
+  was deleted outright: chips are built from records on the phone, across every
+  building it holds, plus a phone-local history index that is not a Sheet at all.
+  No `_Config` list, no new tab, no new column.
+- ~~Whether `03`'s archived-building drop fires in 0.2.~~ **Answered by
+  `14-building-archive`, 2026-08-08. It fires.** It changed no template column
+  either way, as expected.
+
+`15` did add one thing to this file, but to **section 5**, not here: a **`hint`**
+key per item in `_Config`, for the needed box placeholder.
+
+**One piece of stale text this file still carries**, for `18` to sweep: every
+`32" 6" RH` example. `15` dropped the inch marks, so the standard is now
+**`32 6 RH`**.
 
 ## 9. The default item list — FINAL
 
