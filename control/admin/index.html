@@ -275,25 +275,39 @@ function removeOther(phaseKey, index) {
   render();
 }
 
-/** Collects the ticked items, plus any custom items, into the payload. */
+/** Collects the ticked items, plus any custom items, into the payload.
+ *
+ *  Each item carries its three lists — the subtype list, the reason trim
+ *  and the needed-box hint. They are seeded into the building's _Config on
+ *  the server and read back from there afterwards. Nothing downstream
+ *  reads a list out of code, so Admin can change one later without a
+ *  release.
+ *
+ *  A custom item gets empty lists: all eight reasons, no subtype dropdown,
+ *  no placeholder. */
 function collectPhases() {
   return DEFAULT_PHASES.map(function (phase) {
     var items = phase.items
       .filter(function (label) { return job.ticked[phase.key + '|' + label]; })
-      .map(function (label) { return { label: label }; });
+      .map(function (label) { return itemPayload(label); });
 
     var other = job.other[phase.key];
     if (other.on) {
-      other.items.forEach(function (name) { items.push({ label: name }); });
+      other.items.forEach(function (name) { items.push(itemPayload(name)); });
 
       // Text still sitting in the box counts too. Nobody should lose an
       // item because they did not press Add.
       var pending = String(other.text || '').trim();
-      if (pending) items.push({ label: pending });
+      if (pending) items.push(itemPayload(pending));
     }
 
     return { key: phase.key, label: phase.label, items: items };
   });
+}
+
+function itemPayload(label) {
+  var lists = defaultItemLists(label);
+  return { label: label, types: lists.types, trim: lists.trim, hint: lists.hint };
 }
 
 function submitForm() {
@@ -315,6 +329,7 @@ function submitForm() {
     floorCount: job.floorCount,
     unitsPerFloor: job.unitsPerFloor,
     unitCount: job.unitCount,
+    reasons: DEFAULT_REASONS,
     phases: phases
   }).then(function (result) {
     job.busy = false;
@@ -434,7 +449,7 @@ function editOpsHtml(structure) {
     /* Remove an item */
     '<div class="op-card card">' +
       '<div class="op-title">Remove an item</div>' +
-      '<div class="field-note">The item loses its Status and Details columns. Every other column keeps its values.</div>' +
+      '<div class="field-note">The item loses its Status column. Every other column keeps its values.</div>' +
       '<select class="input" id="e-remove-item">' + itemOptions.join('') + '</select>' +
       '<button type="button" class="btn btn-ghost btn-small press" onclick="runOp(\'remove-item\')">Remove item</button>' +
     '</div>' +
