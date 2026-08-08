@@ -13,6 +13,55 @@ moment it reaches that code.
 
 ---
 
+## Amendments made during the build
+
+LOCKED means planning is closed, not that the file can be wrong. Each line
+below is a place where building the thing showed the plan was short. **Every
+one is marked again where it lands in the file**, so nobody reads the old
+sentence on its own and "fixes" the code back.
+
+Nothing here re-opens a decision. Each one is arithmetic the plan could not
+have done on paper.
+
+| # | Amendment | Sections | Date |
+|---|---|---|---|
+| A1 | `list-projects` sends **five** numbers, not four. `unitsNotStarted` was added | 2.4, 3.4, 5.2, 6 | 2026-08-08, step 2 |
+| A2 | The Details box was deleted in **step 2**, not step 3 | 5.4, 6 | 2026-08-08, step 2 |
+
+### A1 — the fifth number
+
+The plan says `list-projects` sends four numbers: `unitsDone`, `unitsTotal`,
+`deficiencies`, `waiting`. **The rollup rule of section 3.4 cannot run on
+them.** It needs `n`, `c` **and `s`** — how many are Not Started — and four
+numbers do not carry `s`.
+
+The failure is not an edge case. "Every unit Not Started" and "some unit In
+Progress" both arrive as `unitsDone: 0`, so the phone cannot tell a job nobody
+has touched from a job halfway done. **Every untouched building on Tracking
+read In Progress**, which is the same class of lie worst-wins told.
+
+`unitsNotStarted` is one `.filter()` over `readOverallColumn`'s answer, which
+is already in memory. It costs no extra read.
+
+**It does not break the rule the four numbers existed for.** That rule is
+"the server sends numbers and the phone applies the rule", from `14` rule 4.
+A fifth number is still a number. What was banned is a *verdict* — a status
+string worked out on the server, which the phone cannot re-check. There is
+still no `overall` key anywhere in the answer.
+
+### A2 — the Details box
+
+Section 5.4 lists the Details box among the Unit screen deletions, and the
+Unit screen rewrite is step 3 and step 4 work. **Step 1 had already removed
+the Details column from the Sheet**, so by step 2 `get-project` sent no
+`details` key at all and the box had nothing to read or write. It went with
+its column, in step 2, with `toggleDetails`, `typeDetails`, `closeDetails`,
+`cancelDetails`, `editorFrom` and `openEditor`.
+
+This changes when, not what. Everything else in 5.4 is still step 3 and 4.
+
+---
+
 ## 0. Before you start
 
 ### Read order
@@ -343,10 +392,14 @@ rebuild. It backs the Admin refusal panel in section 5.6.
 
 ### 2.4 Changed: `handleListProjects`
 
-Per building it sends **four numbers and no verdict**:
+> **AMENDED A1, 2026-08-08 — it sends FIVE numbers.** `unitsNotStarted` was
+> added during step 2. Section 3.4's rule needs it and four numbers do not
+> carry it. Do not take it back out. See Amendments, above.
+
+Per building it sends **five numbers and no verdict**:
 
 ```
-unitsDone, unitsTotal, deficiencies, waiting
+unitsDone, unitsNotStarted, unitsTotal, deficiencies, waiting
 ```
 
 - `unitsDone` and `unitsTotal` come from the per-unit `COMPLETION` column that
@@ -723,7 +776,8 @@ working and gains whatever new reasons `save-batch` returns. `registerWorker()`
 - **Pull to refresh.**
 - The row takes the marks of section 4: bar, `48 units · 13 done`, both flag
   chips, the not-saved chip, the status pill. Its marks always show.
-- Apply the rollup rule of 3.4 to the four numbers `list-projects` sends.
+- Apply the rollup rule of 3.4 to the **five** numbers `list-projects` sends.
+  **AMENDED A1** — the fifth is `unitsNotStarted`, and the rule needs it.
 
 **The four-step order of tests for drawing a row. First match wins:**
 
@@ -784,6 +838,11 @@ Copy `building.html:52` and `unit.html:61`, which both handle
 ### 5.4 `control/tracker/unit.html` — the heaviest rewrite
 
 320 lines, roughly half changed.
+
+> **AMENDED A2, 2026-08-08 — the Details box was deleted in STEP 2**, not
+> here. Step 1 took its column out of the Sheet, so by step 2 `get-project`
+> sent no `details` key and the box had nothing to read. Everything else in
+> this section is still step 3 and step 4 work.
 
 **Deleted — the Details box, in eight places:** the editor markup (123-136), the
 Details button (142-144), the read-only line (158), `toggleDetails` (217),
@@ -1072,9 +1131,9 @@ the old test Sheets.
 
 `get-project` · `Store` rewritten to `localStorage` · the demo data deleted · the
 rollup function and `pillHtml` · the marks of section 4 on `building.html` and
-`tracker/index.html` · `list-projects` sending four numbers · the error branch on
-Buildings · the two empty messages · the four-step Tracking order · pull to
-refresh · the header flash.
+`tracker/index.html` · `list-projects` sending five numbers (**A1**) · the error
+branch on Buildings · the two empty messages · the four-step Tracking order ·
+pull to refresh · the header flash · the Details box, with its column (**A2**).
 
 **Test:** open a building, then turn the phone to airplane mode and open it again.
 It must draw instantly from the copy. Delete the copy in the browser tools and

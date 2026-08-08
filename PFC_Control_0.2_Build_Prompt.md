@@ -32,6 +32,37 @@ were proposed, argued and turned down, and each one is the obvious idea you will
 at the moment you reach that code. It is 80 lines. It is the cheapest thing in the
 file and the one that saves the most work.
 
+**The plan's Amendments section is mandatory too.** It sits at the top of
+`BUILD-PLAN.md` and it is short. It lists the places where building the thing
+showed the plan was short, so a session does not read an old sentence and undo
+working code.
+
+### The kickoff message
+
+Paste this to start a session. Set the step number and nothing else.
+
+> Continue the PFC Control 0.2 build. Start step N.
+>
+> READ FIRST, in this order. **Do not read anything else before you have read
+> all four.**
+>
+> 1. `PFC_Control_0.2_Build_Prompt.md` at the repo root — how the build is run.
+> 2. `.scratch/pfc-control-0.2/BUILD-LOG.md` — **the last entry first.** Do not
+>    guess the state from the git log.
+> 3. `.scratch/pfc-control-0.2/BUILD-PLAN.md` — **the Amendments section at the
+>    top, then section 11, then only the sections your step names.** Section 6
+>    says which those are. **Do not read the plan whole.** It is 1,400 lines and
+>    reading it cold costs a third of the session.
+> 4. The code your step touches, from `code-inventory.md` if you want it
+>    measured first.
+>
+> Then work. Stop at a coherent point, leave 15k tokens for the landing, and
+> write the log entry before you finish.
+
+`template-changes.md` and `supersessions.md` are **not** in the read order. The
+Sheet spec was spent in step 1, and the plan was written from `supersessions.md`
+and wins over it. Open either one only when the plan sends you there by name.
+
 ---
 
 ## 1. Where the code lives
