@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PROTOTYPE — pending save (ticket 05)</title>
+
+<!-- The real PFC Control theme. Nothing here is styled by hand except the
+     prototype scaffolding at the bottom of this file. -->
+<link rel="stylesheet" href="../../../control/shared/theme.css">
+
+<style>
+/* =====================================================================
+   THROWAWAY PROTOTYPE — .scratch/pfc-control-0.2/prototypes/
+   =====================================================================
+   Question (ticket 05): what does a person see while a save waits, when it
+   lands, and when it fails?
+
+   Variants, switchable with ?variant=D|A|B|C and the bar at the bottom:
+     D — the pick. C's unit screen, B's bar on Building and Tracking.
+     A, B, C — the three first drafts, kept so D can be compared.
+
+   The status dropdown is the real one from control/tracker/unit.html, with
+   the 0.2 change from ticket 11: Complete is not offered while an open flag
+   sits on the item.
+
+   Fake data. Fake server. Nothing is saved. Do not build this into the app.
+   ===================================================================== */
+
+/* ── marks shared by more than one variant ─────────────────────────── */
+
+/* A ring that turns, used for "this is on its way".
+   display:block matters. A plain inline span ignores width and height, so
+   the mark collapses anywhere its parent is not a flex row. */
+.pend-ring {
+  display: block;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-top-color: var(--accent);
+  animation: spin 900ms linear infinite;
+  flex-shrink: 0;
+}
+.pend-ring--sm { width: 10px; height: 10px; border-width: 1.6px; }
+
+/* A filled dot for "this one failed and is being held". */
+.held-dot {
+  display: block;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #E85C5C; flex-shrink: 0;
+}
+
+.mark-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.mark-txt { font-size: 11px; font-weight: 600; color: var(--fg-6); white-space: nowrap; }
+.mark-txt--bad { color: #F08080; }
+
+/* A held edit greys the item name, because the screen is showing the
+   Sheet value and not what was tapped. */
+.item--held .item-name { color: var(--fg-6); }
+
+
+/* ── DROPDOWN: the row for a value the rules will not allow ────────── */
+
+.status-opt--off { opacity: 0.45; cursor: default; }
+.status-opt--off .txt { font-weight: 500; }
+.status-opt-note {
+  padding: 8px 14px 10px;
+  font-size: 11px; line-height: 1.4;
+  color: var(--fg-6);
+  border-top: 1px solid var(--line-soft);
+}
+
+
+/* ── VARIANT A — quiet dot, trouble banner ─────────────────────────── */
+
+.a-banner {
+  margin: 0 16px 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(224,82,82,0.14);
+  border: 1px solid rgba(224,82,82,0.40);
+  display: flex; align-items: center; gap: 10px;
+}
+.a-banner .t { flex: 1; font-size: 13px; font-weight: 700; color: #F08080; }
+.a-banner button {
+  padding: 7px 13px; border-radius: 9px;
+  border: 1px solid rgba(224,82,82,0.45);
+  color: #F08080; font-size: 12.5px; font-weight: 700;
+}
+
+/* Bottom sheet that the banner opens. */
+.sheet-scrim {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line-menu);
+  border-radius: 18px 18px 0 0;
+  padding: 16px 16px calc(20px + var(--btm-safe));
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: 78vh; overflow-y: auto;
+}
+.sheet-title { font-size: 17px; font-weight: 700; color: var(--fg-1); }
+
+
+/* ── VARIANT B — one bar that always tells the truth ───────────────── */
+
+.b-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 16px 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-chip);
+  border: 1px solid var(--accent-chipbd);
+  width: calc(100% - 32px);
+  text-align: left;
+}
+.b-bar .t { flex: 1; font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.b-bar .go { font-size: 12px; font-weight: 700; color: var(--fg-6); }
+.b-bar--off { background: rgba(255,255,255,0.05); border-color: var(--line-menu); }
+.b-bar--off .t { color: var(--fg-4); }
+.b-bar--bad { background: rgba(224,82,82,0.14); border-color: rgba(224,82,82,0.40); }
+.b-bar--bad .t { color: #F08080; }
+
+/* Grey slab that stands in for the phone's offline state. */
+.b-off-glyph { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--fg-7); flex-shrink: 0; }
+
+
+/* ── VARIANT C — the mark climbs the tree, repair is inline ────────── */
+
+.c-fix {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(224,82,82,0.12);
+  border: 1px solid rgba(224,82,82,0.35);
+  display: flex; flex-direction: column; gap: 9px;
+}
+.c-fix .why { font-size: 12.5px; color: #F08080; line-height: 1.4; }
+.c-fix .was { font-size: 12px; color: var(--fg-6); }
+.c-fix .acts { display: flex; gap: 8px; }
+.c-fix .acts button {
+  padding: 8px 14px; border-radius: 9px;
+  font-size: 12.5px; font-weight: 700;
+}
+.c-retry { background: var(--accent); color: var(--on-accent); }
+.c-drop  { border: 1px solid rgba(255,255,255,0.18); color: var(--fg-5); }
+
+/* Corner mark on a unit chip. */
+.chip-wrap { position: relative; }
+.chip-mark { position: absolute; top: 5px; right: 5px; }
+
+
+/* ── OUTBOX LIST ROW (used by A's sheet and B's screen) ────────────── */
+
+.ob {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-card);
+}
+.ob-main { flex: 1; min-width: 0; }
+.ob-t { font-size: 14.5px; font-weight: 700; color: var(--fg-2); }
+.ob-s { font-size: 12px; color: var(--fg-6); margin-top: 3px; line-height: 1.4; }
+.ob-s.bad { color: #F08080; }
+.ob-acts { display: flex; gap: 8px; flex-shrink: 0; }
+.ob-acts button { padding: 8px 12px; border-radius: 9px; font-size: 12px; font-weight: 700; }
+
+
+/* ── PROTOTYPE SCAFFOLDING — not part of any design ────────────────── */
+
+.pt-pad { height: 186px; }
+
+.pt-switch {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+  background: #101820;
+  border-top: 2px solid #35C4FF;
+  padding: 8px 10px calc(8px + var(--btm-safe));
+  display: flex; flex-direction: column; gap: 7px;
+  font-family: "Courier New", monospace;
+}
+.pt-line { display: flex; align-items: center; gap: 6px; }
+.pt-line > .lbl { font-size: 10px; color: #6FA8C9; width: 52px; flex-shrink: 0; letter-spacing: 0.5px; }
+.pt-line button {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: 6px;
+  background: rgba(53,196,255,0.10);
+  border: 1px solid rgba(53,196,255,0.30);
+  color: #9FD8F5;
+  font-family: inherit;
+  font-size: 10.5px; font-weight: 700;
+}
+.pt-line button.on { background: #35C4FF; color: #06121A; border-color: #35C4FF; }
+.pt-name { text-align: center; font-size: 11px; color: #35C4FF; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="pt-pad"></div>
+<div class="pt-switch" id="switcher"></div>
+
+<script>
+/* =====================================================================
+   FAKE DATA
+   ===================================================================== */
+
+var PROJECTS = [
+  { id: '1500main', name: '1500 Main St', sub: '4 floors · 48 units' },
+  { id: 'harbour',  name: 'Harbour View', sub: '3 floors · 27 units' }
+];
+
+/* One unit, as the Sheet holds it. The outbox paints on top of this. */
+var START = ['complete','complete','in_progress','not_started','not_started','complete','not_started'];
+
+var SHEET = {
+  '2-204': [
+    { phase: 'Rough-in', key: 'blocking',    label: 'Blocking',        progress: 'complete',    flags: 0 },
+    { phase: 'Rough-in', key: 'door_bucks',  label: 'Door Bucks',      progress: 'complete',    flags: 0 },
+    { phase: 'Finish',   key: 'int_doors',   label: 'Interior Doors',  progress: 'in_progress', flags: 1 },
+    { phase: 'Finish',   key: 'baseboard',   label: 'Baseboard',       progress: 'not_started', flags: 0 },
+    { phase: 'Finish',   key: 'casing',      label: 'Casing',          progress: 'not_started', flags: 0 },
+    { phase: 'Finish',   key: 'closet',      label: 'Closet Shelving', progress: 'complete',    flags: 0 },
+    { phase: 'Hardware', key: 'hardware',    label: 'Door Hardware',   progress: 'not_started', flags: 0 }
+  ]
+};
+
+var FLOORS = [
+  { label: 'Floor 1', units: ['1-101','1-102','1-103','1-104'] },
+  { label: 'Floor 2', units: ['2-201','2-202','2-203','2-204'] },
+  { label: 'Floor 3', units: ['3-301','3-302','3-303','3-304'] }
+];
+
+var LABEL = { not_started: 'Not Started', in_progress: 'In Progress', complete: 'Complete' };
+var ORDER = ['not_started', 'in_progress', 'complete'];
+
+
+/* =====================================================================
+   FAKE OUTBOX — the rules from ticket 04, in about 40 lines
+   ===================================================================== */
+
+var net = 'online';        // online | offline | busy | reject
+var outbox = {};           // key -> job
+var drainTimer = null;
+
+function jobKey(unitKey, itemKey) { return '1500main|' + unitKey + '|' + itemKey; }
+
+/** A tap puts one job on the shelf. A second tap on the same item replaces it. */
+function queueEdit(unitKey, item, progress) {
+  outbox[jobKey(unitKey, item.key)] = {
+    key: jobKey(unitKey, item.key),
+    unitKey: unitKey, itemKey: item.key, label: item.label,
+    value: progress, state: 'waiting', tries: 0, error: '',
+    at: Date.now()
+  };
+  scheduleDrain();
+}
+
+function scheduleDrain() {
+  clearTimeout(drainTimer);
+  drainTimer = setTimeout(drain, 1400);   // stands in for the real backoff
+}
+
+function drain() {
+  var list = jobs().filter(function (j) { return j.state === 'waiting'; });
+  if (list.length === 0) return;
+
+  if (net === 'offline') { scheduleDrain(); render(); return; }
+
+  list.forEach(function (j) {
+    if (net === 'online') {
+      // The Sheet takes it. The job leaves the shelf and the copy moves on.
+      itemOf(j.unitKey, j.itemKey).progress = j.value;
+      delete outbox[j.key];
+    } else if (net === 'busy') {
+      j.tries++;
+      j.error = 'The server is busy.';
+      if (j.tries >= 10) { j.state = 'held'; j.error = 'Tried 10 times. The server never answered.'; }
+    } else if (net === 'reject') {
+      j.state = 'held';
+      j.error = 'Admin removed this item from the project.';
+    }
+  });
+
+  if (jobs().some(function (j) { return j.state === 'waiting'; })) scheduleDrain();
+  render();
+}
+
+function jobs()    { return Object.keys(outbox).map(function (k) { return outbox[k]; }); }
+function waiting() { return jobs().filter(function (j) { return j.state === 'waiting'; }); }
+function held()    { return jobs().filter(function (j) { return j.state === 'held'; }); }
+
+function retryJob(key) { var j = outbox[key]; if (j) { j.state = 'waiting'; j.tries = 0; j.error = ''; } scheduleDrain(); render(); }
+function dropJob(key)  { delete outbox[key]; render(); }
+
+function itemOf(unitKey, itemKey) {
+  return SHEET[unitKey].filter(function (i) { return i.key === itemKey; })[0];
+}
+
+/* What the screen shows for one item.
+   A waiting edit paints. A held edit does not. (Ticket 04.) */
+function shown(unitKey, item) {
+  var j = outbox[jobKey(unitKey, item.key)];
+  var out = { progress: item.progress, flags: item.flags, mark: 'none', job: null };
+  if (!j) return out;
+  out.job = j;
+  if (j.state === 'waiting') { out.progress = j.value; out.mark = 'waiting'; }
+  else                       { out.mark = 'held'; }
+  return out;
+}
+
+/* Ticket 11: unanimity or In Progress, and an open flag blocks Complete. */
+function rollup(list) {
+  if (list.length === 0) return { key: 'none', done: 0, total: 0, flags: 0 };
+  var done  = list.filter(function (s) { return s.progress === 'complete'; }).length;
+  var zero  = list.filter(function (s) { return s.progress === 'not_started'; }).length;
+  var flags = list.reduce(function (n, s) { return n + s.flags; }, 0);
+  var key = 'in_progress';
+  if (done === list.length) key = flags > 0 ? 'in_progress' : 'complete';
+  else if (zero === list.length) key = 'not_started';
+  return { key: key, done: done, total: list.length, flags: flags };
+}
+
+function unitShown(unitKey) {
+  if (!SHEET[unitKey]) return { key: 'not_started', done: 0, total: 6, flags: 0 };
+  return rollup(SHEET[unitKey].map(function (i) { return shown(unitKey, i); }));
+}
+
+/* Does this unit / project hold anything unsent? */
+function unitMark(unitKey) {
+  var mine = jobs().filter(function (j) { return j.unitKey === unitKey; });
+  if (mine.some(function (j) { return j.state === 'held'; })) return 'held';
+  if (mine.length) return 'waiting';
+  return 'none';
+}
+function projectMark(id) {
+  if (id !== '1500main') return 'none';
+  if (held().length) return 'held';
+  if (waiting().length) return 'waiting';
+  return 'none';
+}
+
+
+/* =====================================================================
+   THE STATUS DROPDOWN
+   =====================================================================
+   Copied in behaviour from control/tracker/unit.html: tap the trigger, a
+   panel opens under it, tap a value, it closes. A tap anywhere else closes
+   it, and so does Escape.
+
+   The 0.2 change (ticket 11): while an open flag sits on the item, Complete
+   is not offered. It still shows in the list, greyed out, with one line that
+   says why. A silently missing row would look like a bug.
+   ===================================================================== */
+
+var openMenu = null;   // item key of the open dropdown, or null
+
+function toggleMenu(event, itemKey) {
+  event.stopPropagation();
+  openMenu = (openMenu === itemKey) ? null : itemKey;
+  render();
+}
+
+function chooseStatus(event, itemKey, value) {
+  event.stopPropagation();
+  var item = itemOf('2-204', itemKey);
+  queueEdit('2-204', item, value);
+  openMenu = null;
+  render();
+}
+
+function closeMenu() {
+  if (openMenu === null) return;
+  openMenu = null;
+  render();
+}
+
+document.addEventListener('click', closeMenu);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+
+
+/** The trigger and, when it is open, the panel. Every variant uses this. */
+function statusControl(item, s) {
+  var isOpen  = (openMenu === item.key);
+  var blocked = s.flags > 0;      // an open flag blocks Complete
+
+  var panel = '';
+  if (isOpen) {
+    var rows = ORDER.map(function (value) {
+      var off = (blocked && value === 'complete');
+      if (off) {
+        return '<div class="status-opt status-opt--off s-' + value + '">' +
+                 '<span class="dot"></span><span class="txt">' + LABEL[value] + '</span>' +
+               '</div>';
+      }
+      return '<button type="button" class="status-opt press s-' + value +
+                     (value === s.progress ? ' on' : '') + '" ' +
+                     'onclick="chooseStatus(event, \'' + item.key + '\', \'' + value + '\')">' +
+               '<span class="dot"></span><span class="txt">' + LABEL[value] + '</span>' +
+             '</button>';
+    }).join('');
+
+    var note = blocked
+      ? '<div class="status-opt-note">Fix the open flag first. Then Complete comes back.</div>'
+      : '';
+
+    panel = '<div class="status-menu" onclick="event.stopPropagation()">' + rows + note + '</div>';
+  }
+
+  return '<span class="status-wrap">' +
+           '<button type="button" class="status-trigger press s-' + s.progress + '" ' +
+                   'aria-expanded="' + isOpen + '" ' +
+                   'onclick="toggleMenu(event, \'' + item.key + '\')">' +
+             '<span class="dot"></span>' +
+             '<span class="txt">' + LABEL[s.progress] + (s.flags ? ' ⚑' + s.flags : '') + '</span>' +
+             '<span class="caret' + (isOpen ? ' open' : '') + '">' + caret() + '</span>' +
+           '</button>' + panel +
+         '</span>';
+}
+
+
+/* =====================================================================
+   SMALL DRAWING HELPERS
+   ===================================================================== */
+
+function esc(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function pill(r, size) {
+  if (r.key === 'none') return '<span class="pill pill--' + size + ' s-not_started"><span class="txt">—</span></span>';
+  var count = r.total ? ' ' + r.done + '/' + r.total : '';
+  var flag  = r.flags ? ' ⚑' + r.flags : '';
+  return '<span class="pill pill--' + size + ' s-' + r.key + '">' +
+           '<span class="dot"></span>' +
+           '<span class="txt">' + LABEL[r.key] + count + flag + '</span>' +
+         '</span>';
+}
+
+function caret() {
+  return '<svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">' +
+         '<path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function mark(kind, size) {
+  if (kind === 'waiting') return '<span class="pend-ring' + (size === 'sm' ? ' pend-ring--sm' : '') + '"></span>';
+  if (kind === 'held')    return '<span class="held-dot"></span>';
+  return '';
+}
+
+function header(title, sub, right) {
+  return '<header class="hdr hdr--tight">' +
+           '<span class="hdr-back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none">' +
+             '<path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+           '</svg></span>' +
+           '<div class="hdr-titles">' +
+             '<h1 class="hdr-title">' + esc(title) + '</h1>' +
+             '<div class="hdr-sub">' + esc(sub) + '</div>' +
+           '</div>' +
+           '<div class="hdr-spacer"></div>' + (right || '') +
+         '</header>';
+}
+
+/** The three phases of the unit, drawn by whatever item renderer is given. */
+function unitPhases(drawItem, phaseMark) {
+  return ['Rough-in', 'Finish', 'Hardware'].map(function (name) {
+    var mine = SHEET['2-204'].filter(function (i) { return i.phase === name; });
+    var extra = '';
+    if (phaseMark) {
+      var kinds = mine.map(function (i) { return shown('2-204', i).mark; });
+      var pm = kinds.indexOf('held') > -1 ? 'held' : (kinds.indexOf('waiting') > -1 ? 'waiting' : 'none');
+      extra = mark(pm, 'sm');
+    }
+    return '<section class="phase">' +
+             '<div class="phase-head">' +
+               '<h2 class="phase-label">' + name + '</h2>' + extra +
+               pill(rollup(mine.map(function (i) { return shown('2-204', i); })), 'xs') +
+             '</div>' +
+             mine.map(drawItem).join('') +
+           '</section>';
+  }).join('');
+}
+
+/**
+ * Floors and unit chips.
+ *
+ * `mode` says which unsent marks appear in the tree:
+ *   'none'  — nothing. The sync bar carries it all.
+ *   'held'  — a red dot for a failed edit only. A waiting edit stays quiet.
+ *   'both'  — a turning ring for waiting as well.
+ *
+ * The floors collapse the way control/tracker/building.html really works:
+ * one floor open at a time. That is why the mark has to sit on the floor
+ * header as well as on the chip. A dot inside a closed floor is invisible.
+ */
+function floorsHtml(mode) {
+  return FLOORS.map(function (f, index) {
+    var open = (index === openFloor);
+
+    // Reduce every unit in the floor down to one mark for the header.
+    var marks = f.units.map(unitMark);
+    var fm = marks.indexOf('held') > -1 ? 'held' : (marks.indexOf('waiting') > -1 ? 'waiting' : 'none');
+    if (mode === 'none') fm = 'none';
+    if (mode === 'held' && fm === 'waiting') fm = 'none';
+
+    var chips = f.units.map(function (u) {
+      var r = unitShown(u);
+      var m = mode === 'none' ? 'none' : unitMark(u);
+      if (mode === 'held' && m === 'waiting') m = 'none';
+      return '<div class="unit-chip chip-wrap">' +
+               (m !== 'none' ? '<span class="chip-mark">' + mark(m, 'sm') + '</span>' : '') +
+               '<span class="num">' + u.split('-')[1] + '</span>' +
+               '<span class="dot-only s-' + r.key + '"></span>' +
+             '</div>';
+    }).join('');
+
+    return '<section class="card floor">' +
+             '<button type="button" class="floor-head press" onclick="toggleFloor(event,' + index + ')">' +
+               '<div class="row-main">' +
+                 '<div class="floor-label">' + f.label + '</div>' +
+                 '<div class="floor-count">' + f.units.length + ' units</div>' +
+               '</div>' +
+               mark(fm, 'sm') + pill(rollup(f.units.map(unitShown)), 'sm') +
+               '<span class="caret' + (open ? ' open' : '') + '">' + caret() + '</span>' +
+             '</button>' +
+             (open ? '<div class="floor-body">' + chips + '</div>' : '') +
+           '</section>';
+  }).join('');
+}
+
+/** Only one floor stays open, as on the real Building screen. */
+var openFloor = 1;   // Floor 2 opens first here, because unit 204 lives there
+
+function toggleFloor(event, index) {
+  event.stopPropagation();
+  openFloor = (openFloor === index) ? -1 : index;
+  render();
+}
+
+/** The Tracking list, with the project mark switched on or off. */
+function projectsHtml(showMarks) {
+  return PROJECTS.map(function (p) {
+    var m = showMarks ? projectMark(p.id) : 'none';
+    return '<div class="card"><div class="row">' +
+             '<div class="row-main"><span class="row-title">' + esc(p.name) + '</span>' +
+             '<span class="row-sub">' + esc(p.sub) + '</span></div>' +
+             mark(m, 'sm') +
+             pill({ key: 'in_progress', done: 31, total: 48, flags: 0 }, 'sm') +
+           '</div></div>';
+  }).join('');
+}
+
+
+/* =====================================================================
+   THE SYNC BAR (from variant B)
+   ===================================================================== */
+
+function syncBar(onTap) {
+  var w = waiting().length, h = held().length;
+  if (w === 0 && h === 0) return '';
+
+  var cls = '', glyph = '<span class="pend-ring pend-ring--sm"></span>', text = '';
+
+  if (h > 0 && w === 0) {
+    cls = ' b-bar--bad'; glyph = '<span class="held-dot"></span>';
+    text = h + (h === 1 ? ' edit did' : ' edits did') + ' not save';
+  } else if (net === 'offline') {
+    cls = ' b-bar--off'; glyph = '<span class="b-off-glyph"></span>';
+    text = 'Offline · ' + w + (w === 1 ? ' edit waits' : ' edits wait');
+  } else {
+    text = 'Saving ' + w + (w === 1 ? ' edit' : ' edits') + '…';
+    if (h) text += ' · ' + h + ' failed';
+  }
+
+  return '<button class="b-bar press' + cls + '" onclick="' + onTap + '">' +
+           glyph + '<span class="t">' + text + '</span><span class="go">Outbox ›</span>' +
+         '</button>';
+}
+
+
+/** The Outbox screen (from variant B). */
+function outboxScreen(closeCall) {
+  var list = jobs();
+  var rows = list.length === 0
+    ? '<div class="state"><div class="state-title">Everything is saved</div>' +
+      '<div class="state-text">No edit is waiting.</div></div>'
+    : list.map(function (j) {
+        var sub = j.state === 'waiting'
+          ? (net === 'offline' ? 'Waiting for signal' : 'Sending…')
+          : j.error;
+        return '<div class="ob">' +
+                 (j.state === 'waiting' ? '<span class="pend-ring"></span>' : '<span class="held-dot"></span>') +
+                 '<div class="ob-main">' +
+                   '<div class="ob-t">' + esc(j.label) + ' → ' + LABEL[j.value] + '</div>' +
+                   '<div class="ob-s' + (j.state === 'held' ? ' bad' : '') + '">Unit ' +
+                     j.unitKey.split('-')[1] + ' · ' + esc(sub) + '</div>' +
+                 '</div>' +
+                 (j.state === 'held'
+                   ? '<div class="ob-acts">' +
+                       '<button class="c-drop" onclick="dropJob(\'' + j.key + '\')">Drop</button>' +
+                       '<button class="c-retry" onclick="retryJob(\'' + j.key + '\')">Retry</button>' +
+                     '</div>'
+                   : '') +
+               '</div>';
+      }).join('');
+
+  return '<header class="hdr hdr--tight">' +
+           '<button class="hdr-back press" onclick="' + closeCall + '">' +
+             '<svg width="12" height="20" viewBox="0 0 12 20" fill="none">' +
+             '<path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+           '</button>' +
+           '<div class="hdr-titles"><h1 class="hdr-title">Outbox</h1>' +
+           '<div class="hdr-sub">' + waiting().length + ' waiting · ' + held().length + ' failed</div></div>' +
+         '</header>' +
+         '<div class="body">' + rows + '</div>';
+}
+
+
+/* =====================================================================
+   VARIANT D — THE PICK
+   =====================================================================
+   Miguel, 2026-08-07: C on the Unit screen, B on Building and Tracking.
+
+   Unit  — the mark sits on the item, the phase and the unit pill. A failed
+           edit opens a red card under the item that caused it.
+   Above — one sync bar carries the whole state and opens the Outbox screen.
+
+   Three seams settled by Miguel on 2026-08-07:
+   1. The bar rides on every screen, Unit included, under one rule. A failed
+      edit on the unit you are looking at is therefore said twice. That is
+      the price of never hiding a failure that happened somewhere else.
+   2. Building marks a failed edit only, never a waiting one. The mark sits
+      on the unit chip AND on the floor header, because only one floor is
+      open at a time and a dot inside a closed floor cannot be seen.
+   3. A landed edit says nothing. The ring stops, the bar goes, and the item
+      already shows the new value.
+   ===================================================================== */
+
+var D = { name: 'THE PICK — C on Unit, B above', outboxOpen: false };
+
+D.render = function (screen) {
+  if (D.outboxOpen) return outboxScreen('D.outboxOpen=false;render()');
+  if (screen === 'unit')     return D.unit();
+  if (screen === 'building') return D.building();
+  return D.tracking();
+};
+
+D.unit = function () {
+  return header('Unit 204', '1500 Main St · Floor 2',
+                '<div class="mark-row">' + mark(unitMark('2-204'), 'sm') + pill(unitShown('2-204'), 'md') + '</div>') +
+         syncBar('D.outboxOpen=true;render()') +
+         '<div class="body body--flush">' + unitPhases(D.item, true) + '</div>';
+};
+
+D.item = function (item) {
+  var s = shown('2-204', item);
+
+  var fix = '';
+  if (s.mark === 'held') {
+    fix = '<div class="c-fix">' +
+            '<div class="why">' + esc(s.job.error) + '</div>' +
+            '<div class="was">You tapped <b>' + LABEL[s.job.value] + '</b>. The Sheet still says ' +
+              LABEL[item.progress] + '.</div>' +
+            '<div class="acts">' +
+              '<button class="c-retry" onclick="retryJob(\'' + s.job.key + '\')">Try again</button>' +
+              '<button class="c-drop" onclick="dropJob(\'' + s.job.key + '\')">Drop the edit</button>' +
+            '</div>' +
+          '</div>';
+  }
+
+  return '<div class="item' + (s.mark === 'held' ? ' item--held' : '') + '">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + esc(item.label) + '</span>' +
+             mark(s.mark) +
+             statusControl(item, s) +
+           '</div>' + fix +
+         '</div>';
+};
+
+D.building = function () {
+  return header('1500 Main St', '4 floors · 48 units', '') +
+         syncBar('D.outboxOpen=true;render()') +
+         '<div class="body">' + floorsHtml('held') + '</div>';
+};
+
+D.tracking = function () {
+  return header('Tracking', 'Live buildings', '') +
+         syncBar('D.outboxOpen=true;render()') +
+         '<div class="body">' + projectsHtml(false) + '</div>';
+};
+
+
+/* =====================================================================
+   VARIANT A — quiet dot, and a banner only when something is wrong
+   ===================================================================== */
+
+var A = { name: 'Quiet dot, banner on trouble', sheetOpen: false };
+
+A.render = function (screen) {
+  var page = screen === 'unit' ? A.unit() : (screen === 'building' ? A.building() : A.tracking());
+  return page + (A.sheetOpen ? A.sheet() : '');
+};
+
+A.banner = function () {
+  if (held().length === 0) return '';
+  var n = held().length;
+  return '<div class="a-banner">' +
+           '<span class="held-dot"></span>' +
+           '<span class="t">' + n + (n === 1 ? ' edit did' : ' edits did') + ' not save</span>' +
+           '<button onclick="A.sheetOpen=true;render()">Review</button>' +
+         '</div>';
+};
+
+A.unit = function () {
+  return header('Unit 204', '1500 Main St · Floor 2', '<div>' + pill(unitShown('2-204'), 'md') + '</div>') +
+         A.banner() +
+         '<div class="body body--flush">' + unitPhases(A.item, false) + '</div>';
+};
+
+A.item = function (item) {
+  var s = shown('2-204', item);
+  return '<div class="item' + (s.mark === 'held' ? ' item--held' : '') + '">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + esc(item.label) + '</span>' +
+             mark(s.mark) +
+             statusControl(item, s) +
+           '</div>' +
+         '</div>';
+};
+
+A.building = function () {
+  return header('1500 Main St', '4 floors · 48 units', '') + A.banner() +
+         '<div class="body">' + floorsHtml('none') + '</div>';
+};
+
+A.tracking = function () {
+  return header('Tracking', 'Live buildings', '') + A.banner() +
+         '<div class="body">' + projectsHtml(false) + '</div>';
+};
+
+A.sheet = function () {
+  var rows = held().map(function (j) {
+    return '<div class="ob">' +
+             '<span class="held-dot"></span>' +
+             '<div class="ob-main">' +
+               '<div class="ob-t">' + esc(j.label) + ' → ' + LABEL[j.value] + '</div>' +
+               '<div class="ob-s bad">Unit ' + j.unitKey.split('-')[1] + ' · ' + esc(j.error) + '</div>' +
+             '</div>' +
+             '<div class="ob-acts">' +
+               '<button class="c-drop" onclick="dropJob(\'' + j.key + '\')">Drop</button>' +
+               '<button class="c-retry" onclick="retryJob(\'' + j.key + '\')">Retry</button>' +
+             '</div>' +
+           '</div>';
+  }).join('');
+
+  return '<div class="sheet-scrim" onclick="A.sheetOpen=false;render()">' +
+           '<div class="sheet" onclick="event.stopPropagation()">' +
+             '<div class="sheet-title">Edits that did not save</div>' + rows +
+             '<button class="btn btn-ghost press" onclick="A.sheetOpen=false;render()">Close</button>' +
+           '</div>' +
+         '</div>';
+};
+
+
+/* =====================================================================
+   VARIANT B — one bar that always tells the truth
+   ===================================================================== */
+
+var B = { name: 'One sync bar + Outbox screen', outboxOpen: false };
+
+B.render = function (screen) {
+  if (B.outboxOpen) return outboxScreen('B.outboxOpen=false;render()');
+  if (screen === 'unit')     return B.unit();
+  if (screen === 'building') return B.building();
+  return B.tracking();
+};
+
+B.unit = function () {
+  return header('Unit 204', '1500 Main St · Floor 2', '<div>' + pill(unitShown('2-204'), 'md') + '</div>') +
+         syncBar('B.outboxOpen=true;render()') +
+         '<div class="body body--flush">' + unitPhases(B.item, false) + '</div>';
+};
+
+B.item = function (item) {
+  var s = shown('2-204', item);
+
+  // Almost nothing on the row. The bar carries the news.
+  var m = '';
+  if (s.mark === 'waiting') m = '<span class="mark-row"><span class="mark-txt">Saving</span></span>';
+  if (s.mark === 'held')    m = '<span class="mark-row"><span class="held-dot"></span>' +
+                                '<span class="mark-txt mark-txt--bad">Not saved</span></span>';
+
+  return '<div class="item' + (s.mark === 'held' ? ' item--held' : '') + '">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + esc(item.label) + '</span>' + m +
+             statusControl(item, s) +
+           '</div>' +
+         '</div>';
+};
+
+B.building = function () {
+  return header('1500 Main St', '4 floors · 48 units', '') +
+         syncBar('B.outboxOpen=true;render()') +
+         '<div class="body">' + floorsHtml('none') + '</div>';
+};
+
+B.tracking = function () {
+  return header('Tracking', 'Live buildings', '') +
+         syncBar('B.outboxOpen=true;render()') +
+         '<div class="body">' + projectsHtml(false) + '</div>';
+};
+
+
+/* =====================================================================
+   VARIANT C — the mark climbs the tree, repair happens inline
+   ===================================================================== */
+
+var C = { name: 'Mark climbs the tree, fix inline' };
+
+C.render = function (screen) {
+  if (screen === 'unit')     return C.unit();
+  if (screen === 'building') return C.building();
+  return C.tracking();
+};
+
+C.unit = function () {
+  return header('Unit 204', '1500 Main St · Floor 2',
+                '<div class="mark-row">' + mark(unitMark('2-204'), 'sm') + pill(unitShown('2-204'), 'md') + '</div>') +
+         '<div class="body body--flush">' + unitPhases(D.item, true) + '</div>';
+};
+
+C.building = function () {
+  return header('1500 Main St', '4 floors · 48 units', '') +
+         '<div class="body">' + floorsHtml('both') + '</div>';
+};
+
+C.tracking = function () {
+  return header('Tracking', 'Live buildings', '') +
+         '<div class="body">' + projectsHtml(true) + '</div>';
+};
+
+
+/* =====================================================================
+   SWITCHER AND WIRING — prototype scaffolding
+   ===================================================================== */
+
+var VARIANTS = { D: D, A: A, B: B, C: C };
+var variant = (new URLSearchParams(location.search).get('variant') || 'D').toUpperCase();
+if (!VARIANTS[variant]) variant = 'D';
+var screen = 'unit';
+
+function closePanels() { openMenu = null; A.sheetOpen = false; B.outboxOpen = false; D.outboxOpen = false; }
+
+function setVariant(v) {
+  variant = v;
+  history.replaceState(null, '', '?variant=' + v);
+  closePanels();
+  render();
+}
+
+function setScreen(s) { closePanels(); screen = s; render(); }
+
+function setNet(n) {
+  net = n;
+  if (n !== 'offline') scheduleDrain();
+  render();
+}
+
+function reset() {
+  outbox = {};
+  closePanels();
+  SHEET['2-204'].forEach(function (i, n) { i.progress = START[n]; });
+  render();
+}
+
+function btn(label, on, call) {
+  return '<button class="' + (on ? 'on' : '') + '" onclick="event.stopPropagation();' + call + '">' + label + '</button>';
+}
+
+function render() {
+  document.getElementById('app').innerHTML = VARIANTS[variant].render(screen);
+
+  document.getElementById('switcher').innerHTML =
+    '<div class="pt-name">' + variant + ' — ' + VARIANTS[variant].name + '</div>' +
+    '<div class="pt-line"><span class="lbl">VARIANT</span>' +
+      btn('D', variant === 'D', "setVariant('D')") +
+      btn('A', variant === 'A', "setVariant('A')") +
+      btn('B', variant === 'B', "setVariant('B')") +
+      btn('C', variant === 'C', "setVariant('C')") + '</div>' +
+    '<div class="pt-line"><span class="lbl">SCREEN</span>' +
+      btn('Unit', screen === 'unit', "setScreen('unit')") +
+      btn('Building', screen === 'building', "setScreen('building')") +
+      btn('Tracking', screen === 'tracking', "setScreen('tracking')") + '</div>' +
+    '<div class="pt-line"><span class="lbl">SERVER</span>' +
+      btn('OK', net === 'online', "setNet('online')") +
+      btn('Offline', net === 'offline', "setNet('offline')") +
+      btn('Busy', net === 'busy', "setNet('busy')") +
+      btn('Rejects', net === 'reject', "setNet('reject')") +
+      btn('Reset', false, "reset()") + '</div>';
+}
+
+/* Left and right arrow keys cycle the variant. */
+document.addEventListener('keydown', function (e) {
+  var keys = ['D', 'A', 'B', 'C'];
+  var at = keys.indexOf(variant);
+  if (e.key === 'ArrowRight') setVariant(keys[(at + 1) % 4]);
+  if (e.key === 'ArrowLeft')  setVariant(keys[(at + 3) % 4]);
+});
+
+render();
+</script>
+</body>
+</html>

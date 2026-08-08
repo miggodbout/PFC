@@ -157,6 +157,12 @@ Miguel on 2026-08-07: "Interior Doors cannot be Complete if there is a
 deficiency." The dropdown does not offer Complete while an open flag of either
 kind sits on that item. Fix or cancel the record first.
 
+**The blocked row is greyed, not removed.** Settled in
+`.scratch/pfc-control-0.2/issues/05-pending-state-ui.md`. Complete stays in the
+dropdown, dimmed and not tappable, with one line under the panel: "Fix the open
+flag first. Then Complete comes back." A row that silently disappears reads as a
+broken app.
+
 So the rollup's flag test only has to catch **phase-level Waiting records**. Any
 flag on an item has already stopped that item from reading Complete.
 

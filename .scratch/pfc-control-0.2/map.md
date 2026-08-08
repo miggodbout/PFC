@@ -184,6 +184,21 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   before the refresh on app open, and **a building holding any waiting or held
   edit is never dropped from the phone**.
 
+- [What a pending save looks like on screen](issues/05-pending-state-ui.md) —
+  **two mechanisms, split by screen.** On Unit, a turning ring marks the item,
+  the phase and the unit pill, and a failed edit opens a red card under the item
+  with Try again and Drop. On Building and Tracking, **one sync bar** carries
+  everything: `Saving 3 edits…`, `Offline · 3 edits wait`, `2 edits did not
+  save`. **The count lives in the bar and nowhere else**, and the bar opens an
+  Outbox screen. The bar rides on every screen including Unit, so a failure on
+  another unit always reaches you; the cost is that a failure on the unit you are
+  looking at is said twice. Above the Unit screen, **only a held edit marks the
+  tree, never a waiting one** — a red dot on the unit chip **and on the floor
+  header, because a floor closes and hides its chips**. A landed edit says
+  nothing at all. Building the real dropdown also settled a detail `11` left
+  open: the blocked Complete row is **greyed with a reason, not removed**.
+  Asset: `prototypes/05-pending-state.html`.
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
