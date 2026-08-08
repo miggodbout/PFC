@@ -140,6 +140,14 @@ There is no Archive tab in the Sheet. Miguel will filter the state column when h
 reads the tab directly. An Archive view in the app is a filter over records the
 phone already holds, so it costs nothing.
 
+> **The last sentence is overruled, 2026-08-08.** `06-deficiency-entry-screen`
+> made Archive a **window**, not a filter, and Miguel moved it to **0.3** under
+> the one-window-per-MINOR guideline. It does not cost nothing, and 0.2 has no
+> Archive view of any kind. The two sentences before it still hold: no Archive
+> tab in the Sheet, and Miguel filters the state column when he reads it
+> directly. See `14-building-archive` for the model and `supersessions.md`
+> item 12.
+
 Moving rows to an Archive tab was rejected on the research in
 `07-apps-script-write-limits`: a move is a write plus a delete, it can half-fail,
 and a retried save must be safe to run twice.

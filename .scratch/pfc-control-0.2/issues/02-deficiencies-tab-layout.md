@@ -81,6 +81,13 @@ This is the same idempotence rule as the `update-item` note at the end of
 `control/appscript/Code.js`: the call carries the final value, not a change to
 apply. Ticket `04-queued-edit-rules` owns the retry rules themselves.
 
+> **The action name is stale, 2026-08-08.** `04` deleted `update-item` before it
+> was built and replaced it with **`save-batch`**, which takes the whole outbox in
+> one call. The idempotence rule above is unchanged and still exactly right — it
+> is now the rule `save-batch` follows, per job. The comment block at the end of
+> `Code.js` still advertises `update-item` and is the one piece of stale text
+> living in production code. See `supersessions.md` items 21 and 23.
+
 ### Finding a row
 
 The server reads column A whole, in one call:

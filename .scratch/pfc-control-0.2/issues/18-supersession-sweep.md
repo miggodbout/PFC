@@ -1,10 +1,57 @@
 # Sweep the 0.2 notes for decisions that were later overruled
 
 Type: task
-Status: open
+Status: **first pass done 2026-08-08. Second pass owed after 13, 14 and 15.**
 Blocked by: 13, 14, 15 — every other 0.2 ticket. 17 resolved 2026-08-08. This
 runs last, right before `09-write-0.2-build-plan`. Run it earlier and the
 tickets that close after it make it stale again.
+
+---
+
+## First pass, 2026-08-08
+
+The whole "Known stale items" list below is driven by tickets that have
+**already** closed — `01`, `02`, `06`, `11`, `12`, `17`. None of it can be undone
+by `13`, `14` or `15`. So that part was swept now rather than left for one long
+session later. The staleness warning above still holds for everything else.
+
+**Produced:**
+
+1. **`../supersessions.md`** — 29 entries. Twenty-two supersessions, six stale
+   cross-references, and one live conflict the sweep could not settle.
+2. **`../template-changes.md`, rewritten.** Eight sections, each carrying its own
+   status. Six are FINAL. **The file as a whole is deliberately not marked
+   FINAL**, because section 5 waits on `13`. The old file's section 3 is deleted
+   outright, per `17`.
+3. **Corrections added in place**, additive only, old text left below each one:
+   `01` (Archive costs nothing), `02` (the `update-item` reference), `12` (the
+   form sketch, and the Hub card sketch), `14` (a stale `Blocked by` block).
+4. **`../code-inventory.md`** — not asked for by this ticket. Written the same
+   day because `09` owes a file-by-file change list and no session had read the
+   code against these tickets. It found nine things, and two of them corrected
+   this sweep: `11` already owns the Dashboard tab, and `11` already orders the
+   `on_hold` to `waiting` rename throughout the code.
+
+**Confirmed and closed, needing nothing:**
+
+- `02`'s column-letter shift reaches no other ticket. Re-checked.
+- `06`'s question body describes the pre-`12` shape, which is correct and
+  intended — it is the question as asked. Its resolution plainly reads as current.
+- `06`'s six-control budget is **a constraint the build must meet at seven**, not
+  a finding that was overruled. Written that way in `supersessions.md` item 17.
+- `prototypes/05-pending-state.html` was built after `11` closed and draws the
+  three-value dropdown correctly.
+
+**One conflict found, and Miguel closed it the same day.** Whether `03`'s
+archived-building drop fires in 0.2. The sweep could not settle it — a decision,
+owned by `14` — so it laid the facts out there instead. Miguel answered on
+2026-08-08: **it fires.** A finished building leaves Tracker, and 0.2 has no door
+onto it until Archive ships in 0.3. See `14` and `supersessions.md`.
+
+**One entry lives in production code, not in a note:** `Code.js` lines 1300 to
+1315 still advertise the `update-item` action that `04` deleted. It is the first
+thing a build session reads when it opens that file. Left in place — this map
+writes no production code — and flagged for `09`.
 
 ## Question
 

@@ -109,6 +109,16 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   doing". Holds Progress, and closes records.
 - **Logger** — one form. Answers "this one door is wrong". Writes records only.
 
+Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. Read them
+before `09`:
+- **`supersessions.md`** — which decision wins wherever two disagree. 29 entries.
+  First pass 2026-08-08. A second pass is owed after `13`, `14` and `15` close.
+- **`template-changes.md`** — the master template spec. Eight sections, six
+  FINAL. Section 5 waits on `13`. **Not FINAL as a whole yet.**
+- **`code-inventory.md`** — the 0.1 code read against all seventeen tickets.
+  Every rollup call site, everywhere the demo data reaches, the exact lines each
+  ticket deletes, and nine things no ticket owns. Written 2026-08-08.
+
 ## Decisions so far
 
 - Destination and 0.2 scope (this charting session) — 0.2 = fast local copy,
@@ -268,14 +278,42 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   six controls to seven**. Admin owns both lists, and a list change must not
   rebuild the Tracker tab.
 
+- **A finished building leaves Tracker in 0.2.** Settled by Miguel on
+  2026-08-08, on [14-building-archive](issues/14-building-archive.md). He was
+  offered the safer reading — hold the rule for 0.3, when the Archive door exists
+  — and chose against it. **The accepted cost: 0.2 has no door onto a finished
+  building.** It leaves the Tracking list, and the only way to read it is to open
+  the project Sheet directly. Nothing is lost, it is hidden from the app. This
+  closes the conflict `18` found: `03`'s archived-building drop **does** fire in
+  0.2. **Two rules must stay separate in the build** — leaving the Tracking list
+  is about what the app *draws*, and dropping the local copy is about what the
+  phone *stores*. `04`'s rule that a building holding a waiting or held edit is
+  never dropped is a storage rule and survives untouched.
+
 ## Not yet specified
 
+- **What "a finished item leaves Tracker" means.** The other half of Miguel's
+  2026-08-08 answer, and it is a bigger change than the building half. Either a
+  Complete item stops being drawn on the Unit screen, or he meant the fixed
+  **record**, which `06` already settled. The direction follows his own "Tracker
+  stays as lean as possible" principle, so it is not in doubt — the mechanism is.
+  **The hole:** you cannot undo a mistaken Complete on a row that is no longer
+  drawn. Recommended answer, written up on `14`: hide it, using `06`'s existing
+  greyed-with-Undo-until-you-leave-the-unit treatment, which solves the hole with
+  a pattern already decided for the same screen. Needs one sentence from Miguel.
 - Whether a Waiting record can attach to a whole unit, for something like no
   power on site or a locked unit. Only item and phase are settled.
 - How the Service Worker and `CACHE_NAME` handling change once the app holds
-  real data locally. Today the Service Worker caches the app shell only. One fact
-  is now known: `sw.js` must delete old Cache API entries in its `activate`
-  handler, because a worker update does not remove them.
+  real data locally. Today the Service Worker caches the app shell only.
+  **Narrowed on 2026-08-08 by `code-inventory.md`:** the one fact recorded here
+  before — that `sw.js` must delete old Cache API entries in its `activate`
+  handler — **is already done**, at `sw.js` lines 53 to 63. Every cache whose
+  name is not the current one is deleted. What 0.2 adds is data in
+  **localStorage**, which a Service Worker never touches, and that is exactly
+  what keeps the outbox safe across an update. `registerWorker()` in `common.js`
+  already carries the right comment about it. What is genuinely left: adding the
+  Logger and Outbox screens to the `SHELL` list, and the standing habit of
+  raising `CACHE_NAME`.
 - Whether a photo belongs on a deficiency record in 0.2, or later.
 - **A record for a problem PFC will never fix.** Found on 2026-08-08 while
   resolving `17`. Miguel: Exterior Doors are patio and entry doors that the

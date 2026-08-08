@@ -76,6 +76,16 @@ So Tracker is **not** read-only. Tracker keeps its Progress dropdowns.
 
 ### The Logger screen
 
+> **The sketch below is not the final form. Corrected 2026-08-08.** It is missing
+> two fields. `06-deficiency-entry-screen` added **Type** — Deficiency or Waiting
+> — above everything else, because the two reason lists share no value.
+> `17-reason-list-scope` added a **Subtype** dropdown above the needed line, on
+> an item that defines types. The current form is seven controls, in this order:
+> Type, Item, Subtype, Needed, Count, Reason, Save. **`06` and `17` together own
+> it.** Everything else in this section — the place bar, the field-by-field
+> reasoning, and why one-step-per-screen and one-long-page were both rejected —
+> is unchanged and still correct.
+
 Place is set once. The record fields sit under it, and they clear after each
 save. Miguel stands in one unit for a while, so the place fields must not be
 asked again for every problem in the room.
@@ -205,6 +215,13 @@ promised a list of open records across buildings. Nothing in this ticket needs
 it, and the records are visible in two places already. It stays greyed.
 
 `Archive` is not added here. `14-building-archive` owns that screen.
+
+> **The Archive line is overruled, 2026-08-08.** `06` added a **greyed `Archive`
+> card** to the Hub, beside `Deficiencies` and `Materials`. It is the seam the
+> 0.3 Archive window lands on. So the 0.2 Hub ships **seven** cards, not the five
+> the sketch above draws: Tracking, Log, Create Job, and four greyed —
+> Deficiencies, Materials, Reports, Archive. The `Deficiencies`-stays-greyed
+> decision is untouched. See `supersessions.md` item 15.
 
 ### The split makes the offline queue simpler
 
