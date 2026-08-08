@@ -321,3 +321,42 @@ a feature here; it is the only place a rule already decided can live.
   gone and no replacement was asked for, because it was never used.
 - **Whether an Outbox row taps through to its unit.** Still `05`'s open point,
   still left to the build plan.
+
+## Amended by `17-reason-list-scope`, 2026-08-08
+
+**The six-control budget becomes seven, on an item that defines types.** This is
+the one thing on this ticket that `17` breaks, and it needs re-checking against
+`prototypes/06-logger-and-records.html` before the build plan is written.
+
+`17` gave the needed line one dropdown for the type. It appears **only** on an
+item that defines types, so most of the form is untouched:
+
+    LOGGING A DOOR                LOGGING A BASEBOARD
+
+    Type      [ Deficiency ▾ ]    Type      [ Deficiency ▾ ]
+    Item      [ Interior Doors ▾] Item      [ Baseboards ▾ ]
+    Door type [ Bypass ▾ ]  ← new Needed    [ 5 1/4 MDF   ]
+    Needed    [ 32" 6" RH   ]     Count     [ 12 ]
+    Count     [ 1 ]               Reason    [ Damaged ▾ ]
+    Reason    [ Wrong Type ▾ ]              [ Save ]
+              [ Save ]
+                                  6 controls, unchanged
+    7 controls
+
+This ticket's finding was that six controls is the whole budget, because anything
+more pushes Save under the keyboard. **That finding is not overruled — it is a
+constraint the build now has to meet at seven.** Options the build plan should
+weigh: putting the type dropdown and Count on one row, or letting the place bar
+collapse once a place is set.
+
+Two smaller consequences:
+
+- **The Reason dropdown reads from a different place.** It no longer follows the
+  phase. It reads the building's one list of eight, minus whatever the chosen
+  item trims. The control does not change, only its source.
+- **The record list gains the subtype.** A row now reads `Bypass · 32" 6" RH`
+  rather than `32" 6" RH`, because `17` put the type in its own Sheet column.
+
+Everything else on this ticket stands: the field order, the phone remembering the
+building and the phase but never the unit, tap the flag to open, `Fix all`, the
+dropped Details box, and a fixed record leaving Tracker greyed with Undo.

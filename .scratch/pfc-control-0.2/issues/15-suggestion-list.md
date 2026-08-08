@@ -69,3 +69,28 @@ point above — scope, ranking, filtering, near-match, deletion.
 - `01-deficiency-record-fields` — the needed line and the hint `ex: 32" 6" RH`.
 - `02-deficiencies-tab-layout` — the columns the source text would be read from.
 - `03-local-copy-rules` — what the phone already holds, at no extra cost.
+
+## Narrowed by `17-reason-list-scope`, 2026-08-08
+
+**The seed list no longer has to carry the door type.** `17` gave the needed line
+one dropdown, holding the types the item defines — Regular, Bypass, Bi-fold,
+Double, Pocket, Double Pocket, Dwarf, Unit Door on Interior Doors, and Passage,
+Privacy, Dummy, Pocket on Hardware. The type is picked, not typed, and it is
+stored in its own column.
+
+So this ticket now covers **the dimensions only**: `32" 6" RH`, width, jamb depth
+and hand. That is a much smaller space than the one the "Settled early" section
+above was sketching, and Miguel's chosen order still applies — Interior Doors
+first, because it holds the most variation.
+
+The trade this ticket was paying for is smaller too. `12` bet that suggestions
+would carry the consistency that dropdowns would have bought. `17` gave the
+riskiest part of that bet — the type, a closed set of eight words that must match
+exactly for 0.5 to total them — to a dropdown instead. Suggestions now only have
+to keep dimensions tidy, and a wrong dimension is a wrong door either way.
+
+Every mechanical point above is still open: where the seed text is stored, the
+scope, the ranking, the filtering, the near-match prompt, and deletion. Note that
+`17` settled Add-only for the **reason and type** lists. It said nothing about
+suggestions, which are generated rather than curated, so deletion is still a live
+question here.

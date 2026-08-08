@@ -160,3 +160,37 @@ was renamed **Closed**, because Cancelled fills it too.
   Started.
 - `12-logger-door` — Miguel asked whether Tracker becomes read-only, with a
   separate Logger door.
+
+### Corrected by `17-reason-list-scope`, 2026-08-08
+
+The old text below stays, because the reasoning in it is still the reasoning. Two
+of its conclusions are overruled.
+
+**1. The three per-phase reason lists are deleted.** There is now **one list of
+eight per building**, plus a short trim per item naming the values that item does
+not offer:
+
+    Wrong Size · Wrong Type · Wrong Swing · Wrong Color · Missing ·
+    Damaged · Defective · Other
+
+`17` sorted Miguel's own list of variables and found that six of the eight apply
+everywhere. Only `Wrong Swing` (doors) and `Wrong Color` (hardware and hinges)
+vary. Three phase lists were maintaining a split that the data does not have.
+
+This ticket's argument against per-item lists — that a custom item lands with an
+empty dropdown — still holds and is what killed per-item **copies**. A custom item
+now gets all eight and no trim, so it is never blank.
+
+**2. `Warped` is renamed `Defective`.** Miguel's change. `Defective` already
+existed on the Hardware list here. It means the thing arrived wrong from the
+factory. `Damaged` means somebody hurt it after it arrived. Warranty claim, or
+site handling.
+
+**3. "The needed line stays free text" is narrowed.** It holds for width, depth
+and swing, which are still typed. It no longer holds for the **type**, which
+becomes one dropdown per item — eight door types, four handle types, nothing at
+all on an item that defines none. See `17` and the correction on `12-logger-door`.
+
+The Waiting list is **unchanged**. One shared list of five, and `17` confirmed it
+can never narrow, because a Waiting record can attach to a whole phase where
+there is no item to narrow against.

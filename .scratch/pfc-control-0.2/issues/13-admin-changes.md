@@ -57,3 +57,78 @@ Points to settle:
 `06` added no other Admin work. The refusal screen for `remove-item` is still
 this ticket's, and it can now be answered: `06` built the record list and the
 Fixed action, so the refusal screen has a shape to borrow from.
+
+## Added by `17-reason-list-scope`, 2026-08-08
+
+`17` closed, and it answered the shared reason-list question in this ticket's
+favour: **Admin owns the lists.** Miguel's words — "the door types should be
+decided in admin, I believe there is a way to add new tasks later on in a job,
+there should also be a way to add new types."
+
+So the point above, "does Admin let Miguel edit those lists, or does 0.2 write
+them once from a fixed default", is **answered: Admin edits them.** Do not answer
+it again. What is left for this ticket is only **where the screen sits**.
+
+### What Admin now owns
+
+Two lists, both stored in the hidden `_Config` tab, both **Add-only**:
+
+1. **Reasons** — one list of eight, held once per building, plus a short trim per
+   item naming the values that item does not offer.
+2. **Types** — per item. Eight door types on Interior Doors, four handle types on
+   Hardware, none on an item that defines none.
+
+`17` sketched them on one edit-item screen. That sketch is not binding — this
+ticket decides the shape:
+
+    ADMIN → EDIT ITEM → Interior Doors
+
+      Door types
+        Regular, Bypass, Bi-fold, Double,
+        Pocket, Double Pocket, Dwarf, Unit Door
+        [ + Add ]
+
+      Reasons for this item
+        ☐ Wrong Colour
+        ☑ everything else
+
+### Rules this ticket must carry
+
+- **Add-only. There is no Delete button, ever.** Miguel settled this on
+  2026-08-08. It is what makes the Sheet safe by itself: no row can point at a
+  value that no longer exists. A typo is removed by hand-editing `_Config`
+  through the escape hatch, and written down.
+- **A list change must not rebuild the Tracker tab.** Adding a type or a reason
+  changes no columns. Today every branch of `applyStructureOp` is followed by
+  `rebuildTracker`, `rebuildDashboard` and `writeConfig`. A list change needs
+  `writeConfig` alone — a fast write that cannot disturb a status value. This is
+  a **new code path**, not a new branch on the old one.
+- **A new value lands in the building being worked on**, so it is usable at once.
+  It does not push to other buildings. The master template is updated separately
+  so new projects inherit it.
+- **A custom item seeds correctly with no work.** It gets all eight reasons and
+  no trim, and it defines no types, so it shows no type dropdown.
+
+### Still open, and now this ticket's
+
+- Where the edit-item screen sits inside Admin, and whether the reason trim and
+  the type list share one screen or two.
+- **Who writes the default trim per item.** `17` ruled this is content, not a
+  rule, and Miguel writes it — the same arrangement as the seed suggestions on
+  `15`. He asked for more time on it on 2026-08-08. **It does not gate 0.2:** a
+  trim list lives in `_Config`, so changing it is an Admin edit or a template
+  edit, with none of the release overhead the PATCH rule in `CLAUDE.md` exists to
+  avoid. Ship sensible defaults, adjust freely afterwards.
+- **The trim is about responsibility, not about the item.** Miguel's Exterior
+  Doors case set this: the framer hangs patio and entry doors, PFC only builds
+  out and trims around them, so `Wrong Swing` comes off even though the door
+  plainly swings. Ask "does PFC own this" and not "can this item have this".
+- Whether the master template updates through Admin or by hand. `17` assumed by
+  hand and did not settle it.
+
+### Unchanged by `17`
+
+The `remove-item` refusal screen, `remove-unit`, the rename-item question, and
+the `rebuildTracker` guarantee are all untouched. Note that the rename-item cost
+is now **worse**: a rename changes the item key, which orphans every record under
+it, and an item now also carries its own type list and reason trim to lose.

@@ -68,6 +68,16 @@ Do not change any rollup formula by hand. `Code.js` rebuilds every rollup from
 
 ## 3. The reason lists, held in config
 
+> **OVERRULED 2026-08-08 by `issues/17-reason-list-scope.md`. Do not build from
+> this section.** The three per-phase lists below are deleted. There is one list
+> of eight per building — Wrong Size, Wrong Type, Wrong Swing, Wrong Color,
+> Missing, Damaged, Defective, Other — plus a short trim per item. `Warped` is
+> renamed `Defective`. The template also ships two **type** lists: eight door
+> types on Interior Doors, four handle types on Hardware. Section 1 above is
+> overruled too — the tab is **thirteen** columns now, not twelve, with a new
+> `subtype` column beside `needed`. `issues/18-supersession-sweep.md` rewrites
+> this whole file and marks it FINAL.
+
 The "what is wrong" list follows the **phase**, not the item. Store the lists in
 the project config so a new phase can carry its own list later. Do not hardcode
 them in the app. This follows the standing rule in `CLAUDE.md`: config drives

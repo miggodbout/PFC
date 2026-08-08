@@ -95,6 +95,15 @@ Vocabulary, settled in `01-deficiency-record-fields`. Use these words:
 - **Waiting** — the old On Hold. Renamed so `In Progress · Waiting` reads without
   contradiction.
 
+Added by `17-reason-list-scope`, 2026-08-08:
+- **Reason** — *what is wrong.* One list of eight per building, trimmed per item.
+- **Needed** — *what would fix it.* Free text, such as `32" 6" RH`.
+- **Subtype** — the kind of thing needed, picked from a list the item defines.
+  Eight door types, four handle types, nothing on an item that defines none. It
+  is part of the needed line, not part of the reason, and it has its own column.
+- **Defective** — arrived wrong from the factory. Replaces `Warped`. Against
+  **Damaged**, which means somebody hurt it after it arrived.
+
 Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 - **Tracker** — a tree. Tracking, Building, Floor, Unit. Answers "how is floor 2
   doing". Holds Progress, and closes records.
@@ -132,7 +141,8 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   Fixed, never deleted and never moved. No Archive tab. No photo, no author and
   no promised date in 0.2.
 - [How the Deficiencies tab lays out](issues/02-deficiencies-tab-layout.md) — one
-  tab, one header row, twelve columns holding keys not labels. **Every record
+  tab, one header row, thirteen columns holding keys not labels — twelve here,
+  plus `subtype` added by `17`. **Every record
   carries an id, and the phone makes it before the save leaves the phone.** That
   is what makes a retried save safe: the server appends when the id is new and
   overwrites when it is not, so a retry can never make a duplicate. Rows always
@@ -240,6 +250,24 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   with Undo only until you leave the unit. Asset:
   `prototypes/06-logger-and-records.html`.
 
+- [How wide a Reason list is, and who writes it](issues/17-reason-list-scope.md)
+  — Miguel's list of variables mixed **two fields**. `Damaged` and `Wrong Swing`
+  are Reasons. `Bypass`, width, depth and swing are the **needed line**. Sorted
+  that way, the reasons collapse to **eight, six of which apply everywhere**, so
+  **the variables were never in this field.** `01`'s three per-phase lists are
+  deleted: there is **one list per building plus a short trim per item**, because
+  eighteen per-item copies would make "add a reason to everything" eighteen edits
+  instead of one. A custom item gets all eight and no trim, which kills `01`'s
+  empty-dropdown objection. **`Warped` is renamed `Defective`** — arrived wrong
+  from the factory, against `Damaged`, hurt on site. **Lists only grow**: Admin
+  needs Add and never Delete, and it touches only the reason and type lists.
+  The Waiting list **never varies**, confirmed. The ticket also drew a field
+  nobody had: **a Subtype dropdown**, eight door types and four handle types,
+  which **partly overturns `12`** — one field, not the four it rejected — takes
+  **a thirteenth column** in the Deficiencies tab, and takes `06`'s form **from
+  six controls to seven**. Admin owns both lists, and a list change must not
+  rebuild the Tracker tab.
+
 ## Not yet specified
 
 - Whether a Waiting record can attach to a whole unit, for something like no
@@ -249,6 +277,16 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   is now known: `sw.js` must delete old Cache API entries in its `activate`
   handler, because a worker update does not remove them.
 - Whether a photo belongs on a deficiency record in 0.2, or later.
+- **A record for a problem PFC will never fix.** Found on 2026-08-08 while
+  resolving `17`. Miguel: Exterior Doors are patio and entry doors that the
+  framer installs, PFC only builds out and trims around them, and "they are often
+  defective and need repairs but we do not handle that." Every record in the
+  model today is a task for PFC. An open flag of either kind blocks Complete on
+  its item, per `11`, so logging a defective exterior door would stop that item
+  reading Complete after PFC finished everything it owns. Candidates: a record
+  state that is neither Open nor Fixed, a record that carries no flag, or a rule
+  that some items never block. Do not build ahead of it — write the rule down
+  before `09`, or push it to 0.3 on purpose.
 
 ## Out of scope
 

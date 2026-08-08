@@ -239,3 +239,42 @@ which screen a queued edit came from.
   memory and the 0.4 QR scan both fit the same slot later.
 - Whether Logger can log against a phase with no item, which `01` allows for a
   Waiting record. The Item dropdown needs a "whole phase" choice. `06` draws it.
+
+## Narrowed by `17-reason-list-scope`, 2026-08-08
+
+**The rejection of structured per-item fields is narrowed, not reversed.** Read
+the old text below as still correct about the thing it rejected.
+
+This ticket rejected a **four-field form** on a door — Style, Width, Depth and
+Swing — on speed, and on the argument that a custom item has no form at all.
+Miguel confirmed on 2026-08-08 that he wants **width, depth and swing to stay
+typed**. That part of the rejection stands untouched.
+
+What he asked for is **one field**: the type. So the needed line gains a single
+dropdown, above its text box, offering whatever types the item defines.
+
+- **Interior Doors** — Regular, Bypass, Bi-fold, Double, Pocket, Double Pocket,
+  Dwarf, Unit Door
+- **Hardware** — Passage, Privacy, Dummy, Pocket
+- **Windows, Exterior Doors, Baseboards** — none defined, **no dropdown appears,
+  and the form is exactly as this ticket drew it**
+
+The custom-item objection dies the same way it died on `01`: an item that defines
+no types shows no dropdown at all. Nothing lands empty and nothing has to be
+written before a new item works.
+
+**Two lines in this ticket are now wrong:**
+
+1. **"No Admin work comes from `12`."** There is Admin work now. Admin owns the
+   type list per item, on an edit-item screen, Add-only. It lands on
+   `13-admin-changes`.
+2. **The form sketch.** It already missed the **Type** field that `06` added. It
+   now also misses the Subtype dropdown. The sketch reads as final and is not —
+   `06` and `17` together own the current form.
+
+**The trade this ticket made is now partly paid in a different currency.** It bet
+that suggestions would carry the consistency dropdowns would have bought.
+`17` moved the riskiest part of that bet — a closed set of eight type words that
+must match character for character before 0.5 can total them — onto a dropdown
+and into its own Sheet column. Suggestions still carry the dimensions. See the
+narrowing note on `15-suggestion-list`.

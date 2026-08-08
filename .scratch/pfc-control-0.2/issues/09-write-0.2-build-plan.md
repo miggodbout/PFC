@@ -2,7 +2,7 @@
 
 Type: task
 Status: open
-Blocked by: 01, 02, 03, 04, 05, 06, 07, 08, 10, 11, 12, 13, 14, 15, 17, 18
+Blocked by: 13, 14, 15, 18 — all others resolved (17 resolved 2026-08-08)
 
 ## Question
 

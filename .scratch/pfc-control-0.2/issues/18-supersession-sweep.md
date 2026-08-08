@@ -2,9 +2,9 @@
 
 Type: task
 Status: open
-Blocked by: 13, 14, 15, 17 — every other 0.2 ticket. This runs last, right
-before `09-write-0.2-build-plan`. Run it earlier and the tickets that close
-after it make it stale again.
+Blocked by: 13, 14, 15 — every other 0.2 ticket. 17 resolved 2026-08-08. This
+runs last, right before `09-write-0.2-build-plan`. Run it earlier and the
+tickets that close after it make it stale again.
 
 ## Question
 
@@ -59,8 +59,12 @@ Not a complete list. It is where to start.
 - Section 3 says "On Hold reasons". `01` renamed On Hold to **Waiting**.
 - It does not know the **Details column** comes out of the Tracker tab. Settled
   in `06`, 2026-08-08.
-- Section 3 states the reason lists as settled. `17-reason-list-scope` may narrow
-  them to the item, so section 3 cannot be marked FINAL until `17` closes.
+- Section 3 is **overruled outright**. `17` closed 2026-08-08 and deleted the
+  three per-phase lists. A warning block now sits at the top of that section
+  pointing here. Rewrite it: one list of eight per building, a trim per item,
+  `Warped` renamed `Defective`, and two new **type** lists.
+- Section 1 is marked FINAL at **twelve** columns. `17` made it **thirteen**,
+  adding `subtype` beside `needed`. FINAL is now wrong.
 - The whole file still carries "Status: PROVISIONAL. Do not start work yet."
 
 **Elsewhere:**
@@ -76,6 +80,31 @@ Not a complete list. It is where to start.
 - `06-deficiency-entry-screen`'s question body describes the pre-`12` shape. That
   one is **fine and intended** — it is the question as asked. Confirm the
   resolution is clearly the current text, and leave it.
+
+**Added 2026-08-08 while resolving `17`.** Each of these already carries a dated
+correction block written by `17`. The job here is to confirm the correction reads
+as current and the old text plainly reads as superseded, not to rewrite either.
+
+- `01-deficiency-record-fields` — its three per-phase reason lists, and `Warped`.
+  Also its flat statement that the needed line stays free text, which is now true
+  of the dimensions and false of the type.
+- `02-deficiencies-tab-layout` — twelve columns became thirteen, and the letters
+  from `subtype` onward all shift. **Already checked on 2026-08-08: no other
+  ticket quotes a Deficiencies-tab column letter.** `04`, `05` and `11` all name
+  the columns without lettering them, and `11` only says "`02` fixed those
+  columns". The map's one-line gist of `02` said "twelve columns" and was fixed
+  the same day. Nothing else to chase — confirm and move on.
+- `12-logger-door` — two wrong lines: "No Admin work comes from `12`", and a form
+  sketch missing both the **Type** field `06` added and the **Subtype** dropdown
+  `17` added.
+- `06-deficiency-entry-screen` — the six-control budget is now seven on an item
+  that defines types. The budget is a constraint the build must meet, not a
+  finding that was overruled. Say that clearly, because it reads either way.
+- `15-suggestion-list` — its "Settled early" section plans seed suggestions for
+  door variants that are now a dropdown. Narrowed, not deleted.
+- `prototypes/06-logger-and-records.html` — **do not edit it**, per the rule
+  above, but note in `supersessions.md` that it draws the pre-`17` six-control
+  form. `06`'s amendment already says the prototype needs re-checking.
 
 ## Why this is not scope creep
 

@@ -144,3 +144,31 @@ row 1, and adds a filter.
 The rollup moved to `11-rollup-rules` whole, along with the whole status model on
 the Unit Tracker tab. Nothing here says what a flag looks like in a unit row, or
 whether a flag is a Sheet formula or worked out by the app.
+
+### Corrected by `17-reason-list-scope`, 2026-08-08
+
+**Twelve columns becomes thirteen.** A `subtype` column joins the tab, holding
+the door type or the handle type. It sits beside `needed`, so the two fields that
+describe the replacement stay together.
+
+| Col | Name | Holds |
+|---|---|---|
+| … | … | A to G unchanged |
+| H | `subtype` | `Bypass`, `Privacy`. **Blank on an item that defines no types** |
+| I | `needed` | Free text, such as `32" 6" RH`. Was column H |
+| J | `quantity` | Was column I |
+| K | `state` | Was column J |
+| L | `created` | Was column K |
+| M | `closed` | Was column L |
+
+Everything else on this ticket holds. The id rule, the append-on-the-bottom rule,
+the one-call column A read, `Cancelled`, the removal refusal, and the rule that
+`rebuildTracker` never touches this tab are all unaffected.
+
+**Why a column and not part of the needed text.** Folding `Bypass` into the front
+of the needed line was offered and rejected. 0.5 totals materials, and reading a
+type out of free text means matching words — the exact problem the dropdown was
+added to solve. A column makes the total countable with no guessing.
+
+**`Wrong Size or Profile` is gone.** Column F now takes one of eight shared
+values. See the correction on `01-deficiency-record-fields`.
