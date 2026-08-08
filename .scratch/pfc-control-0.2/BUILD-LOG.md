@@ -347,3 +347,79 @@ the drain with its backoff, the hold rules, the sync bar, the Unit marks and the
 red card, the Outbox window, and the greyed Complete. **Step 3 ends at the first
 of the two test rounds, and it is the gate: do not start step 5 before it
 reports back.** Delete `localOnlyNote()` in the same step.
+
+---
+
+## Session 4 — 2026-08-08
+
+**Step:** none. A defect fix between step 2 and step 3.
+**Branch:** `0.2` at `eadf9a4`. Pushed.
+**Deployed:** no. Front-end only, no `Code.js` change.
+**Merged to main:** **no, on purpose.** Not a step end. It rides into step 3's
+merge.
+**CACHE_NAME:** unchanged at `pfc-control-0.2-step2`. **`theme.css` is a file the
+phone downloads, so whoever merges this to `main` MUST bump it.** Step 3's merge
+does that by itself with `-step3`. Do not merge this to `main` on its own without
+a bump.
+
+**Landed:** the press effect no longer steals its own clicks.
+
+Miguel tested step 2 and found two dead controls: the checkbox on Admin's Create
+form would not toggle when he clicked the box, only the label, and the floor
+header would not open when he clicked the caret, only the label. He also disliked
+the animation on both. **One bug, and it was neither of those two screens.**
+
+`.press:active` used `transform: scale(0.95)`. A transform shrinks the box about
+its own centre, so both edges pull inward the moment you press. A click only
+fires when the press and the release land on the **same element** — so a release
+on an edge that has just moved away goes to the container behind, and the handler
+never runs. The centre never moves, which is why the label always worked.
+
+The dead band is 2.5% of the control's width on each side. On Admin's Create form
+at 1489px wide that is **37px**, and the 22px `.check-box` spans x 20 to 42 —
+entirely inside it. The caret sits in the same band on the right of `.floor-head`.
+
+**It was never limited to those two controls.** `.press` is on 15 kinds of
+control, and every full-width one had the same dead edges — including
+`card row press`, the item rows on the Unit screen, and `hub-card`.
+
+**Reproduced and fixed in Chrome, against the real Create form** on a local
+server. With the old rule injected back, a click on the checkbox logged
+`mousedown` inside `.check`, then `mouseup` and `click` on `.phase-block`, and
+`aria-checked` stayed `true`. With the fix, all three events stay on the button
+and the row toggles. Retested on the right edge too. Both pass.
+
+**The fix, in `theme.css`:**
+
+- New token `--press-tint: rgba(255,255,255,0.07)`.
+- `.press` is now paint only — `box-shadow: inset 0 0 0 999px var(--press-tint)`.
+  A large inset spread floods the padding box, so one rule tints a dark card and
+  an orange button alike, sits under the text, follows the border radius, and
+  **changes no geometry**. On instantly, out over 160ms; a press that fades *in*
+  reads as lag.
+- `.check` gains `border-radius: 10px`, so the flash is not a hard-edged band.
+  The row draws no background of its own, so the radius does nothing else.
+- A comment on `.press` states the rule as a hit-target rule, not a taste one,
+  and names what scale(0.95) broke.
+
+**Miguel chose the background flash** over dim-only, scale-on-small-controls-only,
+and no feedback at all.
+
+**Not landed:** nothing new. `reference/PFC_Master_Template.xlsx` still not
+updated, per sessions 1 to 3. Everything from step 3 onward.
+
+**Open:**
+
+- **Nothing may move a control on `:active` again.** Any new press state must be
+  paint. This binds the Outbox and Logger windows, which do not exist yet and
+  will inherit `theme.css`.
+- **`.caret` has a dead transition.** `theme.css` has
+  `transition: transform 150ms` on it, but `toggleFloor` calls `render()`, which
+  replaces the element, so a fresh node draws already rotated and the transition
+  never plays. Harmless. Step 6 sweeps the theme classes — drop it there.
+- Everything still open from session 3: the `ZZ 0.2 Step 2 Test` Sheet to trash,
+  the greyed Complete not reachable until step 4, the chip bar looking long on a
+  desktop window, `.details-btn` / `.details-edit` unused, the Tracker row 5
+  wrap, and PLAN CALL 3 at step 4.
+
+**Next:** unchanged — start step 3.
