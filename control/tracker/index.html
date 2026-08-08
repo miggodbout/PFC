@@ -29,40 +29,168 @@
 <script src="../shared/common.js"></script>
 <script>
 /* =====================================================================
-   TRACKING — every project, with its worst status
+   BUILDINGS — every project the crew is tracking
+   =====================================================================
+   The header reads Buildings because a list of addresses is what is on
+   the screen. Tracking is the section this screen lives in. The two are
+   allowed to differ, and that was chosen deliberately in 0.1.1.
+
+   The stored list draws first, then a fetch refreshes it behind. There is
+   no staleness clock and no timer: a fetch that succeeds makes the copy
+   fresh by definition, and the app warns only when a fetch FAILS.
    ===================================================================== */
 
 var screen = document.getElementById('screen');
 
-screen.innerHTML = loadingHtml('Loading projects…');
+/*
+   Which buildings already read Complete when this session first asked.
+   sessionStorage, not localStorage: it must survive walking into a
+   building and back, and it must be gone when the app closes. It is not
+   one of the four data stores, and nothing syncs it.
 
-loadProjects().then(function (result) {
-  screen.innerHTML = '<div class="body">' + demoBannerHtml(result) + listHtml(result) + '</div>';
-});
+   A building already finished at the start of the session is not drawn at
+   all. One that goes Complete WHILE you watch stays on screen, greyed,
+   until the next app open — which is also when its local copy is dropped,
+   so the row is tappable for exactly as long as it is drawn.
+*/
+var SESSION_KEY = 'pfc.control.v1.session.finished';
+
+var held = Store.list();
+var lastList = held ? held.projects : null;
+
+if (lastList) {
+  // The stored list is this session's first answer. Seed from it, or every
+  // long-finished building would flash up greyed for a second before the
+  // fetch lands and takes it away.
+  rememberFinished(lastList);
+  draw(lastList, null);
+} else {
+  screen.innerHTML = loadingHtml('Loading projects…');
+}
+
+refresh();
+
+enablePullToRefresh(refresh);
 
 
-function listHtml(result) {
-  if (result.projects.length === 0) return emptyHtml();
-  return result.projects.map(rowHtml).join('');
+function refresh() {
+  return fetchProjects().then(function (result) {
+    if (result.source === 'error') {
+      // No stored list and no signal is the only blank case. With a list
+      // in hand the screen keeps it and says how old it is.
+      if (!lastList) screen.innerHTML = errorHtml(result.reason, result.detail);
+      else draw(lastList, result);
+      return;
+    }
+    lastList = result.projects;
+    rememberFinished(result.projects);
+    dropFinishedCopies(result.projects);
+    draw(result.projects, null);
+  });
 }
 
 
-function rowHtml(project) {
-  var tag = project.demo ? '<span class="tag">DEMO</span>' : '';
+/* ── WHAT WAS ALREADY FINISHED ────────────────────────────────────── */
 
-  return '<a class="card row press" href="building.html?p=' + encodeURIComponent(project.id) + '">' +
+/** The set of buildings that already read Complete when the session began. */
+function finishedAtStart() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+/** Written once, from the first list answer of the session. */
+function rememberFinished(projects) {
+  if (finishedAtStart()) return;
+  var set = {};
+  projects.forEach(function (project) {
+    if (projectRollup(project).status === 'complete') set[project.id] = true;
+  });
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(set)); } catch (e) {}
+}
+
+
+/**
+ * A finished building's copy is dropped, ahead of the ten-copy limit.
+ * A building holding an unsent edit is never dropped, finished or not.
+ */
+function dropFinishedCopies(projects) {
+  projects.forEach(function (project) {
+    if (projectRollup(project).status !== 'complete') return;
+    if (Store.hasJobsFor(project.id)) return;
+    if (Store.project(project.id)) Store.dropProject(project.id);
+  });
+}
+
+
+/* ── DRAW ─────────────────────────────────────────────────────────── */
+
+function draw(projects, failure) {
+  var note = failure ? staleNoteHtml(held ? held.fetchedAt : 0) : '';
+  screen.innerHTML = '<div class="body">' + note + listHtml(projects) + '</div>';
+}
+
+
+function listHtml(projects) {
+  var wasFinished = finishedAtStart() || {};
+
+  var rows = projects.map(function (project) {
+    return rowHtml(project, wasFinished);
+  }).filter(function (row) { return row !== ''; });
+
+  if (rows.length === 0) return emptyHtml(projects);
+  return rows.join('');
+}
+
+
+/**
+ * THE FOUR TESTS FOR DRAWING A ROW. First match wins.
+ *
+ *   1. The phone holds an unsent edit for it  -> a normal row
+ *   2. Complete, and already Complete when this session started
+ *                                             -> DO NOT DRAW IT
+ *   3. Complete, and it went Complete during this session
+ *                                             -> a greyed row, FINISHED
+ *   4. anything else                          -> a normal row
+ */
+function rowHtml(project, wasFinished) {
+  var roll     = projectRollup(project);
+  var jobs     = Store.jobCountFor(project.id);
+  var unsent   = jobs.waiting + jobs.held;
+  var finished = (roll.status === 'complete');
+
+  if (finished && unsent === 0) {
+    if (wasFinished[project.id]) return '';                 // test 2
+  }
+
+  var grey = finished && unsent === 0;                      // test 3
+  var tag  = grey ? '<span class="tag">FINISHED</span>' : '';
+
+  // Only a HELD edit is a mark above the Unit screen. A waiting edit
+  // paints the value and says nothing else.
+  var marks = marksHtml(roll, jobs.held);
+
+  return '<a class="card row press' + (grey ? ' row--finished' : '') + '" ' +
+            'href="building.html?p=' + encodeURIComponent(project.id) + '" ' +
+            'aria-label="' + escapeHtml(marksLabel(project.name, roll, jobs.held)) + '">' +
            '<span class="row-main">' +
              '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
-             '<span class="row-sub">' + escapeHtml(subtitleFor(project)) + '</span>' +
+             '<span class="row-sub">' + escapeHtml(shapeOf(project)) + '</span>' +
+             '<span class="meta">' + barHtml(roll) +
+               '<span class="floor-count">' + escapeHtml(countText(roll, 'unit', 'units')) + '</span>' +
+             '</span>' +
+             marks +
            '</span>' +
-           pillHtml(project.overall) +
+           pillHtml(roll) +
            ICON.chevron +
          '</a>';
 }
 
 
 /** "36 units · 3 floors", or just "12 units" when there are no floors. */
-function subtitleFor(project) {
+function shapeOf(project) {
   var units = project.unitCount + (project.unitCount === 1 ? ' unit' : ' units');
   if (project.mode === 'flat') return units;
 
@@ -71,10 +199,25 @@ function subtitleFor(project) {
 }
 
 
-function emptyHtml() {
+/**
+ * TWO EMPTY MESSAGES, not one.
+ *
+ * "No projects yet" is wrong once buildings exist and every one of them
+ * has finished — it reads as data loss. The list answer tells the two
+ * cases apart by itself: it either came back empty, or came back holding
+ * buildings that all read Complete.
+ */
+function emptyHtml(projects) {
+  var allDone = projects.length > 0;
+
+  var title = allDone ? 'Nothing to track' : 'No projects yet';
+  var text  = allDone
+    ? 'Every building is finished. Open the project Sheet to read one.'
+    : 'Create your first building. Every project gets its own Google Sheet.';
+
   return '<div class="state">' +
-           '<div class="state-title">No projects yet</div>' +
-           '<div class="state-text">Create your first building. Every project gets its own Google Sheet.</div>' +
+           '<div class="state-title">' + title + '</div>' +
+           '<div class="state-text">' + text + '</div>' +
            '<a class="btn btn-primary press" style="max-width:240px" href="../admin/index.html">Create Job</a>' +
          '</div>';
 }

@@ -22,7 +22,9 @@
     </svg>
   </a>
   <div class="hdr-titles">
-    <h1 class="hdr-title" id="title">Unit</h1>
+    <!-- Empty on purpose. A blank header for a moment reads as loading.
+         The literal word "Unit" read as a label, and then changed. -->
+    <h1 class="hdr-title" id="title"></h1>
     <div class="hdr-sub" id="subtitle"></div>
   </div>
   <div class="hdr-spacer"></div>
@@ -36,19 +38,25 @@
 /* =====================================================================
    UNIT — every item, grouped by phase
    =====================================================================
-   The status dropdown and the details box work fully on screen. Neither
-   one writes to the project Sheet. That is the next version. A note at the
-   top of the screen says so, so nobody thinks the work is saved.
+   Drawn from the whole-building copy get-project stored, so a unit opens
+   with no signal and with no wait.
+
+   A tap on the status control goes on the outbox shelf and paints the
+   screen. Step 3 sends it. The note at the top says so until then.
+
+   EVERY ITEM IS ALWAYS DRAWN, whatever its Progress. Complete is a mark on
+   a row, never a reason to remove the row — the row is the control you set
+   Progress with, so hiding it takes away the only way to correct a
+   mis-tap. Do not build a hide-finished-items option.
    ===================================================================== */
 
 var projectId = param('p');
 var unitKey   = param('u');
 var screen    = document.getElementById('screen');
 
-var data       = null;   // the unit, once it loads
-var openMenu   = null;   // item key of the open status dropdown
-var openEditor = null;   // item key of the open details box
-var editorFrom = '';     // the details text as it was when the box opened
+var copy     = null;   // the whole building
+var place    = null;   // { unit, group } inside it
+var openMenu = null;   // item key of the open status dropdown
 
 
 document.getElementById('back').href = 'building.html?p=' + encodeURIComponent(projectId);
@@ -56,14 +64,33 @@ document.getElementById('back').href = 'building.html?p=' + encodeURIComponent(p
 if (!projectId || !unitKey) {
   screen.innerHTML = errorHtml('server', 'No unit was given. Go back and choose one.');
 } else {
-  screen.innerHTML = loadingHtml('Loading unit…');
-  loadUnit(projectId, unitKey).then(function (result) {
+  copy = Store.project(projectId);
+
+  if (copy) {
+    render();
+  } else {
+    setTitle(unitKey);
+    screen.innerHTML = loadingHtml('Loading unit…');
+  }
+
+  refresh();
+  enablePullToRefresh(refresh);
+}
+
+
+function refresh() {
+  return fetchProject(projectId).then(function (result) {
     if (result.source === 'error') {
-      screen.innerHTML = errorHtml(result.reason, result.detail);
+      if (!copy) {
+        screen.innerHTML = (result.reason === 'offline' || result.reason === 'timeout')
+          ? noCopyHtml()
+          : errorHtml(result.reason, result.detail);
+      } else {
+        render(staleNoteHtml(Store.projectFetchedAt(projectId)));
+      }
       return;
     }
-    data = result.data;
-    document.title = 'Unit ' + data.unit.label + ' — PFC Control';
+    copy = result.data;
     render();
   });
 }
@@ -71,31 +98,49 @@ if (!projectId || !unitKey) {
 
 /* ── DRAW ─────────────────────────────────────────────────────────── */
 
-function render() {
-  document.getElementById('title').textContent = 'Unit ' + data.unit.label;
+function render(note) {
+  place = findUnit(copy, unitKey);
+
+  if (!place) {
+    screen.innerHTML = errorHtml('server',
+      'Unit ' + unitKey + ' is not in this building any more. Go back and choose one.');
+    return;
+  }
+
+  setTitle(place.unit.label);
   document.getElementById('subtitle').textContent =
-    data.projectName + (data.groupLabel ? ' · ' + data.groupLabel : '');
-  document.getElementById('unit-pill').innerHTML = pillHtml(data.overall, 'md');
+    copy.name + (place.group.label ? ' · ' + place.group.label : '');
+  document.getElementById('unit-pill').innerHTML = pillHtml(unitRollup(copy, unitKey), 'md');
 
   screen.innerHTML =
     '<div class="body body--flush">' +
+      (note || '') +
       localOnlyNote() +
-      data.phases.map(phaseHtml).join('') +
+      copy.phases.map(phaseHtml).join('') +
     '</div>';
 
   placeOpenMenu();
 }
 
 
+function setTitle(label) {
+  document.title = 'Unit ' + label + ' — PFC Control';
+  document.getElementById('title').textContent = 'Unit ' + label;
+}
+
+
 function phaseHtml(phase) {
   if (phase.items.length === 0) return '';
 
-  var statuses = phase.items.map(function (item) { return item.status; });
+  var statuses = phase.items.map(function (item) {
+    return itemStatus(copy, unitKey, item.key);
+  });
+  var flags = countFlags(copy, { unit: unitKey, phase: phase.key });
 
   return '<section class="phase">' +
            '<div class="phase-head">' +
              '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
-             pillHtml(worst(statuses), 'xs') +
+             pillHtml(rollupOf(statuses, flags), 'xs') +
            '</div>' +
            phase.items.map(itemHtml).join('') +
          '</section>';
@@ -103,8 +148,7 @@ function phaseHtml(phase) {
 
 
 function itemHtml(item) {
-  var key      = safeStatus(item.status);
-  var editing  = (openEditor === item.key);
+  var key      = itemStatus(copy, unitKey, item.key);
   var menuOpen = (openMenu === item.key);
 
   var menu = menuOpen
@@ -120,28 +164,9 @@ function itemHtml(item) {
       '</div>'
     : '';
 
-  var editor = editing
-    ? '<div class="details-edit" onclick="event.stopPropagation()">' +
-        '<textarea id="editor" placeholder="Add a note about this item…" ' +
-                  'oninput="typeDetails(' + attr(item.key) + ', this.value)">' +
-          escapeHtml(item.details) +
-        '</textarea>' +
-        '<div class="details-actions">' +
-          '<button type="button" class="btn btn-ghost btn-small press" ' +
-                  'onclick="cancelDetails(event,' + attr(item.key) + ')">Cancel</button>' +
-          '<button type="button" class="btn btn-primary btn-small press" ' +
-                  'onclick="closeDetails(event)">Save</button>' +
-        '</div>' +
-      '</div>'
-    : '';
-
   return '<div class="item">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(item.label) + '</span>' +
-
-             '<button type="button" class="details-btn press' + (editing ? ' on' : '') + '" ' +
-                     'aria-expanded="' + editing + '" ' +
-                     'onclick="toggleDetails(event,' + attr(item.key) + ')">Details</button>' +
 
              '<span class="status-wrap">' +
                '<button type="button" class="status-trigger press s-' + key + '" ' +
@@ -154,9 +179,6 @@ function itemHtml(item) {
                menu +
              '</span>' +
            '</div>' +
-
-           (editing ? '' : '<div class="item-details">' + escapeHtml(item.details) + '</div>') +
-           editor +
          '</div>';
 }
 
@@ -172,30 +194,40 @@ function attr(text) {
 function toggleMenu(event, itemKey) {
   event.stopPropagation();     // keeps the page listener from closing it again
   openMenu = (openMenu === itemKey) ? null : itemKey;
-  openEditor = null;           // only one thing stays open at a time
   render();
 }
 
 
+/**
+ * Puts the tap on the outbox shelf and redraws.
+ *
+ * The job carries the FINAL VALUE, not a change to apply, and it is keyed
+ * by the thing it changes. Tap the same item twice before it sends and the
+ * second job replaces the first, so only the last value ever reaches the
+ * Sheet.
+ *
+ * progress holds the SHORT KEY, which is what every screen on this phone
+ * works in. Step 3's drain turns it into the Sheet's label on the way out.
+ *
+ * The building copy is not touched. The paint happens on the way to the
+ * screen, in paintedStatus, which is what makes a fresh fetch unable to
+ * overwrite an edit that has not sent.
+ */
 function chooseStatus(event, itemKey, status) {
   event.stopPropagation();
 
-  var item = findItem(itemKey);
-  if (!item) return;
+  Store.putJob({
+    key:       itemJobKey(projectId, unitKey, itemKey),
+    kind:      'item',
+    projectId: projectId,
+    unitKey:   unitKey,
+    itemKey:   itemKey,
+    progress:  status,
+    at:        Date.now(),
+    tries:     0,
+    held:      false
+  });
 
-  var was = item.status;
-  item.status = status;
-  Store.setItem(projectId, unitKey, itemKey, { status: status });
-
-  // On a demo building the note is made-up text that matches the old
-  // status. Move it on with the status, so the two never disagree.
-  // A real note from the Sheet is never touched. It belongs to the user.
-  if (data.demo && isMadeUpNote(item.details, was)) {
-    item.details = demoItemDetails(demoDef(projectId), unitKey, itemKey, status);
-    Store.setItem(projectId, unitKey, itemKey, { details: item.details });
-  }
-
-  refreshRollup();
   openMenu = null;
   render();
 }
@@ -212,54 +244,17 @@ function placeOpenMenu() {
 }
 
 
-/* ── DETAILS BOX ──────────────────────────────────────────────────── */
+/*
+   THE DETAILS BOX IS GONE.
 
-function toggleDetails(event, itemKey) {
-  event.stopPropagation();
+   Every item used to carry a free-text note in a second Sheet column. The
+   app never read it back, so a note typed on a computer was invisible on
+   every phone. 0.2 removed the Details column from the Sheet, and a
+   structured record in the Deficiencies tab replaced the note — it says
+   what is wrong, what is needed and how many, and 0.5 can add it up.
 
-  if (openEditor === itemKey) { closeDetails(event); return; }
-
-  var item = findItem(itemKey);
-  editorFrom = item ? item.details : '';
-  openEditor = itemKey;
-  openMenu = null;
-  render();
-
-  var box = document.getElementById('editor');
-  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
-}
-
-
-/**
- * Every keystroke is kept straight away. Nothing waits for a Save press,
- * so no typing can be lost by tapping elsewhere. Cancel puts the old text
- * back.
- */
-function typeDetails(itemKey, text) {
-  var item = findItem(itemKey);
-  if (!item) return;
-  item.details = text;
-  Store.setItem(projectId, unitKey, itemKey, { details: text });
-}
-
-
-function closeDetails(event) {
-  if (event) event.stopPropagation();
-  openEditor = null;
-  render();
-}
-
-
-function cancelDetails(event, itemKey) {
-  event.stopPropagation();
-  var item = findItem(itemKey);
-  if (item) {
-    item.details = editorFrom;
-    Store.setItem(projectId, unitKey, itemKey, { details: editorFrom });
-  }
-  openEditor = null;
-  render();
-}
+   Step 4 puts the flag chips and the record list on this screen.
+*/
 
 
 /* ── CLOSE ON A TAP OUTSIDE, OR ON ESCAPE ─────────────────────────── */
@@ -273,9 +268,8 @@ function cancelDetails(event, itemKey) {
 */
 
 function closeAll() {
-  if (openMenu === null && openEditor === null) return;
+  if (openMenu === null) return;
   openMenu = null;
-  openEditor = null;
   render();
 }
 
@@ -286,35 +280,14 @@ document.addEventListener('keydown', function (event) {
 });
 
 
-/* ── HELPERS ──────────────────────────────────────────────────────── */
+/*
+   NOTHING CACHES A ROLLUP HERE ANY MORE.
 
-function findItem(itemKey) {
-  for (var p = 0; p < data.phases.length; p++) {
-    var items = data.phases[p].items;
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].key === itemKey) return items[i];
-    }
-  }
-  return null;
-}
-
-
-/** Works out this unit's status again, and remembers it for the Building screen. */
-function refreshRollup() {
-  var all = [];
-  data.phases.forEach(function (phase) {
-    phase.items.forEach(function (item) { all.push(item.status); });
-  });
-  data.overall = worst(all);
-  Store.setUnit(projectId, unitKey, data.overall);
-}
-
-
-/** True when the note is one of the demo building's made-up lines. */
-function isMadeUpNote(text, status) {
-  var list = DEMO_DETAILS[status] || [];
-  return list.indexOf(text) !== -1;
-}
+   0.1 worked this unit's status out on tap and wrote it into the store, so
+   the Building screen would agree. Both screens now read the same building
+   copy and call the same rollup function, so they cannot disagree, and
+   there is nothing to keep in step.
+*/
 </script>
 </body>
 </html>

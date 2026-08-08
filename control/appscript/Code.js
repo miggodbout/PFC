@@ -177,6 +177,7 @@ function doPost(e) {
 function route(action, data) {
   switch (action) {
     case 'list-projects':    return handleListProjects(data.fresh === '1' || data.fresh === true);
+    case 'get-project':      return handleGetProject(data.id);
     case 'get-structure':    return handleGetStructure(data.id);
     case 'get-unit':         return handleGetUnit(data.id, data.unit);
     case 'create-project':   return handleCreateProject(data);
@@ -259,6 +260,14 @@ function handleListProjects(fresh) {
         // column that is open anyway. Counting items instead would mean
         // reading the whole Tracker grid for every building on the list.
         unitsDone:    statuses.filter(function (key) { return key === 'complete'; }).length,
+
+        // The fifth number, added in step 2. The rollup rule needs to know
+        // "every unit Not Started" apart from "some unit In Progress", and
+        // four numbers cannot tell those two apart: both read unitsDone 0.
+        // It costs one filter over an array that is already in memory, and
+        // it is still a number, not a verdict. The phone applies the rule.
+        unitsNotStarted: statuses.filter(function (key) { return key === 'not_started'; }).length,
+
         unitsTotal:   units.length,
         deficiencies: flags.deficiencies,
         waiting:      flags.waiting
@@ -278,8 +287,115 @@ function handleListProjects(fresh) {
 
 
 /**
+ * Returns ONE WHOLE BUILDING IN ONE ANSWER.
+ *
+ * This replaces get-structure plus one get-unit per unit. The phone stores
+ * what comes back and draws the Building screen and every Unit screen out
+ * of that one copy, so a unit opens with no signal and with no wait.
+ *
+ * It is cheap because the Unit Tracker tab is one grid. Reading all 48 rows
+ * is the same single getValues call that handleGetUnit makes for one row.
+ *
+ * Three things go out that nothing in 0.2 draws yet, and none of them may
+ * be trimmed later:
+ *
+ *   - every item's types, trim and hint, so Logger draws its dropdowns from
+ *     the local copy with no second call;
+ *   - the building's reason list, for the same reason;
+ *   - THE WHOLE DEFICIENCIES TAB, EVERY STATE — Open, Fixed and Cancelled.
+ *     Fixed records feed the suggestion chips, and the 0.3 Archive window is
+ *     a filter over records. A state filter added here to shrink the payload
+ *     takes away both. Size is not the constraint: about 300 records at
+ *     ~120 bytes is ~36 KB against a building copy of ~100 KB.
+ *
+ * No rollup goes out. The phone owns that rule. See buildRollupFormula for
+ * why exactly two copies of it exist and why a third must not.
+ */
+function handleGetProject(id) {
+  if (!id) return { success: false, error: 'No project id was given.' };
+
+  var ss     = SpreadsheetApp.openById(id);
+  var config = readConfig(ss);
+  if (!config) return { success: false, error: 'This Sheet is not a PFC Control project.' };
+
+  var stale = configVersionError(config);
+  if (stale) return { success: false, error: stale };
+
+  var units  = allUnits(config);
+  var layout = computeLayout(config);
+
+  // One read of the whole grid. status[unitKey][itemKey] holds a short key.
+  var status      = {};
+  var lastUpdated = {};
+
+  if (units.length > 0) {
+    var sheet  = ss.getSheetByName(TRACKER_SHEET_NAME);
+    var values = sheet.getRange(FIRST_DATA_ROW, 1, units.length, layout.lastCol).getValues();
+
+    units.forEach(function (unit, index) {
+      var row  = values[index];
+      var byItem = {};
+      layout.order.forEach(function (itemKey) {
+        byItem[itemKey] = statusKey(row[layout.statusCol[itemKey] - 1]);
+      });
+      status[unit.key]      = byItem;
+      lastUpdated[unit.key] = formatCell(row[layout.lastUpdatedCol - 1]);
+    });
+  }
+
+  // The groups carry no status. A unit's status is worked out on the phone
+  // from the items above, so there is only ever one answer on screen.
+  var groups = config.groups.map(function (group) {
+    return {
+      key:   group.key,
+      label: group.label,
+      units: group.units.map(function (unit) {
+        return { key: unit.key, label: unit.label, chip: unit.chip };
+      })
+    };
+  });
+
+  var phases = activePhases(config).map(function (phase) {
+    return {
+      key:   phase.key,
+      label: phase.label,
+      items: phase.items.map(function (item) {
+        return {
+          key:   item.key,
+          label: item.label,
+          types: item.types || [],
+          trim:  item.trim  || [],
+          hint:  item.hint  || ''
+        };
+      })
+    };
+  });
+
+  return {
+    success:     true,
+    id:          id,
+    name:        config.name,
+    mode:        config.mode,
+    url:         ss.getUrl(),
+    version:     config.version,
+    unitCount:   units.length,
+    reasons:     config.reasons || FALLBACK_REASONS.slice(),
+    groups:      groups,
+    phases:      phases,
+    status:      status,
+    lastUpdated: lastUpdated,
+    records:     readRecords(ss)
+  };
+}
+
+
+/**
  * Returns one project's full structure, plus the rolled-up status of
  * every unit. The Building screen draws itself from this.
+ *
+ * The phone stopped calling this in 0.2 — get-project above answers with
+ * the whole building instead. Admin still calls it, for the item list its
+ * edit cards offer. Do not delete it.
  */
 function handleGetStructure(id) {
   if (!id) return { success: false, error: 'No project id was given.' };
@@ -337,7 +453,14 @@ function handleGetStructure(id) {
 }
 
 
-/** Returns one unit's items, grouped by phase, with a status each. */
+/**
+ * Returns one unit's items, grouped by phase, with a status each.
+ *
+ * Nothing calls this after 0.2 step 2. get-project sends every unit in one
+ * answer, so the Unit screen reads the local copy instead. It is left in
+ * place because it costs nothing and it is the only way to read one unit
+ * without pulling a whole building.
+ */
 function handleGetUnit(id, unitKey) {
   if (!id)      return { success: false, error: 'No project id was given.' };
   if (!unitKey) return { success: false, error: 'No unit was given.' };
@@ -1438,6 +1561,47 @@ function countOpenFlags(ss) {
     var type = String(row[DEF_COL.type - from]).trim();
     if (type === 'Waiting') out.waiting += 1;
     else if (type === 'Deficiency') out.deficiencies += 1;
+  });
+
+  return out;
+}
+
+
+/**
+ * Reads the whole Deficiencies tab, EVERY STATE, one row per record.
+ *
+ * Do not add a state filter here. Fixed records feed the suggestion chips
+ * on the Logger screen, and the 0.3 Archive window is a filter over
+ * records. Filtering at the server takes both away, and the payload it
+ * saves is measured in kilobytes.
+ *
+ * One read of the whole block, then the mapping happens in memory.
+ * created and closed come back as Date objects, so formatCell turns them
+ * into yyyy-mm-dd strings the phone can compare and print.
+ */
+function readRecords(ss) {
+  var sheet = ss.getSheetByName(DEFICIENCIES_SHEET_NAME);
+  if (!sheet) return [];
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];    // header row only, no records yet
+
+  var width = DEFICIENCY_COLUMNS.length;
+  var idAt  = DEFICIENCY_COLUMNS.indexOf('record_id');
+  var rows  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+  var out   = [];
+
+  rows.forEach(function (row) {
+    // A blank record id is an empty row left by a hand edit. Skip it.
+    if (String(row[idAt] || '').trim() === '') return;
+
+    var record = {};
+    DEFICIENCY_COLUMNS.forEach(function (name, index) {
+      record[name] = (name === 'quantity')
+        ? (parseInt(row[index], 10) || 0)
+        : formatCell(row[index]);
+    });
+    out.push(record);
   });
 
   return out;
