@@ -49,6 +49,17 @@ Design principle Miguel stated, on 2026-08-06:
   its Progress.** Complete is a mark on a row, never a reason to remove the row —
   the row is the control you set Progress with, so hiding it takes away the only
   way to correct a mis-tap. Do not propose hiding finished items again.
+- **A third reading, from `19` on 2026-08-08: lean also means not saying the same
+  fact twice on one screen.** Shown the finished Building screen Miguel said the
+  page was "pretty damn busy", and gave the fix himself: a floor header carries
+  its flag counts and its not-saved chip **only while the floor is closed**. The
+  rule he set is *a header reports what it hides.*
+  - **The narrow version is his. The wide version is not.** He ruled on the floor
+    header, and `19` applied it to the Tracking row because that row never opens.
+    Whether it reaches any other screen is a question, not a deduction. Ask him.
+  - It cuts what is **repeated**, never what is **only said once**. That is what
+    keeps it clear of `14`'s bound above: an item drawn nowhere else is never
+    repetition.
 
 Scoping rule Miguel stated on 2026-08-08, while closing `15`:
 - **Anything about a closed job belongs to the Archive, and the Archive is 0.3.**

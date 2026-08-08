@@ -225,6 +225,13 @@ keeps its own Waiting flag and every item keeps its own. `06` is untouched.
 
 **Only one floor is open at a time**, so at most one header ever drops its marks.
 
+**A flat project has no floor header at all, and needs no extra rule.**
+`control/tracker/building.html:73` draws a flat project's one unnamed group as
+chips with no header, because there is nothing to open or close. A flat project
+therefore hides nothing, so under this rule there is nothing for a header to
+report — the chips carry their own marks and the sync bar carries the saves.
+Written down so `09` does not have to re-derive it.
+
 ### The floor header layout
 
 Two lines, or three when there is a problem to report:
