@@ -43,6 +43,21 @@ Design principle Miguel stated, on 2026-08-06:
   not get slower because logging got richer. This drove `12-logger-door`, which
   answered it by giving logging its own form-shaped door.
 
+Known 0.1 defect to fix inside 0.2, reported by Miguel on 2026-08-07:
+- **The header flashes a wrong word while a screen loads.**
+  `control/tracker/building.html` ships the literal word `Building` in its HTML
+  and JavaScript replaces it when the address arrives. `unit.html` flashes
+  `Unit` the same way.
+- Miguel expected `03-local-copy-rules` to remove this by itself. **It removes
+  it for a building already on the phone, and not otherwise.** A first open, a
+  building dropped by the ten-building limit, and a fresh install all still
+  fetch, and `03` keeps a spinner for exactly that case.
+- So the fix is separate from the local copy. Either pass the name through from
+  the Buildings list, which already knows it, or leave the placeholder empty. A
+  blank header for a moment reads as loading. A wrong word reads as a label.
+- Ticket `09` must fold this into the build plan. It is small, but it is not
+  free, and it is not covered by any ticket on this map.
+
 Scale to design for, stated on 2026-08-07:
 - Up to about **50 buildings** over the life of the tool. One or two are live at
   a time. This is why the phone drops old copies, and why a finished building has
