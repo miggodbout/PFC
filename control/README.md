@@ -180,6 +180,34 @@ var CACHE_NAME = 'pfc-control-0.1.2';   // raise this on every release
 
 Phones keep serving the old copy until this number changes.
 
+### If a phone still shows the old version
+
+Learned the hard way on 2026-08-07, when a header change took three app opens
+and still did not arrive.
+
+First find out where it is stuck. Open the site in **Safari**, as a normal tab,
+and pull down to refresh.
+
+- **Safari shows the old version too.** The release is not live. Check that the
+  push reached `main`, and that GitHub Pages has finished building.
+- **Safari shows the new version, the home screen app does not.** This is the
+  normal case, and it is an iOS rule, not a fault. **A home screen web app on
+  iOS keeps its own private copy of the site, separate from Safari's.** Clearing
+  Safari's website data does nothing to it.
+
+The only reliable cure for the second case:
+
+1. Long press the icon, Remove App, **Delete App**. This is the step that throws
+   away the app's private copy.
+2. Open the site in Safari and check it shows the new version.
+3. Share, then **Add to Home Screen**.
+
+Version 0.1.2 fixed the two faults that made this happen so easily: `sw.js` no
+longer throws away a half saved file, and `common.js` now calls
+`registration.update()` on every open. A phone stuck on 0.1.1 or older cannot
+receive that fix by itself, because the fix lives in the very files that are
+stuck. Those phones need the delete and re-add above, once.
+
 ---
 
 ## Running it

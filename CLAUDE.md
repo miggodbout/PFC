@@ -71,6 +71,8 @@ control/
   manifest.json
   shared/               — theme, logo, shared JS
   tracker/               — view project status (Tracking → Building → Floor → Unit)
+                           The section is named Tracking. Only the address list
+                           on tracker/index.html is headed Buildings. See below.
   admin/                  — unlisted, create/edit project structure
 ```
 
@@ -175,6 +177,22 @@ value was never touched. No extra column, and no automatic write.
 Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
 `control/shared/common.js`, and `buildRollupFormula` in
 `control/appscript/Code.js`.
+
+---
+
+## Screen Names (PFC Control)
+
+**Tracking is the section. Buildings is one screen inside it.** Settled by Miguel
+on 2026-08-07, shipped as 0.1.1.
+
+`tracker/index.html` shows a list of addresses, so its on-screen header reads
+**Buildings**. Everything else keeps the word Tracking: the Hub card, the browser
+tab title, and all the planning language in `.scratch/pfc-control-0.2/`, where
+ticket 14 asks when a building leaves **Tracking** and enters Archive.
+
+Do not "fix" this for consistency. A header names what is on the screen. A card
+and a section name the activity. They are allowed to differ, and Miguel chose
+this deliberately after being offered the full rename.
 
 ---
 
