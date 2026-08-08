@@ -63,19 +63,31 @@
 
 
 /* ── STATUS PALETTE ──────────────────────────────────────────────────
-   One class for each status. Any component inside picks the colours up
+   One class for each value. Any component inside picks the colours up
    through these four variables, so a status badge, a dot and a tinted row
    all stay in step.
 
-   Note the two deliberate mismatches, copied from the prototype: for
-   Deficiency and On Hold the text is lighter than the dot, so small text
-   stays readable on the tinted background. */
+   THE TOP FOUR ARE PROGRESS. The bottom two are FLAGS, not statuses —
+   0.2 took Deficiency and On Hold out of the status model, and their
+   colours stayed because a flag chip needs a red and a blue.
+
+   .s-on_hold was renamed .s-waiting in 0.2. A CSS class name is free to
+   change, unlike a storage key.
+
+   Note the two deliberate mismatches, copied from the prototype: on the
+   two flag colours the text is lighter than the dot, so small text stays
+   readable on the tinted background. */
 
 .s-not_started { --dot: #8A8A8E; --sfg: rgba(255,255,255,0.75); --sbg: rgba(255,255,255,0.08); --sbd: rgba(255,255,255,0.12); }
 .s-in_progress { --dot: #E0A344; --sfg: #E0A344;                 --sbg: rgba(224,163,68,0.16); --sbd: rgba(224,163,68,0.35); }
 .s-complete    { --dot: #4CAF6D; --sfg: #4CAF6D;                 --sbg: rgba(76,175,109,0.16); --sbd: rgba(76,175,109,0.35); }
+
+/* Nothing to roll up. A group with no items reads as a dash, which is not
+   the same fact as Not Started. */
+.s-none        { --dot: #4A4A4E; --sfg: rgba(255,255,255,0.45); --sbg: rgba(255,255,255,0.05); --sbd: rgba(255,255,255,0.10); }
+
 .s-deficiency  { --dot: #E85C5C; --sfg: #F08080;                 --sbg: rgba(224,82,82,0.18);  --sbd: rgba(224,82,82,0.40); }
-.s-on_hold     { --dot: #6C9CFF; --sfg: #8CB0FF;                 --sbg: rgba(91,141,239,0.18); --sbd: rgba(91,141,239,0.40); }
+.s-waiting     { --dot: #6C9CFF; --sfg: #8CB0FF;                 --sbg: rgba(91,141,239,0.18); --sbd: rgba(91,141,239,0.40); }
 
 
 /* ── BASE ────────────────────────────────────────────────────────── */
@@ -219,15 +231,23 @@ button {
   border-radius: 16px;
 }
 
+/* A row carries two or three lines now, so the pill and the chevron line
+   up with the TITLE and not with the middle of the block. */
 .row {
   min-height: 76px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
   width: 100%;
   text-align: left;
 }
+.row > .pill, .row > svg { margin-top: 2px; flex-shrink: 0; }
+
+/* A building that finished during this session. It stays tappable — the
+   copy is still on the phone until the next app open — and it leaves the
+   list by itself after that. */
+.row--finished { opacity: 0.45; }
 .row-main { flex: 1; min-width: 0; }
 /* These sit inside a link, so they are spans. Spans need display block to
    stack. The same applies to every text pair inside a tappable link. */
@@ -244,7 +264,8 @@ button {
   margin-top: 3px;
 }
 
-/* "DEMO" marker beside a project name. */
+/* A small marker beside a project name. "FINISHED" is the only one left —
+   the DEMO tag went with the demo buildings in 0.2. */
 .tag {
   display: inline-block;
   vertical-align: 2px;
@@ -265,14 +286,16 @@ button {
 .floor-head {
   min-height: 56px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 12px 16px;
   width: 100%;
   text-align: left;
 }
+.floor-head > .pill, .floor-head > .caret { margin-top: 2px; flex-shrink: 0; }
+
 .floor-label { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.90); }
-.floor-count { font-size: 12px; color: var(--fg-6); margin-top: 2px; }
+.floor-count { font-size: 12px; color: var(--fg-6); }
 
 .floor-body {
   padding: 2px 12px 14px;
@@ -281,8 +304,12 @@ button {
   gap: 8px;
 }
 
+/* The chip carries at most four marks: the Progress dot, a red flag, a
+   blue flag, and the corner badge. That is the ceiling, not a target.
+   position:relative anchors the bar and the badge. */
 .unit-chip {
-  min-height: 48px;
+  position: relative;
+  min-height: 52px;
   border-radius: 11px;
   background: var(--surface-2);
   border: 1px solid var(--line-soft);
@@ -290,7 +317,8 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
+  padding-bottom: 5px;
 }
 .unit-chip .num {
   font-size: 14px; font-weight: 700;
@@ -300,9 +328,149 @@ button {
   padding: 0 4px;
 }
 
+/* One row inside the chip: the dot, then whichever flags are open. */
+.chip-marks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  line-height: 1;
+}
+
 /* Caret that flips when a floor opens. */
 .caret { transition: transform 150ms ease; flex-shrink: 0; }
 .caret.open { transform: rotate(180deg); }
+
+
+/* ── THE MARKS — THREE FACTS, THREE SHAPES ───────────────────────────
+   Shape carries the meaning before colour does, because shape survives
+   bright sun and colour blindness.
+
+     round dot          Progress          grey, amber, green
+     flag glyph         a flag on site    red Deficiency, blue Waiting
+     corner badge "!"   a failed save     red, outside the chip
+
+   This is the red-on-red answer. A failed save and a Deficiency never
+   share a shape and never share a place. */
+
+/* The second line of a floor header or a Tracking row: bar, then count. */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* The third line. It draws only when something is wrong, so a clean floor
+   never grows a third line. */
+.marks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+  color: var(--dot);
+}
+.flag .flag-n { font-size: 11px; font-weight: 700; color: var(--sfg); }
+.f-deficiency { --dot: #E85C5C; --sfg: #F08080; }
+.f-waiting    { --dot: #6C9CFF; --sfg: #8CB0FF; }
+
+/* Inside a unit chip the flag loses its number — the chip carries both
+   flag kinds and no numbers. Tap through for the count. */
+.chip-marks .flag .flag-n { display: none; }
+
+.not-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+}
+.not-saved-mark {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #E85C5C;
+  color: #0D0D0D;
+  font-size: 10px; font-weight: 700;
+}
+.not-saved-txt { font-size: 11px; font-weight: 700; color: #F08080; }
+
+/* On a chip the badge hangs OFF the top right corner, outside the chip,
+   so it can never be mistaken for a mark about the work itself. */
+.unit-chip .not-saved {
+  position: absolute;
+  top: -5px; right: -5px;
+}
+.unit-chip .not-saved-txt { display: none; }
+
+/* ── THE PROGRESS BAR ────────────────────────────────────────────────
+   A hairline, coloured by Progress. A group with nothing done draws no
+   bar at all, not an empty track. */
+
+.bar {
+  display: block;
+  width: 60px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--dot);
+}
+
+/* On a chip the bar sits on the bottom edge, full width. */
+.unit-chip .bar {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 4px;
+  width: auto;
+}
+
+
+/* ── PULL TO REFRESH ─────────────────────────────────────────────── */
+
+.ptr {
+  position: fixed;
+  top: calc(var(--top-safe) - 26px);
+  left: 50%;
+  margin-left: -13px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;
+  transition: opacity 140ms ease;
+}
+.ptr.on { opacity: 1; }
+.ptr-ring {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+}
+.ptr.spin {
+  transform: translateY(60px) !important;
+}
+.ptr.spin .ptr-ring { animation: ptr-spin 700ms linear infinite; }
+
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
 
 
 /* ── UNIT VIEW ───────────────────────────────────────────────────── */
@@ -636,6 +804,14 @@ select.input {
   gap: 10px;
 }
 .banner b { color: var(--accent); font-weight: 700; }
+
+/* A statement of fact, not a warning. The screen already drew from its
+   stored copy — this only says how old that copy is. */
+.banner--quiet {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--line-soft);
+  color: var(--fg-6);
+}
 .banner button {
   flex-shrink: 0;
   padding: 6px 12px;

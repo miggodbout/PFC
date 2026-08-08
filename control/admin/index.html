@@ -381,13 +381,15 @@ function editSectionHtml() {
   if (!edit.open) return head;
   if (edit.loading) return head + loadingHtml('Loading projects…');
 
-  var choices = edit.projects.filter(function (p) { return !p.demo; });
+  // Every project on the list is a real Sheet. The demo buildings that
+  // this used to filter out were deleted in 0.2.
+  var choices = edit.projects;
 
   if (choices.length === 0) {
     return head + '<div class="op-card card"><div class="op-msg">' +
       escapeHtml(API_URL
         ? 'There are no saved projects yet. Create one above.'
-        : 'Connect the backend first. Demo projects cannot be changed.') +
+        : 'Connect the backend first. Paste the web app address into API_URL.') +
       '</div></div>';
   }
 
@@ -479,7 +481,9 @@ function toggleEdit() {
     render();
     loadProjects().then(function (result) {
       edit.loading = false;
-      edit.projects = result.projects;
+      // A failed list answers with an error and no projects. Admin runs on
+      // a computer with signal, so the empty message below is enough.
+      edit.projects = result.projects || [];
       render();
     });
     return;

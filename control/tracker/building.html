@@ -22,7 +22,9 @@
     </svg>
   </a>
   <div class="hdr-titles">
-    <h1 class="hdr-title" id="title">Building</h1>
+    <!-- Empty on purpose. A blank header for a moment reads as loading.
+         The literal word "Building" read as a label, and then changed. -->
+    <h1 class="hdr-title" id="title"></h1>
     <div class="hdr-sub" id="subtitle"></div>
   </div>
 </header>
@@ -33,11 +35,15 @@
 <script>
 /* =====================================================================
    BUILDING — floors open one at a time, each holding its unit chips
+   =====================================================================
+   Drawn from the local copy get-project stored, so the screen appears at
+   once and works with no signal. A fetch runs behind it and redraws.
    ===================================================================== */
 
 var projectId = param('p');
 var screen    = document.getElementById('screen');
-var structure = null;
+var copy      = null;   // the whole building
+var rolls     = {};     // every unit's rollup, worked out once per draw
 
 /* Which floor is open. Floor 1 opens by default on every project, so a
    new project never opens fully closed. Tap the open floor to close it. */
@@ -47,51 +53,110 @@ var openFloor = 0;
 if (!projectId) {
   screen.innerHTML = errorHtml('server', 'No project was given. Go back and choose one.');
 } else {
-  screen.innerHTML = loadingHtml('Loading building…');
-  loadStructure(projectId).then(function (result) {
+  copy = Store.project(projectId);
+
+  if (copy) {
+    render();
+  } else {
+    // No copy on this phone. The name is still known if the Buildings list
+    // is stored, so the header does not have to wait for the fetch.
+    setTitle(nameFromList());
+    screen.innerHTML = loadingHtml('Loading building…');
+  }
+
+  refresh();
+  enablePullToRefresh(refresh);
+}
+
+
+function refresh() {
+  return fetchProject(projectId).then(function (result) {
     if (result.source === 'error') {
-      screen.innerHTML = errorHtml(result.reason, result.detail);
+      if (!copy) {
+        // Nothing stored and nothing reachable. Say which of the two it is.
+        screen.innerHTML = (result.reason === 'offline' || result.reason === 'timeout')
+          ? noCopyHtml()
+          : errorHtml(result.reason, result.detail);
+      } else {
+        render(staleNoteHtml(Store.projectFetchedAt(projectId)));
+      }
       return;
     }
-    structure = result.data;
-    document.title = structure.name + ' — PFC Control';
-    document.getElementById('title').textContent = structure.name;
-    document.getElementById('subtitle').textContent = subtitleFor(structure);
+    copy = result.data;
     render();
   });
 }
 
 
-function render() {
-  var banner = structure.demo
-    ? '<div class="banner"><div><b>Demo data.</b> This is an example building. ' +
-      'It is not stored in a Sheet.</div></div>'
-    : '';
+/* ── DRAW ─────────────────────────────────────────────────────────── */
+
+function render(note) {
+  setTitle(copy.name);
+  document.getElementById('subtitle').textContent = shapeOf(copy);
+
+  // Every unit's rollup, worked out once. Each one is needed twice: for
+  // its own chip, and inside its floor's total.
+  rolls = unitRollups(copy);
 
   // A flat project has one unnamed group. Show its chips with no floor
-  // header, because there is nothing to open or close.
-  var body = (structure.mode === 'flat' && structure.groups.length === 1)
+  // header, because there is nothing to open or close — so it hides
+  // nothing and needs no marks rule of its own.
+  var body = (copy.mode === 'flat' && copy.groups.length === 1)
     ? '<div class="card"><div class="floor-body" style="padding-top:14px">' +
-        chipsHtml(structure.groups[0]) + '</div></div>'
-    : structure.groups.map(floorHtml).join('');
+        chipsHtml(copy.groups[0]) + '</div></div>'
+    : copy.groups.map(floorHtml).join('');
 
-  screen.innerHTML = '<div class="body">' + banner + body + '</div>';
+  screen.innerHTML = '<div class="body">' + (note || '') + body + '</div>';
 }
 
 
+function setTitle(name) {
+  if (!name) return;
+  document.title = name + ' — PFC Control';
+  document.getElementById('title').textContent = name;
+}
+
+
+/** The building's name out of the stored Buildings list, or ''. */
+function nameFromList() {
+  var list = Store.list();
+  var found = '';
+  ((list && list.projects) || []).forEach(function (project) {
+    if (project.id === projectId) found = project.name;
+  });
+  return found;
+}
+
+
+/**
+ * A HEADER REPORTS WHAT IT HIDES.
+ *
+ * Closed, it carries the label, the bar, the count, the pill, both flag
+ * counts and the not-saved chip. Open, it carries the first four and
+ * nothing else — the flagged chips are right there in front of you.
+ *
+ * The count, the bar and the pill stay either way. You cannot work those
+ * out by eye from twelve chips.
+ */
 function floorHtml(group, index) {
   var open = (index === openFloor);
-  var statuses = group.units.map(function (unit) { return unit.status; });
-  var count = group.units.length + (group.units.length === 1 ? ' unit' : ' units');
+  var roll = groupRollup(group, rolls);
+
+  var notSaved = heldEditsIn(group);
+  var marks    = open ? '' : marksHtml(roll, notSaved);
 
   return '<section class="card floor">' +
            '<button type="button" class="floor-head press" aria-expanded="' + open + '" ' +
+                   'aria-label="' + escapeHtml(marksLabel(group.label, roll, notSaved)) + '" ' +
                    'onclick="toggleFloor(' + index + ')">' +
              '<span style="flex:1;min-width:0">' +
                '<span class="floor-label" style="display:block">' + escapeHtml(group.label) + '</span>' +
-               '<span class="floor-count" style="display:block">' + count + '</span>' +
+               '<span class="meta">' + barHtml(roll) +
+                 '<span class="floor-count">' + escapeHtml(countText(roll, 'unit', 'units')) + '</span>' +
+               '</span>' +
+               marks +
              '</span>' +
-             pillHtml(worst(statuses), 'sm') +
+             pillHtml(roll, 'sm') +
              '<span class="caret' + (open ? ' open' : '') + '">' + ICON.caret + '</span>' +
            '</button>' +
            (open ? '<div class="floor-body">' + chipsHtml(group) + '</div>' : '') +
@@ -99,15 +164,55 @@ function floorHtml(group, index) {
 }
 
 
+/**
+ * The chip carries both flag kinds and NO NUMBERS. Tap through for the
+ * count. Four marks is the ceiling on a 77px chip, not a target.
+ */
 function chipsHtml(group) {
   return group.units.map(function (unit) {
+    var roll     = rolls[unit.key] || rollup({}, {});
+    var notSaved = heldEditsFor(unit.key);
+
     return '<a class="unit-chip press" ' +
-              'href="unit.html?p=' + encodeURIComponent(projectId) + '&u=' + encodeURIComponent(unit.key) + '" ' +
-              'aria-label="Unit ' + escapeHtml(unit.label) + ', ' + STATUS[safeStatus(unit.status)].label + '">' +
+              'href="unit.html?p=' + encodeURIComponent(projectId) +
+                   '&u=' + encodeURIComponent(unit.key) + '" ' +
+              'aria-label="' + escapeHtml(marksLabel('Unit ' + unit.label, roll, notSaved)) + '">' +
              '<span class="num">' + escapeHtml(unit.chip || unit.label) + '</span>' +
-             dotHtml(unit.status) +
+             '<span class="chip-marks">' +
+               dotHtml(roll) +
+               flagChipHtml('deficiency', roll.deficiency) +
+               flagChipHtml('waiting', roll.waiting) +
+             '</span>' +
+             barHtml(roll) +
+             notSavedChipHtml(notSaved) +
            '</a>';
   }).join('');
+}
+
+
+/*
+   Only a HELD edit marks anything above the Unit screen. A waiting edit
+   paints the value it set and says nothing else — otherwise every tap
+   would light up the whole tree on the way down.
+
+   Nothing is ever held until 0.2 step 3 builds the retry and the hold
+   rules, so these both read 0 today.
+*/
+
+function heldEditsFor(unitKey) {
+  var jobs  = Store.jobs();
+  var count = 0;
+  Object.keys(jobs).forEach(function (key) {
+    var job = jobs[key];
+    if (job.held && job.projectId === projectId && job.unitKey === unitKey) count += 1;
+  });
+  return count;
+}
+
+function heldEditsIn(group) {
+  return group.units.reduce(function (total, unit) {
+    return total + heldEditsFor(unit.key);
+  }, 0);
 }
 
 
@@ -118,7 +223,7 @@ function toggleFloor(index) {
 }
 
 
-function subtitleFor(project) {
+function shapeOf(project) {
   var units = project.unitCount + (project.unitCount === 1 ? ' unit' : ' units');
   if (project.mode === 'flat') return units;
 

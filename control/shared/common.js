@@ -3,8 +3,8 @@
    =====================================================================
    Every screen loads this file. It holds:
      - the connection to the Apps Script backend
-     - the five status values and the rollup rule
-     - the demo project, used before the backend is connected
+     - the three Progress values, the two flag kinds, and the rollup rule
+     - the local copy on the phone, and the outbox of unsent edits
      - the small drawing helpers the screens share
 
    Rule for this file: no screen-specific code. If only one screen needs
@@ -23,8 +23,9 @@
  * If this address stops working, deploy again and paste the new one here.
  * See control/README.md.
  *
- * Set this back to an empty string at any time. The app then falls back to
- * the demo buildings, and every screen still works.
+ * An empty address is not a working state any more. 0.2 deleted the demo
+ * buildings, so every screen answers "The backend is not connected yet."
+ * A made-up building beside a real one is worse than an error.
  */
 var API_URL = 'https://script.google.com/macros/s/AKfycbzo9lCHMaxDqMEk6PPZouUWXG6dDeAMh3tHI0dtYExjCYE9DYDdT4vj8_YCrtnGjv5e/exec';
 
@@ -32,39 +33,148 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbzo9lCHMaxDqMEk6PPZouUWXG
 var API_TIMEOUT = 12000;
 
 
-/* ── STATUS ───────────────────────────────────────────────────────── */
+/* ── PROGRESS AND FLAGS ───────────────────────────────────────────── */
 
-/** The five statuses. The keys match what the backend sends. */
+/**
+ * Progress. Three values. Always set by hand, one value per item.
+ *
+ * Deficiency and On Hold left this object in 0.2. Neither one was ever
+ * progress. "In Progress · Waiting on Painters" is two facts about one
+ * item, and one field cannot hold both. They are FLAGS now, below.
+ */
 var STATUS = {
   not_started: { label: 'Not Started' },
   in_progress: { label: 'In Progress' },
-  complete:    { label: 'Complete' },
-  deficiency:  { label: 'Deficiency' },
-  on_hold:     { label: 'On Hold' }
+  complete:    { label: 'Complete' }
 };
 
-/** Dropdown order. Every dropdown shows all five, always in this order. */
-var CYCLE = ['not_started', 'in_progress', 'complete', 'deficiency', 'on_hold'];
-
-/** Worst status wins. This list runs worst to best. */
-var ROLLUP_ORDER = ['deficiency', 'on_hold', 'in_progress', 'not_started'];
+/** Dropdown order. Every dropdown shows all three, always in this order. */
+var CYCLE = ['not_started', 'in_progress', 'complete'];
 
 /**
- * Returns the worst status in a list.
- * Complete shows only when every item is Complete.
- * This matches the rollup formula in each project's Sheet.
+ * The two flag kinds. A flag is never set by hand: it appears while an
+ * open record sits in the project's Deficiencies tab and clears when the
+ * last one is fixed or cancelled.
+ *
+ * A flag is not a status, so it never takes the Progress dot. It gets its
+ * own shape — a flag glyph — because shape survives bright sun and colour
+ * blindness, and because a failed save is also red.
+ *
+ * on_hold was renamed waiting in 0.2, so "In Progress · Waiting on
+ * Painters" reads without contradiction.
  */
-function worst(list) {
-  if (!list || list.length === 0) return 'not_started';
-  for (var i = 0; i < ROLLUP_ORDER.length; i++) {
-    if (list.indexOf(ROLLUP_ORDER[i]) !== -1) return ROLLUP_ORDER[i];
-  }
-  return 'complete';
-}
+var FLAGS = {
+  deficiency: { label: 'Deficiency', cls: 'f-deficiency' },
+  waiting:    { label: 'Waiting',    cls: 'f-waiting' }
+};
 
 /** Keeps an unknown value from breaking a screen. */
 function safeStatus(key) {
   return STATUS[key] ? key : 'not_started';
+}
+
+
+/* ── THE ROLLUP RULE ──────────────────────────────────────────────── */
+
+/**
+ * THE ROLLUP RULE, WRITTEN ONCE. Every screen calls this. No screen works
+ * out a rollup of its own.
+ *
+ * WORST STATUS WINS IS DELETED. It made a unit holding 17 Complete items
+ * and 1 Not Started item read "Not Started", which hid a nearly finished
+ * unit. The rule is unanimity or In Progress, counted rather than ordered.
+ *
+ * counts — what the group holds, ONE LEVEL DOWN:
+ *            a phase counts its ITEMS
+ *            a unit counts its ITEMS across every phase
+ *            a floor counts its UNITS
+ *            a building counts its UNITS
+ *          { total, complete, notStarted }
+ *
+ * flags  — open flags below the group: { deficiency, waiting }
+ *
+ * First test that matches wins:
+ *
+ *   total is 0                    ->  none, drawn as a dash
+ *   every one Complete, no flag   ->  Complete
+ *   every one Complete, a flag    ->  In Progress
+ *   every one Not Started         ->  Not Started
+ *   anything else                 ->  In Progress
+ *
+ * An open flag BLOCKS Complete. It never RAISES Not Started: a unit with
+ * nothing done and one Waiting record still reads Not Started, with a blue
+ * flag beside it.
+ *
+ * A flag also blocks Complete on an item, through displayStatus() below.
+ * So by the time a group is counted here, a flagged item has already
+ * stopped reading Complete, and this f test only has to catch a Waiting
+ * record attached to a whole phase.
+ *
+ * The project Sheet computes the same rule in its own formula, so it still
+ * reads by hand. Two copies on purpose. The app never reads the Sheet's
+ * rollup column, so any drift between them is cosmetic. Do not write a
+ * third.
+ */
+function rollup(counts, flags) {
+  var total      = (counts && counts.total)      || 0;
+  var complete   = (counts && counts.complete)   || 0;
+  var notStarted = (counts && counts.notStarted) || 0;
+
+  var deficiency = (flags && flags.deficiency) || 0;
+  var waiting    = (flags && flags.waiting)    || 0;
+
+  var status;
+  if (total === 0) {
+    status = 'none';
+  } else if (complete === total) {
+    status = (deficiency + waiting > 0) ? 'in_progress' : 'complete';
+  } else if (notStarted === total) {
+    status = 'not_started';
+  } else {
+    status = 'in_progress';
+  }
+
+  return {
+    status:     status,
+    done:       complete,
+    total:      total,
+    deficiency: deficiency,
+    waiting:    waiting
+  };
+}
+
+
+/** The same rule, counted from a list of status keys. */
+function rollupOf(statuses, flags) {
+  var list       = statuses || [];
+  var complete   = 0;
+  var notStarted = 0;
+
+  list.forEach(function (key) {
+    if (key === 'complete') complete += 1;
+    else if (safeStatus(key) === 'not_started') notStarted += 1;
+  });
+
+  return rollup({ total: list.length, complete: complete, notStarted: notStarted }, flags);
+}
+
+
+/**
+ * STORE WHAT IS SET. DISPLAY WHAT IS TRUE.
+ *
+ * The Sheet holds whatever a person last set by hand, and it never changes
+ * on its own. This applies the one downgrade the app makes on the way to
+ * the screen: Complete DISPLAYS as In Progress while an open flag sits on
+ * that item.
+ *
+ * Fix the last record and Complete comes back by itself, because the
+ * stored value was never touched. No extra column, no stored state, and no
+ * automatic write.
+ */
+function displayStatus(stored, openFlagCount) {
+  var key = safeStatus(stored);
+  if (key === 'complete' && openFlagCount > 0) return 'in_progress';
+  return key;
 }
 
 
@@ -311,43 +421,326 @@ function jsonpCall(action, data) {
 }
 
 
-/* ── LOADERS ──────────────────────────────────────────────────────── */
-/* Each loader answers with a source, so a screen can say where the data
-   came from. source is 'live' for the backend, or 'demo'.                */
+/* ── THE LOCAL COPY ───────────────────────────────────────────────── */
+/*
+   FOUR KEYS, FOUR LIFETIMES. DO NOT MERGE THEM.
 
-/** Loads the project list for the Tracking screen. */
-function loadProjects() {
-  return apiCall('list-projects', {}, 'GET').then(function (result) {
-    if (result.ok) {
-      return { source: 'live', projects: result.data.projects || [] };
+     pfc.control.v1.projects      the Buildings list answer, and which
+                                  building was opened when
+     pfc.control.v1.project.<id>  one whole building copy
+     pfc.control.v1.outbox        edits that have not reached the Sheet
+     pfc.control.v1.chips         needed lines from DROPPED buildings only
+                                  (0.2 step 4 fills this one)
+
+   localStorage, not sessionStorage. sessionStorage dies with the page
+   session, and Apple publishes no timer for when iOS ends a backgrounded
+   web app window. An edit typed on site has to still be there tomorrow.
+
+   ONE KEY PER BUILDING, not one key holding everything. localStorage reads
+   and writes a key WHOLE, so one big key would rewrite a megabyte every
+   time one status changed.
+
+   IndexedDB was considered and turned down for 0.2: every read there is
+   asynchronous, so every screen would gain a wait, and every wait is a
+   place a screen can go blank. One building is about 100 KB against a
+   ~5 MB cap.
+
+   A STORAGE KEY IS AN IDENTIFIER, NOT A LABEL. Name it once and never
+   rename it. Renaming orphans what is already on a crew phone.
+
+   There is no migration from 0.1, and nobody should write one. The 0.1
+   store sat in sessionStorage, so it is already gone. That is lucky
+   rather than planned.
+*/
+
+var STORE_PREFIX = 'pfc.control.v1.';
+
+/** How many building copies the phone keeps. The eleventh drops the oldest. */
+var PROJECT_LIMIT = 10;
+
+var Store = {
+
+  /** Reads one key. Never throws — private browsing can block storage. */
+  read: function (name, fallback) {
+    try {
+      var raw = localStorage.getItem(STORE_PREFIX + name);
+      if (!raw) return fallback;
+      var value = JSON.parse(raw);
+      return (value === null || value === undefined) ? fallback : value;
+    } catch (e) {
+      return fallback;
     }
-    // The backend is not connected, or it cannot be reached. Show the demo
-    // projects so every screen still works.
-    return { source: 'demo', reason: result.reason, detail: result.detail, projects: demoProjectList() };
+  },
+
+  /** Writes one key. Returns false when storage is full or blocked. */
+  write: function (name, value) {
+    try {
+      localStorage.setItem(STORE_PREFIX + name, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  drop: function (name) {
+    try { localStorage.removeItem(STORE_PREFIX + name); } catch (e) {}
+  },
+
+
+  /* -- the Buildings list ------------------------------------------- */
+
+  /** The stored list answer, or null. */
+  list: function () {
+    return this.read('projects', null);
+  },
+
+  setList: function (projects) {
+    var held = this.list() || {};
+    this.write('projects', {
+      projects:  projects,
+      fetchedAt: Date.now(),
+      seen:      held.seen || {}
+    });
+  },
+
+
+  /* -- one building copy -------------------------------------------- */
+
+  /** One whole building, as get-project sent it, or null. */
+  project: function (id) {
+    var held = this.read('project.' + id, null);
+    return held ? held.data : null;
+  },
+
+  /** When that copy was last fetched, in milliseconds, or 0. */
+  projectFetchedAt: function (id) {
+    var held = this.read('project.' + id, null);
+    return held ? (held.fetchedAt || 0) : 0;
+  },
+
+  setProject: function (id, data) {
+    this.write('project.' + id, { data: data, fetchedAt: Date.now() });
+    this.touch(id);
+    this.enforceLimit();
+  },
+
+  /** Every building id the phone is holding a copy of. */
+  projectIds: function () {
+    var ids = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(STORE_PREFIX + 'project.') === 0) {
+          ids.push(key.slice((STORE_PREFIX + 'project.').length));
+        }
+      }
+    } catch (e) {}
+    return ids;
+  },
+
+  /** Marks a building as opened now, for the ten-copy limit. */
+  touch: function (id) {
+    var held = this.list() || { projects: [], fetchedAt: 0, seen: {} };
+    held.seen = held.seen || {};
+    held.seen[id] = Date.now();
+    this.write('projects', held);
+  },
+
+  /**
+   * Deletes one building copy.
+   *
+   * A copy is only a copy. The Sheet is the record, and an unsent edit
+   * lives in the outbox under its own key, so nothing is lost here.
+   */
+  dropProject: function (id) {
+    var copy = this.project(id);
+    if (copy) foldNeededLinesIntoChips(copy);
+    this.drop('project.' + id);
+  },
+
+  /**
+   * Keeps the phone to PROJECT_LIMIT copies, dropping the least recently
+   * opened first.
+   *
+   * A BUILDING HOLDING AN UNSENT EDIT IS NEVER DROPPED, whatever its age.
+   * The edit itself is safe either way — it lives in the outbox — but the
+   * copy is what the screen paints it on.
+   */
+  enforceLimit: function () {
+    var ids = this.projectIds();
+    if (ids.length <= PROJECT_LIMIT) return;
+
+    var seen = (this.list() || {}).seen || {};
+    var self = this;
+
+    var droppable = ids.filter(function (id) { return !self.hasJobsFor(id); });
+    droppable.sort(function (a, b) { return (seen[a] || 0) - (seen[b] || 0); });
+
+    var over = ids.length - PROJECT_LIMIT;
+    droppable.slice(0, over).forEach(function (id) { self.dropProject(id); });
+  },
+
+
+  /* -- the outbox ---------------------------------------------------- */
+  /*
+     A KEYED SHELF, NOT A LINE-UP.
+
+     One item job, keyed projectId|unitKey|itemKey. One record job, keyed
+     by the record id. One key holds one job, so changing the same thing
+     twice before it sends REPLACES the first job and only the final value
+     reaches the Sheet.
+
+     That works because every job carries the FINAL VALUE, never a change
+     to apply. Writing it twice is the same as writing it once, which is
+     also what makes a retry safe.
+
+     Step 2 builds the shelf. THE DRAIN, THE BACKOFF, THE HOLD RULES AND
+     THE OUTBOX WINDOW ARE STEP 3. Until then a job goes on the shelf and
+     waits there, and it paints the screen, because a waiting edit paints
+     and only a HELD edit does not.
+  */
+
+  /*
+     The shelf is read once per page load and kept in memory. Painting a
+     floor of 48 chips asks for it about 700 times, and every ask is a
+     JSON.parse of the whole key. Every write below refreshes the memo.
+  */
+  _jobs: null,
+
+  /** Every job on the shelf, keyed. */
+  jobs: function () {
+    if (!this._jobs) this._jobs = this.read('outbox', {});
+    return this._jobs;
+  },
+
+  job: function (key) {
+    return this.jobs()[key] || null;
+  },
+
+  /** Puts one job on the shelf, replacing whatever held that key. */
+  putJob: function (job) {
+    var all = this.jobs();
+    all[job.key] = job;
+    this._jobs = all;
+    return this.write('outbox', all);
+  },
+
+  removeJob: function (key) {
+    var all = this.jobs();
+    delete all[key];
+    this._jobs = all;
+    this.write('outbox', all);
+  },
+
+  /** True when this building holds any unsent edit, waiting or held. */
+  hasJobsFor: function (id) {
+    var all = this.jobs();
+    return Object.keys(all).some(function (key) { return all[key].projectId === id; });
+  },
+
+  /** How many unsent edits this building holds, split by state. */
+  jobCountFor: function (id) {
+    var all = this.jobs();
+    var out = { waiting: 0, held: 0 };
+    Object.keys(all).forEach(function (key) {
+      if (all[key].projectId !== id) return;
+      if (all[key].held) out.held += 1;
+      else out.waiting += 1;
+    });
+    return out;
+  }
+};
+
+
+/** The shelf key for one item edit. */
+function itemJobKey(projectId, unitKey, itemKey) {
+  return projectId + '|' + unitKey + '|' + itemKey;
+}
+
+
+/**
+ * Folds a building's needed lines into the chip history, in the same step
+ * that deletes its copy.
+ *
+ * 0.2 STEP 4 FILLS THIS IN. It is called from Store.dropProject, which is
+ * the only place a copy is deleted, so the fold can never be missed. Until
+ * step 4 lands, a dropped building's needed lines are simply gone, and
+ * they come back the next time the building is opened.
+ *
+ * The rule step 4 implements: a building STILL on the phone is counted
+ * live from scratch every time, and only a DROPPED building is read from
+ * this index. A live building is never written into it — that is what
+ * makes cancelling a record take its chip back out exactly.
+ */
+function foldNeededLinesIntoChips(copy) {
+  return copy;
+}
+
+
+/* ── LOADERS ──────────────────────────────────────────────────────── */
+/*
+   Each loader answers with a source, so a screen can say where the data
+   came from. source is 'live' for the backend, or 'error'.
+
+   THE DEMO BUILDINGS ARE DELETED. An invented building beside a real one
+   is a trap on a job site. A screen with no data now says so.
+*/
+
+/** Fetches the Buildings list and stores it. */
+function fetchProjects() {
+  return apiCall('list-projects', {}, 'GET').then(function (result) {
+    if (!result.ok) {
+      return { source: 'error', reason: result.reason, detail: result.detail };
+    }
+    var projects = result.data.projects || [];
+    Store.setList(projects);
+    return { source: 'live', projects: projects };
   });
 }
 
 
-/** Loads one project's floors and units for the Building screen. */
+/**
+ * Fetches ONE WHOLE BUILDING and stores it.
+ *
+ * One call carries the structure, every unit's item statuses, every
+ * record, and the lists Logger draws its dropdowns from. The Building
+ * screen and every Unit screen inside it are drawn from this one copy.
+ */
+function fetchProject(projectId) {
+  return apiCall('get-project', { id: projectId }, 'GET').then(function (result) {
+    if (!result.ok) {
+      return { source: 'error', reason: result.reason, detail: result.detail };
+    }
+    Store.setProject(projectId, result.data);
+    return { source: 'live', data: result.data };
+  });
+}
+
+
+/**
+ * The project list, for Admin.
+ *
+ * Admin wants the server's answer and nothing else — it is used on a
+ * computer with signal, to change structure, and a stale list there would
+ * offer a building that no longer exists. The Tracking screen does not use
+ * this: it draws its stored copy first and refreshes behind it.
+ */
+function loadProjects() {
+  return fetchProjects();
+}
+
+
+/**
+ * One project's floors, units and item list, for Admin.
+ *
+ * The phone stopped calling this in 0.2. get-project answers with the
+ * whole building instead. Admin still needs the plain structure, and it
+ * needs it fresh from the server rather than from a phone copy.
+ */
 function loadStructure(projectId) {
-  if (isDemo(projectId)) {
-    return Promise.resolve({ source: 'demo', reason: 'demo-project', data: demoStructure(projectId) });
-  }
   return apiCall('get-structure', { id: projectId }, 'GET').then(function (result) {
     if (!result.ok) return { source: 'error', reason: result.reason, detail: result.detail };
-    return { source: 'live', data: applyUnitOverrides(projectId, result.data) };
-  });
-}
-
-
-/** Loads one unit's items for the Unit screen. */
-function loadUnit(projectId, unitKey) {
-  if (isDemo(projectId)) {
-    return Promise.resolve({ source: 'demo', reason: 'demo-project', data: demoUnit(projectId, unitKey) });
-  }
-  return apiCall('get-unit', { id: projectId, unit: unitKey }, 'GET').then(function (result) {
-    if (!result.ok) return { source: 'error', reason: result.reason, detail: result.detail };
-    return { source: 'live', data: applyItemOverrides(projectId, result.data) };
+    return { source: 'live', data: result.data };
   });
 }
 
@@ -364,307 +757,162 @@ function updateStructure(payload) {
 }
 
 
-/* ── LOCAL CHANGES (0.1 only) ──────────────────────────────────────── */
+/* ── READING A BUILDING COPY ──────────────────────────────────────── */
 /*
-   0.1 does not save a status or a details note to the Sheet. Any change you
-   make stays on this phone, in this browser tab, and disappears when the
-   tab closes. Every screen that allows a change says so on screen.
-
-   The store below is the exact place 0.2 replaces. 0.2 sends each change to
-   the backend, keeps it here until the server confirms it, and shows a
-   pending mark while it waits.
+   Everything below reads the answer get-project sent, which is what
+   Store.project(id) hands back. The screens never dig into that shape
+   themselves — they ask these functions, so the rollup rule and the
+   painting rule each live in exactly one place.
 */
 
-var Store = {
-  key: 'pfc.control.v1.local',
-  cache: null,
-
-  read: function () {
-    if (this.cache) return this.cache;
-    try {
-      this.cache = JSON.parse(sessionStorage.getItem(this.key) || '{}');
-    } catch (e) {
-      this.cache = {};   // private browsing can block storage
-    }
-    if (!this.cache.items) this.cache.items = {};
-    if (!this.cache.units) this.cache.units = {};
-    return this.cache;
-  },
-
-  save: function () {
-    try {
-      sessionStorage.setItem(this.key, JSON.stringify(this.cache));
-    } catch (e) {
-      // Storage is full or blocked. The change still works for this page.
-    }
-  },
-
-  /** Reads one item's local change, or null. */
-  item: function (projectId, unitKey, itemKey) {
-    return this.read().items[projectId + '|' + unitKey + '|' + itemKey] || null;
-  },
-
-  /** Records a local change to one item. */
-  setItem: function (projectId, unitKey, itemKey, patch) {
-    var store = this.read();
-    var id = projectId + '|' + unitKey + '|' + itemKey;
-    store.items[id] = assign(store.items[id] || {}, patch);
-    this.save();
-  },
-
-  /** The rolled-up status of a unit, after local changes. */
-  unit: function (projectId, unitKey) {
-    return this.read().units[projectId + '|' + unitKey] || null;
-  },
-
-  /** Records a unit's rolled-up status, so the Building screen agrees. */
-  setUnit: function (projectId, unitKey, status) {
-    this.read().units[projectId + '|' + unitKey] = status;
-    this.save();
-  },
-
-  /** True when anything has been changed but not saved. */
-  hasChanges: function () {
-    var store = this.read();
-    return Object.keys(store.items).length > 0;
-  },
-
-  clear: function () {
-    this.cache = { items: {}, units: {} };
-    this.save();
-  }
-};
-
-
-/** Puts local unit changes on top of the structure the server sent. */
-function applyUnitOverrides(projectId, structure) {
-  (structure.groups || []).forEach(function (group) {
-    group.units.forEach(function (unit) {
-      var local = Store.unit(projectId, unit.key);
-      if (local) unit.status = local;
-    });
-  });
-  return structure;
+/**
+ * Puts an unsent edit on top of what the Sheet last said, on the way to
+ * the screen.
+ *
+ * The building copy and the outbox are separate keys, so A FRESH FETCH CAN
+ * NEVER OVERWRITE AN UNSENT EDIT. A fetch replaces the copy only, and the
+ * paint happens after it, every time a screen draws.
+ *
+ * A WAITING edit paints. A HELD edit does not — a held edit shows what the
+ * Sheet holds and lives only in the Outbox window. Otherwise a floor could
+ * read 18/18 Complete off an edit that will never land.
+ *
+ * A job's paint is removed when, and only when, the server answers ok.
+ */
+function paintedStatus(projectId, unitKey, itemKey, stored) {
+  var job = Store.job(itemJobKey(projectId, unitKey, itemKey));
+  if (job && job.kind === 'item' && !job.held) return job.progress;
+  return stored;
 }
 
 
-/** Puts local item changes on top of the unit the server sent. */
-function applyItemOverrides(projectId, unitData) {
-  var all = [];
-  (unitData.phases || []).forEach(function (phase) {
+/**
+ * Counts OPEN records in a building copy.
+ *
+ * filter.unit  — one unit
+ * filter.phase — one phase
+ * filter.item  — one item. Pass '' to count records attached to a WHOLE
+ *                PHASE, which is the only case where the item is blank.
+ *
+ * Fixed and Cancelled records never count. They still travel in the copy,
+ * because they feed the suggestion chips and the 0.3 Archive window.
+ */
+function countFlags(copy, filter) {
+  var out  = { deficiency: 0, waiting: 0 };
+  var want = filter || {};
+
+  (copy.records || []).forEach(function (record) {
+    if (record.state !== 'Open') return;
+    if (want.unit  !== undefined && record.unit  !== want.unit)  return;
+    if (want.phase !== undefined && record.phase !== want.phase) return;
+    if (want.item  !== undefined && record.item  !== want.item)  return;
+
+    if (record.type === 'Waiting') out.waiting += 1;
+    else if (record.type === 'Deficiency') out.deficiency += 1;
+  });
+
+  return out;
+}
+
+
+/** What one item's Progress control must show. Painted, then downgraded. */
+function itemStatus(copy, unitKey, itemKey) {
+  var stored  = ((copy.status || {})[unitKey] || {})[itemKey] || 'not_started';
+  var painted = paintedStatus(copy.id, unitKey, itemKey, stored);
+  var flags   = countFlags(copy, { unit: unitKey, item: itemKey });
+  return displayStatus(painted, flags.deficiency + flags.waiting);
+}
+
+
+/** Every item of one unit, as the screen must show them. */
+function unitItemStatuses(copy, unitKey) {
+  var out = [];
+  (copy.phases || []).forEach(function (phase) {
     phase.items.forEach(function (item) {
-      var local = Store.item(projectId, unitData.unit.key, item.key);
-      if (local) {
-        if (local.status !== undefined)  item.status = local.status;
-        if (local.details !== undefined) item.details = local.details;
-      }
-      all.push(item.status);
+      out.push(itemStatus(copy, unitKey, item.key));
     });
   });
-  unitData.overall = worst(all);
-  return unitData;
+  return out;
 }
 
 
-/* ── DEMO DATA ────────────────────────────────────────────────────── */
-/*
-   Two made-up buildings, copied from the design prototype. They appear
-   only when the backend is not connected or cannot be reached. Every
-   screen marks them DEMO.
-
-   The statuses are not random. They come from a hash of the project, unit
-   and item names, so the same unit always shows the same thing.
-*/
-
-var DEMO_DEFS = [
-  { id: 'demo_elsliger', name: 'Elsliger 36-B', floors: 3, perFloor: 12 },
-  { id: 'demo_highland', name: 'Highland View', floors: 3, perFloor: 6 }
-];
-
-/* Ten picks per group. The first floor runs ahead, the top floor runs
-   behind, and the floors between are part done. */
-var DEMO_WEIGHTS = {
-  ahead:  spread({ complete: 5, in_progress: 2, deficiency: 1, on_hold: 1, not_started: 1 }),
-  mid:    spread({ complete: 2, in_progress: 4, deficiency: 1, on_hold: 1, not_started: 2 }),
-  behind: spread({ complete: 0, in_progress: 2, deficiency: 1, on_hold: 1, not_started: 6 })
-};
-
-var DEMO_DETAILS = {
-  not_started: ['Not started'],
-  in_progress: ['Crew on site today', 'In progress, half done', 'Started, needs second pass'],
-  complete:    ['No issues', 'Installed, inspected', 'Complete, signed off'],
-  deficiency:  ['Scratched, needs replacement', 'Wrong size received',
-                'Damaged in transit, reorder needed', 'Missing hardware'],
-  on_hold:     ['Awaiting materials', 'Backordered, ETA unknown', 'Paused, waiting on supplier']
-};
-
-/** Builds a pick list from a count for each status. */
-function spread(counts) {
-  var list = [];
-  CYCLE.forEach(function (key) {
-    for (var i = 0; i < (counts[key] || 0); i++) list.push(key);
-  });
-  return list;
+/** One unit's rollup. It counts ITEMS. */
+function unitRollup(copy, unitKey) {
+  return rollupOf(unitItemStatuses(copy, unitKey), countFlags(copy, { unit: unitKey }));
 }
 
-/** A small, steady hash. The same text always gives the same number. */
-function hashStr(text) {
-  var h = 0;
-  for (var i = 0; i < text.length; i++) {
-    h = (h * 31 + text.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
 
-function isDemo(projectId) {
-  return String(projectId || '').indexOf('demo_') === 0;
-}
-
-function demoDef(projectId) {
-  for (var i = 0; i < DEMO_DEFS.length; i++) {
-    if (DEMO_DEFS[i].id === projectId) return DEMO_DEFS[i];
-  }
-  return null;
-}
-
-/** Builds the floors and units of a demo building. */
-function demoGroups(def) {
-  var groups = [];
-  for (var f = 1; f <= def.floors; f++) {
-    var units = [];
-    for (var u = 1; u <= def.perFloor; u++) {
-      var number = String(f * 100 + u);
-      units.push({ key: number, label: number, chip: number, floorIndex: f - 1 });
-    }
-    groups.push({ key: 'floor_' + f, label: 'Floor ' + f, units: units });
-  }
-  return groups;
-}
-
-/** The status of one demo item. Steady, not random. */
-function demoItemStatus(def, unitKey, itemKey, floorIndex) {
-  var tier = (floorIndex === 0) ? 'ahead'
-           : (floorIndex === def.floors - 1) ? 'behind'
-           : 'mid';
-  var pool = DEMO_WEIGHTS[tier];
-  return pool[hashStr(def.id + '|' + unitKey + '|' + itemKey) % pool.length];
-}
-
-function demoItemDetails(def, unitKey, itemKey, status) {
-  var list = DEMO_DETAILS[status] || [''];
-  return list[hashStr(def.id + '|' + unitKey + '|' + itemKey + '|d') % list.length];
-}
-
-/** Every item key of a demo building, in order. */
-function demoItems() {
-  var items = [];
-  DEFAULT_PHASES.forEach(function (phase) {
-    phase.items.forEach(function (label) {
-      items.push({ phase: phase, key: slugify(label), label: label });
+/**
+ * Every unit's rollup in one pass, keyed by unit key.
+ *
+ * The Building screen needs each unit twice — once for its chip and once
+ * inside its floor's total — so it works them out once and passes them
+ * down.
+ */
+function unitRollups(copy) {
+  var out = {};
+  (copy.groups || []).forEach(function (group) {
+    group.units.forEach(function (unit) {
+      out[unit.key] = unitRollup(copy, unit.key);
     });
   });
-  return items;
+  return out;
 }
 
-/** The rolled-up status of one demo unit. */
-function demoUnitStatus(def, unit) {
-  var statuses = demoItems().map(function (item) {
-    return demoItemStatus(def, unit.key, item.key, unit.floorIndex);
+
+/**
+ * One floor's rollup. IT COUNTS UNITS, NOT ITEMS.
+ *
+ * Every count above the Unit screen is units: a floor reads
+ * "12 units · 5 done", never "148/216 items".
+ */
+function groupRollup(group, rolls) {
+  var complete   = 0;
+  var notStarted = 0;
+  var flags      = { deficiency: 0, waiting: 0 };
+
+  group.units.forEach(function (unit) {
+    var roll = rolls[unit.key];
+    if (!roll) return;
+    if (roll.status === 'complete') complete += 1;
+    else if (roll.status === 'not_started') notStarted += 1;
+    flags.deficiency += roll.deficiency;
+    flags.waiting    += roll.waiting;
   });
-  return worst(statuses);
+
+  return rollup({ total: group.units.length, complete: complete, notStarted: notStarted }, flags);
 }
 
-function demoProjectList() {
-  return DEMO_DEFS.map(function (def) {
-    var groups = demoGroups(def);
-    var all = [];
-    groups.forEach(function (group) {
-      group.units.forEach(function (unit) {
-        all.push(Store.unit(def.id, unit.key) || demoUnitStatus(def, unit));
-      });
+
+/**
+ * A whole building's rollup, from the numbers list-projects sends.
+ *
+ * The server sends counts and no verdict, and this is where the phone
+ * applies the rule to them. unitsNotStarted is the fifth number: without
+ * it, "every unit Not Started" and "some unit In Progress" both arrive as
+ * unitsDone 0 and cannot be told apart.
+ */
+function projectRollup(project) {
+  return rollup({
+    total:      project.unitsTotal || 0,
+    complete:   project.unitsDone  || 0,
+    notStarted: project.unitsNotStarted || 0
+  }, {
+    deficiency: project.deficiencies || 0,
+    waiting:    project.waiting || 0
+  });
+}
+
+
+/** Finds one unit inside a building copy, with the floor it sits on. */
+function findUnit(copy, unitKey) {
+  var found = null;
+  (copy.groups || []).forEach(function (group) {
+    group.units.forEach(function (unit) {
+      if (unit.key === unitKey) found = { unit: unit, group: group };
     });
-    return {
-      id: def.id,
-      name: def.name,
-      mode: 'floors',
-      demo: true,
-      unitCount: all.length,
-      groupCount: groups.length,
-      overall: worst(all)
-    };
   });
-}
-
-function demoStructure(projectId) {
-  var def = demoDef(projectId);
-  if (!def) return null;
-
-  var groups = demoGroups(def).map(function (group) {
-    return {
-      key: group.key,
-      label: group.label,
-      units: group.units.map(function (unit) {
-        return {
-          key: unit.key,
-          label: unit.label,
-          chip: unit.chip,
-          status: Store.unit(def.id, unit.key) || demoUnitStatus(def, unit)
-        };
-      })
-    };
-  });
-
-  var all = [];
-  groups.forEach(function (g) { g.units.forEach(function (u) { all.push(u.status); }); });
-
-  return {
-    id: def.id,
-    name: def.name,
-    mode: 'floors',
-    demo: true,
-    unitCount: all.length,
-    groups: groups,
-    overall: worst(all)
-  };
-}
-
-function demoUnit(projectId, unitKey) {
-  var def = demoDef(projectId);
-  if (!def) return null;
-
-  var floorIndex = Math.floor(parseInt(unitKey, 10) / 100) - 1;
-  var all = [];
-
-  var phases = DEFAULT_PHASES.map(function (phase) {
-    return {
-      key: phase.key,
-      label: phase.label,
-      items: phase.items.map(function (label) {
-        var itemKey = slugify(label);
-        var status  = demoItemStatus(def, unitKey, itemKey, floorIndex);
-        var details = demoItemDetails(def, unitKey, itemKey, status);
-
-        var local = Store.item(def.id, unitKey, itemKey);
-        if (local) {
-          if (local.status !== undefined)  status = local.status;
-          if (local.details !== undefined) details = local.details;
-        }
-
-        all.push(status);
-        return { key: itemKey, label: label, status: status, details: details };
-      })
-    };
-  });
-
-  return {
-    id: def.id,
-    demo: true,
-    projectName: def.name,
-    unit: { key: unitKey, label: unitKey, chip: unitKey },
-    groupLabel: 'Floor ' + (floorIndex + 1),
-    phases: phases,
-    overall: worst(all)
-  };
+  return found;
 }
 
 
@@ -700,18 +948,140 @@ function param(name) {
   return found ? decodeURIComponent(found[1].replace(/\+/g, ' ')) : '';
 }
 
-/** A status badge. size is '', 'md', 'sm' or 'xs'. */
-function pillHtml(status, size) {
-  var key = safeStatus(status);
-  return '<span class="pill' + (size ? ' pill--' + size : '') + ' s-' + key + '">' +
+/**
+ * A status badge. It takes what rollup() returns, not a status string.
+ * size is '', 'md', 'sm' or 'xs'.
+ *
+ * A group holding nothing reads as a dash. It is not Not Started — there
+ * is nothing there to start.
+ */
+function pillHtml(roll, size) {
+  var key   = (roll && roll.status) || 'none';
+  var empty = (key === 'none');
+  var cls   = empty ? 's-none' : 's-' + safeStatus(key);
+  var label = empty ? '—' : STATUS[safeStatus(key)].label;
+
+  return '<span class="pill' + (size ? ' pill--' + size : '') + ' ' + cls + '">' +
            '<span class="dot"></span>' +
-           '<span class="txt">' + STATUS[key].label + '</span>' +
+           '<span class="txt">' + label + '</span>' +
          '</span>';
 }
 
-/** A status dot on its own. */
-function dotHtml(status) {
-  return '<span class="dot-only s-' + safeStatus(status) + '"></span>';
+/**
+ * The Progress dot on its own — a ROUND DOT, and only ever Progress.
+ * A flag never takes this shape and never takes this place.
+ */
+function dotHtml(roll) {
+  var key = (roll && roll.status) || 'none';
+  return '<span class="dot-only ' + (key === 'none' ? 's-none' : 's-' + safeStatus(key)) + '"></span>';
+}
+
+
+/**
+ * The hairline progress bar on the bottom edge of a unit chip, a floor
+ * header or a Tracking row.
+ *
+ * A GROUP WITH NOTHING DONE DRAWS NO BAR AT ALL, not an empty track. An
+ * empty track and a missing bar say the same thing, and the missing one
+ * costs no ink.
+ *
+ * A 60px bar cannot tell 15/18 from 16/18. That is accepted: the chip is a
+ * target, and the exact number is on the Unit screen.
+ */
+function barHtml(roll) {
+  if (!roll || !roll.total || roll.done === 0) return '';
+  var pct = Math.round((roll.done / roll.total) * 100);
+  return '<span class="bar"><span class="bar-fill s-' + safeStatus(roll.status) + '" ' +
+         'style="width:' + pct + '%"></span></span>';
+}
+
+
+/** "12 units · 5 done". Above the Unit screen the noun is always units. */
+function countText(roll, one, many) {
+  if (!roll || !roll.total) return 'no ' + many;
+  return roll.total + ' ' + (roll.total === 1 ? one : many) + ' · ' + roll.done + ' done';
+}
+
+
+/** One flag chip: the glyph, then its own count. */
+function flagChipHtml(kind, count) {
+  var flag = FLAGS[kind];
+  if (!flag || !count) return '';
+  return '<span class="flag ' + flag.cls + '" aria-hidden="true">' +
+           ICON.flag + '<span class="flag-n">' + count + '</span>' +
+         '</span>';
+}
+
+
+/**
+ * The chip for edits this phone could not save.
+ *
+ * A CORNER BADGE WITH AN EXCLAMATION MARK, never a plain red dot. A failed
+ * save and a Deficiency are both red, so they are kept apart by shape and
+ * by place: the flag is a glyph inside the row, the badge hangs off the
+ * top right corner, outside the chip.
+ */
+function notSavedChipHtml(count) {
+  if (!count) return '';
+  return '<span class="not-saved" aria-hidden="true">' +
+           '<span class="not-saved-mark">!</span>' +
+           '<span class="not-saved-txt">' + count + ' not saved</span>' +
+         '</span>';
+}
+
+
+/**
+ * The marks line — both flag counts and the not-saved chip.
+ *
+ * THE MARKS GET A LINE OF THEIR OWN. Left to trail the count they break in
+ * a different place on every floor, which reads as a mistake.
+ *
+ * It returns an empty string when there is nothing wrong, so a clean floor
+ * never draws a third line.
+ */
+function marksHtml(roll, notSaved) {
+  var out = flagChipHtml('deficiency', roll.deficiency) +
+            flagChipHtml('waiting',    roll.waiting) +
+            notSavedChipHtml(notSaved);
+  return out ? '<span class="marks">' + out + '</span>' : '';
+}
+
+
+/**
+ * Everything the marks say, in words.
+ *
+ * The marks are shapes and colours, so a screen reader gets nothing from
+ * them. Every place that draws marks must put this on the element, or the
+ * marks are decoration.
+ */
+function marksLabel(name, roll, notSaved) {
+  var parts = [name];
+
+  if (!roll.total) {
+    parts.push('nothing to track');
+  } else {
+    parts.push((roll.status === 'none') ? 'no status' : STATUS[safeStatus(roll.status)].label);
+    parts.push(roll.done + ' of ' + roll.total + ' done');
+  }
+
+  if (roll.deficiency) parts.push(roll.deficiency + ' ' + (roll.deficiency === 1 ? 'deficiency' : 'deficiencies'));
+  if (roll.waiting)    parts.push(roll.waiting + ' waiting');
+  if (notSaved)        parts.push(notSaved + ' ' + (notSaved === 1 ? 'edit' : 'edits') + ' not saved');
+
+  return parts.join(', ');
+}
+
+
+/** "Tue 2:14 PM", for the line that says how old a copy is. */
+function whenText(ms) {
+  if (!ms) return '';
+  var when = new Date(ms);
+  var day  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][when.getDay()];
+  var hour = when.getHours();
+  var half = hour < 12 ? 'AM' : 'PM';
+  var show = hour % 12;
+  if (show === 0) show = 12;
+  return day + ' ' + show + ':' + ('0' + when.getMinutes()).slice(-2) + ' ' + half;
 }
 
 
@@ -727,7 +1097,11 @@ var ICON = {
   bars:    '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="3" rx="1" fill="#0D0D0D"/><rect x="1" y="7" width="14" height="3" rx="1" fill="#0D0D0D"/><rect x="1" y="12" width="9" height="3" rx="1" fill="#0D0D0D"/></svg>',
   tick:    '<svg width="12" height="10" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1" stroke="#0D0D0D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   success: '<svg width="24" height="18" viewBox="0 0 24 18" fill="none" aria-hidden="true"><path d="M1 9l7 7L23 1" stroke="#4CAF6D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  close:   '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  close:   '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round"/></svg>',
+
+  /* The flag. currentColor, so one glyph serves both flag kinds and the
+     chip's own class picks the red or the blue. */
+  flag:    '<svg width="9" height="11" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>'
 };
 
 /** The back button in a screen header. */
@@ -772,22 +1146,105 @@ function errorHtml(reason, detail) {
          '</div>';
 }
 
-/** The bar that explains demo data. Returns an empty string for live data. */
-function demoBannerHtml(result) {
-  if (result.source !== 'demo') return '';
-  var text = (result.reason === 'not-configured' || !API_URL)
-    ? 'The backend is not connected yet. These are example buildings.'
-    : 'Cannot reach the server. These are example buildings.';
-  return '<div class="banner"><div><b>Demo data.</b> ' + escapeHtml(text) + '</div>' +
-         (API_URL ? '<button class="press" onclick="window.location.reload()">Retry</button>' : '') +
+/**
+ * The line a screen shows when a refresh failed but a stored copy drew.
+ *
+ * The app never warns that a copy might be old. IT WARNS ONLY WHEN A FETCH
+ * FAILS, and then it says exactly how old the copy is, so the person on
+ * site can judge it themselves. There is no staleness clock and no refresh
+ * timer: a fetch that succeeds makes the copy fresh by definition.
+ */
+function staleNoteHtml(fetchedAt) {
+  var when = whenText(fetchedAt);
+  return '<div class="banner banner--quiet"><div>Offline.' +
+         (when ? ' Last updated ' + escapeHtml(when) + '.' : '') +
+         '</div></div>';
+}
+
+
+/** No copy, no signal. The one thing the person can do is in the sentence. */
+function noCopyHtml() {
+  return '<div class="state">' +
+           '<div class="state-title">No copy on this phone</div>' +
+           '<div class="state-text">Connect and open it once. After that it opens with no signal.</div>' +
+           '<button class="btn btn-ghost press" style="max-width:200px" ' +
+                   'onclick="window.location.reload()">Try again</button>' +
          '</div>';
 }
 
-/** The note that says a change on this screen is not saved. */
+
+/* ── PULL TO REFRESH ──────────────────────────────────────────────── */
+
+/**
+ * Pull the screen down from the top to fetch again.
+ *
+ * There is no refresh timer anywhere in this app, so this and opening a
+ * screen are the only two ways a fetch happens. It has to be here.
+ *
+ * onRefresh returns a Promise. The arrow turns while it runs.
+ */
+function enablePullToRefresh(onRefresh) {
+  var TRIGGER = 70;      // how far down to pull, in pixels
+  var MAX     = 110;     // how far the screen follows the finger
+
+  var indicator = document.createElement('div');
+  indicator.className = 'ptr';
+  indicator.innerHTML = '<span class="ptr-ring"></span>';
+  document.body.appendChild(indicator);
+
+  var startY  = 0;
+  var pulling = false;
+  var running = false;
+  var pulled  = 0;
+
+  document.addEventListener('touchstart', function (event) {
+    if (running || event.touches.length !== 1) return;
+    // Only from the very top. Otherwise this fights normal scrolling.
+    if (window.scrollY > 0) return;
+    startY  = event.touches[0].clientY;
+    pulling = true;
+    pulled  = 0;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (event) {
+    if (!pulling) return;
+    pulled = Math.min(event.touches[0].clientY - startY, MAX);
+    if (pulled <= 0) { indicator.style.transform = ''; indicator.classList.remove('on'); return; }
+    indicator.style.transform = 'translateY(' + pulled + 'px)';
+    indicator.classList.toggle('on', pulled >= TRIGGER);
+  }, { passive: true });
+
+  document.addEventListener('touchend', function () {
+    if (!pulling) return;
+    pulling = false;
+    indicator.style.transform = '';
+
+    if (pulled < TRIGGER) { indicator.classList.remove('on'); return; }
+
+    running = true;
+    indicator.classList.add('on', 'spin');
+
+    Promise.resolve(onRefresh()).then(function () {
+      running = false;
+      indicator.classList.remove('on', 'spin');
+    }, function () {
+      running = false;
+      indicator.classList.remove('on', 'spin');
+    });
+  });
+}
+
+/**
+ * The note that says a change on this screen has not reached the Sheet.
+ *
+ * BUILD NOTE — this is deleted in 0.2 step 3, when save-batch lands and
+ * the sync bar replaces it. It is still true today: step 2 keeps a tap in
+ * the outbox on this phone, and nothing sends it yet.
+ */
 function localOnlyNote() {
-  return '<div class="banner"><div><b>Preview only.</b> ' +
-         'A change here stays on this phone. It is not saved to the project Sheet yet. ' +
-         'Saving arrives in the next version.</div></div>';
+  return '<div class="banner"><div><b>Not sent yet.</b> ' +
+         'A change here waits on this phone. It reaches the project Sheet in the next step.' +
+         '</div></div>';
 }
 
 
