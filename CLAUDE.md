@@ -89,7 +89,9 @@ Icon: `PFC/assets/Logo Placeholder.png` — known placeholder, low resolution. D
 
 PWA: installable on iOS and Android. Mobile-first. Service Worker caches the app shell so it opens with no signal on site.
 
-Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root.
+Full build spec: see `PFC_Control_Opus5_Prompt.md` in the repo root. That file is the
+0.1 spec. **For 0.2, read `PFC_Control_0.2_Build_Prompt.md` in the repo root first** —
+it says how the 0.2 build is run, and points at the spec and the log.
 
 ---
 
@@ -274,9 +276,18 @@ save path around free text first means building it twice.
 Deficiency records dropped the sub-item level and the photo. One record is one
 problem and one needed line, with a count.
 
-**Version 0.2 is being planned on a wayfinder map at `.scratch/pfc-control-0.2/map.md`.**
-Read that map before any 0.2 work. Pushed-back work is listed in
-`.scratch/0.3-backlog.md`.
+**Version 0.2 planning is finished. The map at `.scratch/pfc-control-0.2/map.md` is
+closed.** Three files carry 0.2 now, and they do not overlap:
+
+| File | Holds |
+|---|---|
+| `.scratch/pfc-control-0.2/BUILD-PLAN.md` | **What to build.** LOCKED. The destination of the map. |
+| `PFC_Control_0.2_Build_Prompt.md` (repo root) | **How to run the build.** Branch, token cap, deploy loop, when a step is done. |
+| `.scratch/pfc-control-0.2/BUILD-LOG.md` | **Where the build is.** One entry per session. Read the last entry first. |
+
+The nineteen tickets in `.scratch/pfc-control-0.2/issues/` hold the reasoning behind
+each decision. Read one only when the build plan points you at it. Pushed-back work is
+listed in `.scratch/0.3-backlog.md`.
 
 Do not build ahead of the current version without explicit instruction. Do leave clean extension points for the versions above.
 
