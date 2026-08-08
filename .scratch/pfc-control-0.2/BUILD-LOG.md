@@ -111,3 +111,106 @@ app answers its health check and `list-projects`.
 **Next:** hand Miguel the step 1 test list from plan section 6, fix whatever it
 finds, and only then start step 2 — `get-project`, `Store` on `localStorage`, the
 demo data deleted, the rollup function and `pillHtml`, and the marks of section 4.
+
+---
+
+## Session 2 — 2026-08-08
+
+**Step:** 1, test round run and passed. Step 1 is done.
+**Branch:** `0.2` at `996673a`.
+**Deployed:** yes — script version 3, description `0.2 step 1 fix 1`. Same
+deployment id, same URL.
+**Merged to main:** yes, `f4c62a8`. Both branches pushed.
+**CACHE_NAME:** unchanged at `pfc-control-0.2-step1`. **Deliberate.** The one fix
+this session was in `Code.js`, which lives in the Apps Script project and is never
+served to a phone. No file behind the Service Worker changed, so a bump would have
+forced every phone to re-download the same shell. Bump on the next front-end merge.
+
+**Landed:** the twelve-item step 1 test list from plan section 6 was run in Chrome
+against the live app, the live Admin and two fresh project Sheets. **All twelve
+pass.** One real defect was found, fixed, deployed and retested end to end.
+
+**The defect — the Dashboard Open Flags column read 1 when there were no records.**
+
+`unitsWithOpenFlagFormula` built this:
+
+```
+=IFERROR(COUNTA(UNIQUE(FILTER(unit range, state range="Open"))),0)
+```
+
+FILTER answers `#N/A` when nothing matches, and the `IFERROR` was there to turn
+that into a zero. It never fired. **`COUNTA` counts an error as one value**, so
+`COUNTA(#N/A)` is `1`, `IFERROR` sees a number, and the cell reports one flagged
+unit on a Sheet with an empty Deficiencies tab. Every Open Flags cell on every new
+project read 1, and every phase without a record kept reading 1 after a real
+record was added — so the column was wrong in both directions.
+
+Fixed by dropping the FILTER construction for **`COUNTUNIQUEIFS`**, which answers
+0 by itself when nothing matches:
+
+```
+=COUNTUNIQUEIFS(unit range, state range,"Open", phase range,"phase1")
+```
+
+The replacement was tested by hand in the test Sheet before the deploy — a phase
+holding a record read 1, a phase without one read 0, the building read 1. A
+comment above the function now names the trap by hand, because
+`IFERROR(COUNTA(UNIQUE(FILTER(...))))` is the obvious thing to write there.
+
+**What each test showed:**
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Buildings empty, "No projects yet." | pass — the version guard skips the four version 1 Sheets |
+| 2 | Create a project, 14 items with Handles, Stops, Bathtub | pass |
+| 3 | Tracker 21 columns, no Details | pass — A-B, C-P items, Q-S rollups, T DATE, U COMPLETION |
+| 4 | Three values in the dropdown | pass |
+| 5 | Three fills | pass — grey, amber, green |
+| 6 | Deficiencies 13 columns, row 1 frozen, filter on | pass |
+| 7 | Dashboard five columns, last reads Open Flags | **failed on the number**, fixed, retested |
+| 8 | Phase 1 all Complete -> Q Complete | pass |
+| 9 | One back to Not Started -> Q In Progress | pass — worst-wins is gone |
+| 10 | Phase 1 all Not Started -> Q Not Started | pass |
+| 11 | Three phases Complete -> U Complete | pass |
+| 12 | One Open record -> Q, U and Open Flags all flip; Fixed -> all back | **failed on Open Flags**, fixed, retested both directions |
+
+**Two extra checks, neither on the list, both clean:**
+
+- `list-projects` over the wire sends `unitsDone:1, unitsTotal:6, deficiencies:0,
+  waiting:0` and no `overall`. Correct per plan 2.4.
+- **Admin's edit block survives the column change.** Added an item to Phase 1 on a
+  project where unit 101 held fourteen Complete values, then removed it again.
+  Every status came back intact both times and the rollups still read right. This
+  was the one live path step 1 could have broken silently, because `readAllValues`
+  and `rebuildTracker` both moved when the Details column left.
+
+**Not landed:**
+
+- **`reference/PFC_Master_Template.xlsx` is still not updated**, and neither is the
+  live copy in Drive (`1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`). Plan section
+  1.7. Unchanged from session 1. No code reads it.
+- Everything from step 2 onward.
+
+**Open:**
+
+- **Five Sheets in `PFC/Projects/` for Miguel to trash. I did not delete any.**
+  Three are version 1 and the app already refuses them:
+  `Elsliger`, `Elsliger 36 Unit B`, `ZZ Test Build (delete me)`.
+  Two are mine from this test round, disposable once he has looked:
+  `ZZ 0.2 Step 1 Test`, `ZZ 0.2 Step 1 Test B`.
+- **The Buildings row still shows a wrong pill, and this is expected.** The server
+  stopped sending `overall` in step 1, so the 0.1 drawing layer falls back and a
+  building holding one Complete unit reads `Not Started`. Step 2 owns that screen
+  and the four numbers are already on the wire waiting for it. Not a defect to fix
+  now.
+- **Buildings takes about eight seconds on a cold cache.** That is
+  `handleListProjects` opening every project Sheet, the known ceiling in plan
+  section 10. Do not fix it in 0.2.
+- The item name in row 5 of the Tracker tab still wraps to two lines over an 89px
+  column. Carried from session 1. Cosmetic, nothing in the plan sets a new width.
+- PLAN CALL 3 still waits for step 4.
+
+**Next:** start step 2 — `get-project`, `Store` rewritten to `localStorage`, the
+demo data deleted, the rollup function and `pillHtml`, `list-projects` drawn from
+the four numbers, the error branch on Buildings, the two empty messages, the
+four-step Tracking order, pull to refresh, and the header flash.
