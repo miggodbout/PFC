@@ -231,6 +231,44 @@ Neither becomes a ticket, because the map closes here.
   `sw.js:53-63`, and 0.2's data is in `localStorage`, which a Service Worker never
   touches.
 
+### Audited the same day, after Miguel pushed back
+
+**He asked whether that was really all the context 0.2 needs. It was not, and he
+was right to ask.** The first pass read fourteen tickets in full and took five
+from the map's gists and this ticket's handover sections — `01`, `10`, `12`, `14`
+and `17`. Those five were then read in full and the plan checked against them.
+
+**No decision was missing.** Every ruling in all five was already placed, and the
+audit changed nothing about what 0.2 does. What was thin was two other things:
+
+1. **Screen-level wording and mechanics**, which a gist drops because it is not a
+   decision. The Logger dropdown sources and the `No unit 201 in this building.`
+   message, the minus/plus Count starting at 1, the `✓ Saved · waiting to send`
+   strip and `[ Log another item ]`, both Tracking empty messages verbatim, the
+   install note's actual steps, the rule that one record is one problem and one
+   needed line, and the flat rule that a Deficiency always attaches to an item
+   while a Waiting may attach to a phase.
+2. **The rejected options.** This is the real find. A gist records what was
+   decided and drops what was turned down, and **the turned-down option is
+   usually the obvious idea a build session has at the moment it reaches that
+   code.** They were scattered across nineteen tickets and reachable only by
+   reading all of them, which is the thing this plan exists to avoid.
+
+**The fix: section 11, `Already rejected. Do not rebuild these`.** About fifty
+entries in four tables — screens, data and lists, storage and queue, marks — each
+with its one-line reason and the ticket that holds the argument. Section 0 now
+says it is not optional reading.
+
+Two smaller repairs came out of the audit: `17` asked in as many words that the
+plan **say plainly that a trim list needs no release at all**, which the first
+pass softened to "does not gate the build"; and `17`'s **"lists only grow" scope
+table** — which lists are Add-only and which are not — was missing, so the rule
+could have been widened by accident.
+
+**The lesson, for the next map.** A ticket gist is enough to place a decision and
+is not enough to build from. Where a plan has to carry mechanics or negatives,
+read the ticket.
+
 ### The map is closed
 
 `09` was the last open ticket. Every 0.2 decision is settled, written down, and

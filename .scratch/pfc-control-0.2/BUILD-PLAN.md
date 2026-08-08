@@ -7,6 +7,10 @@ ticket on the 0.2 map. Every answer in this file comes from a closed ticket.
 This file is the destination of `.scratch/pfc-control-0.2/map.md`. A build
 session works from this file. It does not have to read nineteen tickets first.
 
+**Section 11 is not optional reading.** It holds every option that was proposed,
+argued and turned down. Each one is the obvious idea a build session has at the
+moment it reaches that code.
+
 ---
 
 ## 0. Before you start
@@ -89,6 +93,27 @@ does not change. Three keys are added.
 - **Ship every item with an empty trim.** Miguel writes the trim content later,
   through the Admin Lists card. An empty trim is never wrong, only wider than it
   needs to be. It does not gate the build.
+- **A trim change needs no release at all.** It lives in `_Config`, not in code,
+  so changing it costs one Admin tap on a live building or a template edit for new
+  ones. No push, no Pages build, no `CACHE_NAME` bump, no phone update. **Do not
+  treat a trim list as a thing that needs a version number.**
+- **The trim is about responsibility, not about the item.** Ask "does PFC own
+  this", not "can this item have this". The worked example is Exterior Door(s):
+  the framer hangs patio and entry doors and PFC only builds out and trims around
+  them, so `Wrong Swing`, `Wrong Type` and `Wrong Color` all come off — even
+  though the door plainly swings.
+
+**"Lists only grow" covers exactly two lists.** Do not widen the rule:
+
+| List | Add-only? |
+|---|---|
+| Reasons | **Yes** |
+| Subtypes | **Yes** |
+| Progress: Not Started, In Progress, Complete | No — fixed in code |
+| Record states: Open, Fixed, Cancelled | No — fixed in code |
+| Phases | No — Admin cannot add or remove one |
+| Items | No — `remove-item` has its own rule, section 2.6 |
+| Units | No — Admin has no remove operation |
 
 ### 1.2 The default item list — 14 items, was 17
 
@@ -172,6 +197,13 @@ filter. It is a plain list, unlike the Unit Tracker tab. The header row holds
 
 Rules:
 
+- **One record is one problem and one thing needed.** A problem that needs two
+  different materials becomes **two records**. This keeps the screen flat and
+  still lets 0.5 add up materials.
+- **A Deficiency always attaches to an item. A Waiting attaches to an item or to
+  a phase.** A defect is about a physical thing. "Phase 2 waiting on painters" is
+  not about any one item, and forcing it onto one puts the reason in the wrong
+  place.
 - **The record id format is `d-YYYYMMDD-HHMM-xxxx`**, where `xxxx` is four random
   hex characters. **The phone makes it when Save is tapped, before anything leaves
   the phone.** This is what makes a retried save safe.
@@ -708,11 +740,21 @@ Complete.** Not stored, not synced, gone when the app closes. It is what keeps t
 greyed row on screen until the next app open, which is also when the local copy is
 dropped — so the row is always tappable for as long as it is drawn.
 
-**A second empty message.** `emptyHtml()` at line 74 says *"No projects yet —
-Create your first building."* That is wrong once buildings exist and every one of
-them reads Complete, and it reads as data loss. The finished case says:
-**"Nothing to track. Every building is finished. Open the project Sheet to read
-one."** Both keep the `Create Job` button.
+**A second empty message.** `emptyHtml()` at line 74 has one state today, and it
+is wrong once buildings exist and every one of them reads Complete — it reads as
+data loss. The list answer already tells the two cases apart: it either came back
+empty, or came back holding buildings that all read Complete.
+
+| Case | What the screen says |
+|---|---|
+| No buildings exist | **No projects yet.** Create your first building. Every project gets its own Google Sheet. |
+| Buildings exist, all finished | **Nothing to track.** Every building is finished. Open the project Sheet to read one. |
+
+Both keep the `Create Job` button.
+
+**A greyed `Finished` section at the bottom of Tracking was offered and Miguel
+turned it down.** It buys back the missing door, and that is the problem — it is
+the Archive window in a smaller coat, already ruled out of 0.2.
 
 **This screen has no error branch at all today.** `loadProjects()` at
 `common.js:226` swallows every failure and returns demo buildings, so the screen
@@ -866,9 +908,26 @@ Tracker.
   important part is what replacement is needed." Its grey placeholder is the
   item's `hint`, `Size   Jamb   Swing`, **inside** the empty box. The three chips
   sit under it, filtered as you type.
-- **Count** stays above Reason. The count belongs beside the line it counts.
+- **Count** — minus and plus buttons, starting at **1**. It stays above Reason.
+  The count belongs beside the line it counts.
 - **Reason** — the building's eight, minus this item's trim. It no longer follows
   the phase.
+
+**Where every dropdown gets its list.** None of them is ever a fixed list in code.
+
+| Control | Source |
+|---|---|
+| Building | the buildings the phone holds |
+| Unit | a **text box**, matched against the unit labels in the local copy |
+| Phase | the phases the project holds |
+| Item | the items **that phase** holds |
+| Subtype | the `types` that item defines, or no dropdown at all |
+| Reason | the building's `reasons`, minus that item's `trim` |
+
+**The unit box never assumes the first digit is the floor.** Harbour View numbers
+its units A1 and A2, and the local copy already holds the true answer. It shows
+the floor it found under the box. No match reads
+`No unit 201 in this building.`
 
 **The place bar is two lines**, `1500 Main St · 204` over `Doors & Windows ·
 Floor 2`. One line wrapped, and the wrap pushed the whole form down a row.
@@ -883,11 +942,34 @@ and a wrong unit writes a real door against the wrong door. Opening Logger cold
 shows `1500 Main St · ____` with `set unit`, and **the form stays greyed until the
 unit is set.**
 
+**After a save, Logger stays put.** Building, Unit and Phase stay filled. Only the
+record fields clear. A short strip confirms the save — `✓ Saved · waiting to
+send` — and a `[ Log another item ]` button sits under the list.
+
+```
+─────────────────────────
+ ✓ Saved · waiting to send
+─────────────────────────
+ 1500 Main St · 204
+ Doors & Windows · Floor 2
+
+ Logged here:
+  · Bypass · 32 6 RH   x1  ⏳
+  · Regular · 30 4 LH  x1  ✓
+
+   [  Log another item  ]
+```
+
+Four problems in one room means four saves and no walk back through Building and
+Unit. **Jumping to the unit in Tracker after a save was rejected** — it confirms
+the save and then puts the person in the wrong place for the next one.
+
 **The "Logged here" list** carries a **Cancel** button on every row, always
 visible, and each row's send state — a turning ring on its way, a grey slab
 offline, a tick when it lands. **This list can Cancel a record and can never mark
 one Fixed.** Cancel undoes a typo made ten seconds ago. Fixing is a repair and
-belongs to Tracker.
+belongs to Tracker. The list is also where a typo is caught before the person
+leaves the room.
 
 **PLAN CALL 3 — pin Save to the bottom of the screen.** `06` measured six
 controls as the budget before Save falls under the keyboard. `17` took the form to
@@ -1059,9 +1141,15 @@ with the phone in airplane mode for part of it.
 
 **One signal only: installed or not**, checked with `display-mode: standalone`.
 
-- Installed shows nothing.
-- Not installed shows a small dismissible note, **once per tab-mode open**, with a
-  step-by-step install tutorial.
+- Installed shows nothing. No change from today.
+- Not installed shows a small dismissible note, **once per tab-mode open** and not
+  repeated on every screen inside that visit. It says offline saving may not work
+  right in a browser tab, and it gives the steps: **Share icon → Add to Home
+  Screen.**
+- **No separate handling for the tab/installed data split.** Data written in a tab
+  is invisible to the installed app, so a person who edits in both sees two sets
+  of waiting edits. The fix for that and the fix this section needed are the same
+  action: install it. The nudge covers both.
 - `navigator.storage.persist()` runs silently in the background either way.
   **There is no warning when it is refused**, because there is nothing the crew can
   do about a refusal.
@@ -1154,7 +1242,91 @@ Written down so they are not discovered on site.
 
 ---
 
-## 11. The four PLAN CALLs, in one place
+## 11. Already rejected. Do not rebuild these
+
+Every line here was proposed, argued and turned down. They are collected because
+each one is the obvious idea a build session has at exactly the moment it reaches
+that code. **The reasoning is in the ticket named. Do not re-argue one without
+reading it first.**
+
+### The screens
+
+| Rejected | Why | Ticket |
+|---|---|---|
+| Hiding a Complete item on the Unit screen | The row is the control you set Progress with. Hide it and a mis-tap cannot be undone. **Miguel closed this branch as a rule.** | `14` |
+| A greyed `Finished` section on Tracking | The Archive window in a smaller coat | `14` |
+| A line reading `3 finished buildings are not shown` | It cannot say which building, so it does not shorten the fix. 0.3 lists them by name | `18` |
+| A force-close switch in Admin | A stored flag can disagree with the numbers, and 0.2 has no door to find a wrongly hidden building in | `14` |
+| Tap-to-cycle on the status control | It is a dropdown, as it is today | `05` |
+| Removing the Complete row while a flag is open | A silently missing row reads as a broken app. Grey it with a reason | `05` |
+| An always-open record list under an item | Three records push the next item down ~150px | `06` |
+| A prompt when the dropdown moves to Complete | **Impossible, not rejected.** Complete is untappable while a flag is open | `06` |
+| A grey tick chip keeping fixed records on the item forever | Puts a chip on every item ever worked | `06` |
+| A Unit screen with no sync bar | A failure in another unit would have no way to reach you | `05` |
+| A "Saved" flash, or a permanent "All saved" strip | It costs a band of screen to say nothing is happening | `05` |
+| A badge on the Hub, or a waiting count in the tree | The count lives in the sync bar and nowhere else | `05` |
+| Logger as a second drill-down tree | "I do not need to see Baseboards, Windows and Hardware when I want to log a door" | `12` |
+| Logger one step per screen, or one long scrolling page | Seven screens per record; or the keyboard covers Save | `12` |
+| Jumping to Tracker after a Logger save | Wrong place for the next entry | `12` |
+| Logger setting Progress | Eighteen items would mean eighteen runs of a form | `12` |
+| The `Deficiencies` Hub card turned on | Records are visible in two places already. It stays greyed | `12` |
+
+### The data and the lists
+
+| Rejected | Why | Ticket |
+|---|---|---|
+| Structured per-item fields on the needed line (Style, Width, Depth, Swing) | Taps on every entry, Admin work per item. **`17` took back one field, the type, and no more** | `12`, `17` |
+| Three per-phase reason lists | Six of the eight reasons apply everywhere | `17` |
+| Per-item reason list **copies** | "Add a reason to everything" becomes eighteen edits | `17` |
+| Hardcoding the eight reasons | A change would then cost a release | `17` |
+| A Delete button on a reason or subtype list | A row could then point at a value that stopped existing | `17` |
+| Folding the subtype into the needed text | 0.5 would be back to matching words | `17` |
+| A seed suggestion list | Chips come from every building on the phone, so a new job inherits the vocabulary on day one | `15` |
+| Edit-distance fuzzy matching on the needed line | `32 6 LH` and `32 6 RH` are one character apart and are two different doors | `15` |
+| A per-subtype hint | Fourteen strings become about thirty, and every new subtype needs one | `15` |
+| `get-project` returning open records only | The pool would shrink exactly as the job improved | `15` |
+| Adding the live count and the history count | It double-counts. Take the larger | `15` |
+| A per-chip delete button or hide list | Cancelling the record is the whole deletion answer | `15` |
+| A separate "which one" field naming the physical thing | The needed line identifies it better than a label does | `01` |
+| Moving fixed rows to an Archive tab | A move is a write plus a delete and can half-fail | `01` |
+| Deleting records along with their item | One misclick would destroy a supplier claim | `02` |
+| Leaving open records orphaned and hidden | Two live problems would vanish from every screen | `02` |
+| A shared defaults store every new building copies | Hidden state with no screen, and one typo would follow every future job | `13` |
+| Naming the records and stopping, on the removal refusal | Twelve records across nine units means opening nine units by hand | `13` |
+| Drawing the full record list inside Admin | Ports a Tracker screen into a screen with no unit context | `13` |
+
+### The storage and the queue
+
+| Rejected | Why | Ticket |
+|---|---|---|
+| IndexedDB | Every read is asynchronous, so every screen gains a wait, against a problem the app does not have | `03` |
+| One localStorage key holding everything | One status change would rewrite a megabyte | `03` |
+| A staleness clock, or a refresh timer | A fetch that succeeds makes the copy fresh by definition | `03` |
+| Refreshing every building on app open | Ten calls, nine for buildings nobody will open | `03` |
+| Refreshing the last-opened building beside the list | Wastes a call every time Miguel switches jobs | `03` |
+| An outbox line-up, in strict order | It breaks exactly when one call fails and the next succeeds | `04` |
+| One field per job | The Sheet would hold half a change | `04` |
+| One whole unit per job | It would overwrite a hand edit on an item nobody touched | `04` |
+| A flat 30 second retry | A burst on a fixed beat is the pattern most likely to keep losing the lock fight | `04` |
+| Holding an edit on its first failure | Driving through a dead zone would turn six taps of work into six taps of housekeeping | `04` |
+| Painting a held edit on the screen | A floor could read `18/18 Complete` off an edit that will never land | `04` |
+| A separate warning when `persist()` is refused | There is no action the crew can take about a refusal | `10` |
+| The server reading the whole Tracker grid for `list-projects` | Same call count, but it puts a **third** copy of the rollup rule in the code | `18` |
+
+### The marks
+
+| Rejected | Why | Ticket |
+|---|---|---|
+| A plain red dot for a failed save | Two reds of two meanings on one 77px chip | `19` |
+| The chip printing `14/18` | Twelve fractions on one floor, on the screen that exists so you do not have to read | `19` |
+| An empty progress track on an unstarted unit | An empty track and a missing bar say the same thing | `19` |
+| Four chips in the suggestion row | The row wraps at about four, and the wrapped row is the row Save needs | `15` |
+| Flag counts on a floor header while the floor is open | The flagged chips are right there in front of you | `19` |
+| A blue dot for Waiting | Waiting is a flag, not a status. The dot shows Progress only | `19` |
+
+---
+
+## 12. The four PLAN CALLs, in one place
 
 Everything else in this file comes from a closed ticket. These four were left to
 the plan by name.
