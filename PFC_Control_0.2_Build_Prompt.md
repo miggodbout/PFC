@@ -82,18 +82,29 @@ for a while and I don't want it to be interrupted because I am not present. The 
 URL is not in use atm so it does not matter." That permission covers the **Control**
 script only.
 
-### The footgun, read this first
+### Two scripts, two folders
 
-There are two `.clasp.json` files in this repo, and they point at different Apps
-Script projects.
+There are two Apps Script projects behind this repo, and each has its own
+`.clasp.json` sitting next to the code it describes.
 
-| File | Script | Rule |
+| Run clasp from | Pushes to | Rule |
 |---|---|---|
-| `control/appscript/.clasp.json` | PFC Control (`11PF1yQ7…`) | This is the one 0.2 touches. |
-| `.clasp.json` at the repo root | **Live camera app** (`1QFDFU5w…`) | Crew uses it daily. Never push to it. |
+| `control/appscript/` | PFC Control (`11PF1yQ7…`) | This is the one 0.2 touches. |
+| `appscript/` | Camera app (`1QFDFU5w…`) | Separate system. Off limits without instruction. |
+| the repo root | nothing — `Project settings not found.` | Correct. Leave it that way. |
 
-`clasp` reads the nearest `.clasp.json`. **Run every clasp command from inside
-`control/appscript/`.** Running clasp from the repo root pushes to the live crew tool.
+`clasp` reads the nearest `.clasp.json`, walking up the folder tree until it finds
+one. Until 2026-08-08 the camera app's config sat at the **repo root**, so any clasp
+command run from the root pushed 0.2 code into the camera app's script. Miguel had it
+moved down into `appscript/` on that date. **Do not put a `.clasp.json` back at the
+repo root.**
+
+Both config files are gitignored — `.gitignore` holds the single line `.clasp.json`,
+which matches at every level. They exist only on Miguel's machine. A fresh clone has
+neither, and `clasp push` will fail until they are recreated from the ids in this
+table.
+
+**Run every 0.2 clasp command from inside `control/appscript/`.**
 
 ### The commands
 
@@ -108,7 +119,8 @@ That deployment id is the existing versioned web app, currently at version 1. Up
 it keeps the URL. **Never run `clasp create-deployment` / `clasp deploy`** — that mints
 a new URL, and the app on Miguel's phone points at the old one.
 
-Verified working 2026-08-08: clasp 3.3.0, authenticated, two deployments listed.
+Verified working 2026-08-08: clasp 3.3.0, authenticated, two deployments listed, and
+`clasp show-file-status` correct from both script folders and failing at the root.
 
 Version descriptions read `0.2 step N`. Not `v2`, not `v1.1`. The existing description
 reads "PFC Control v1" because it predates the version rule in `CLAUDE.md`.

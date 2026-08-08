@@ -50,7 +50,9 @@ Status: live, but Miguel expects to scrap or rebuild it. Ask before any large wo
 - `Hub/Log/index.html`
 - `Hub/Log/app_v1.html`
 - `Hub/Log/app_v2.html`
-- `appscript/Code.js` — the Apps Script project calls this file `Code.gs`. It is tracked with `.clasp.json` and `appscript/appsscript.json`.
+- `appscript/Code.js` — the Apps Script project calls this file `Code.gs`. Its clasp config is `appscript/.clasp.json`, beside it.
+
+**Never put a `.clasp.json` at the repo root.** `clasp` walks up the folder tree until it finds one, so a config at the root makes every clasp command anywhere in the repo push to whichever script that config names. The camera app's config sat there until 2026-08-08 and was moved down into `appscript/`. Each script now has its own config next to its own code, and clasp at the root correctly finds nothing. Both configs are gitignored and live only on Miguel's machine.
 
 `upload.html` is part of the live camera app but is not in this repo. It exists only inside the Apps Script project. Do not look for it here.
 
