@@ -19,12 +19,18 @@ Written 2026-08-08, after ticket 09 closed the 0.2 wayfinder map.
 2. This file.
 3. `.scratch/pfc-control-0.2/BUILD-LOG.md` — **where the build actually is.** Last
    entry first. Do not guess from the git log.
-4. `.scratch/pfc-control-0.2/BUILD-PLAN.md`, whole, then its own read order in its
-   section 0.
+4. `.scratch/pfc-control-0.2/BUILD-PLAN.md` — **section 11, then only the sections
+   your step names.** Section 6 says which those are.
 
-Section 11 of the plan is not optional. It lists about fifty ideas that were proposed,
-argued and turned down. Each one is the obvious idea you will have at the moment you
-reach that code.
+**Do not read the plan whole.** It is 1,343 lines, and reading it cold costs about a
+third of a session before a line of work gets done. Changed 2026-08-08, after the
+step 1 test round: the log entry plus the step's own sections carries everything a
+session needs.
+
+**Section 11 stays mandatory, whatever the step.** It lists about fifty ideas that
+were proposed, argued and turned down, and each one is the obvious idea you will have
+at the moment you reach that code. It is 80 lines. It is the cheapest thing in the
+file and the one that saves the most work.
 
 ---
 
@@ -146,24 +152,56 @@ any code.
 
 ---
 
-## 5. When a step is done
+## 5. When a step is done, and when a test round happens
 
-Code written is not done. A step is done when all six of these are true:
+Code written is not done. A step is done when all five of these are true:
 
 1. The step's work from plan section 6 is complete on the `0.2` branch.
-2. `CACHE_NAME` is bumped to `pfc-control-0.2-stepN`.
+2. `CACHE_NAME` is bumped to `pfc-control-0.2-stepN`. **Only when a file the phone
+   downloads has changed.** A backend-only step changes nothing behind the Service
+   Worker, and bumping then makes every phone re-download an identical app. Say in
+   the log which way you went and why.
 3. The branch is merged to `main` and pushed.
 4. `clasp push` and `clasp redeploy` have run, so the backend matches the front end.
-5. Miguel has been handed that step's test list, copied out of plan section 6 as a
-   checklist he can tick, with anything he needs (a phone, airplane mode, the Sheet
-   open on a computer) stated up front.
-6. He has reported back, and every failure is fixed.
+5. A smoke check: the app opens, the screen the step touched draws, and nothing
+   throws. Minutes, in the session you are already in. Not a test round.
 
-Six test rounds, one per step. He chose that over banking them, so that a failure
-points at one step of code.
+### Two test rounds, not six
 
-**Do not start step N+1 before step N reports back.** If waiting, write the log entry
-and stop.
+**Changed 2026-08-08.** The original plan was six rounds, one per step. Step 1's
+round used a whole five-hour window on its own, and Miguel called it: the build
+cannot cost three days of windows.
+
+The argument that set where the two rounds land: every defect in 0.2 is something
+you can see and correct — a wrong pill, a bad colour, a screen that draws late —
+**except a broken save queue**, which takes a record typed on site and silently
+drops it. That one is found weeks later, when the door does not get ordered, and a
+patch cannot bring the data back.
+
+| After | Round |
+|---|---|
+| Step 3 — save-batch, the outbox, the pending state | Full round. This is the gate. |
+| Step 6 — 0.2 FINAL | Full round, every step's list from plan section 6. |
+| Steps 1, 2, 4, 5 | Smoke check only. Ride to the next round. |
+
+**Claude runs the rounds, not Miguel.** Step 1 proved it works: twelve tests driven
+in Chrome, one real defect found, fixed, redeployed and retested, with no window
+spent on his side. Hand him a list only for what a browser cannot do — a real phone,
+airplane mode on a job site, PLAN CALL 3.
+
+**Do not start the step after a gate before that round reports back.** Steps 4 and 7
+do not exist; the gates are step 3 and FINAL. Everywhere else, keep building.
+
+### Keeping a session cheap
+
+Step 1's round cost what it did for two reasons, both avoidable:
+
+- **Reading the plan cold.** Fixed by section 0 above.
+- **Screenshots.** Driving Google Sheets means looking at pictures, and pictures are
+  the most expensive thing in a session. Steps 2 to 6 deliver **app screens**, which
+  `get_page_text`, `read_page` and `javascript_tool` assertions read as text for a
+  fraction of the cost. **Spend a screenshot on colour and layout. Nothing else.**
+- Batch browser actions with `browser_batch`. One round trip, not eight.
 
 ---
 
