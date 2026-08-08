@@ -12,7 +12,7 @@
    The phone keeps serving the old copy until the number changes.
    ===================================================================== */
 
-var CACHE_NAME = 'pfc-control-0.1.1';
+var CACHE_NAME = 'pfc-control-0.1.2';
 
 /** The app's own files. Everything needed to open with no signal. */
 var SHELL = [
@@ -89,13 +89,23 @@ self.addEventListener('fetch', function (event) {
    */
   var key = url.origin + url.pathname;
 
-  // Always ask the network as well, so the next open gets the newest file.
+  /*
+   * Always ask the network as well, so the next open gets the newest file.
+   *
+   * The save must be waited for, not fired and forgotten. A Service Worker
+   * is shut down as soon as the phone thinks it is finished, and iOS is
+   * quick about it. An unwaited cache.put is killed part way through, so
+   * the new file never lands and the app stays on the old copy for ever.
+   */
   var fresh = fetch(request).then(function (response) {
-    if (response && response.ok) {
-      var copy = response.clone();
-      caches.open(CACHE_NAME).then(function (cache) { cache.put(key, copy); });
-    }
-    return response;
+    if (!response || !response.ok) return response;
+
+    var copy = response.clone();
+    return caches.open(CACHE_NAME).then(function (cache) {
+      return cache.put(key, copy);
+    }).then(function () {
+      return response;
+    });
   }).catch(function () {
     return null;
   });

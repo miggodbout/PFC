@@ -716,8 +716,36 @@ function localOnlyNote() {
   var base = here.replace(/shared\/common\.js.*$/, '');
   if (!base) return;
 
+  // True when a Service Worker was already running this page. On the very
+  // first visit it is false, and the reload below must not fire.
+  var hadWorker = !!navigator.serviceWorker.controller;
+  var reloading = false;
+
+  /*
+   * A new Service Worker takes over only after it has saved the new files.
+   * The page on screen is still drawn from the old ones, so reload once.
+   *
+   * Safe with the offline queue that version 0.2 adds: a queued edit lives
+   * in localStorage, which a reload does not touch.
+   */
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadWorker || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
   window.addEventListener('load', function () {
     navigator.serviceWorker.register(base + 'sw.js', { scope: base })
+      .then(function (registration) {
+        /*
+         * Ask the server for a new sw.js on every open.
+         *
+         * Without this the phone decides for itself when to look, and iOS
+         * can sit on an old worker for days. GitHub Pages sends sw.js with
+         * max-age=600, which makes that worse. update() asks every time.
+         */
+        registration.update();
+      })
       .catch(function () {
         // No offline copy. Everything else keeps working.
       });

@@ -186,9 +186,9 @@ Use `MAJOR.MINOR.PATCH`. Never use `v1`, `v2` style names for a milestone again 
 - **PATCH** (`0.1.1` → `0.1.2`) — fixes only, inside a milestone. No new features.
 - **1.0** — reached when the crew uses PFC Control daily as the primary tool. It marks trust, not a feature count.
 
-Current: PFC Control `0.1.1`. Camera app `0.1.2`.
+Current: PFC Control `0.1.2`. Camera app `0.1.2`.
 
-`CACHE_NAME` in `control/sw.js` carries the version, as `pfc-control-0.1.1`. Raise it on every release. Phones keep serving old files until it changes.
+`CACHE_NAME` in `control/sw.js` carries the version, as `pfc-control-0.1.2`. Raise it on every release. Phones keep serving old files until it changes.
 
 Two exceptions, both deliberate:
 - `Hub/Log/app_v1.html` and `app_v2.html` keep their names. There `v1` and `v2` mean a second attempt at one file, not a release. The live app links to them.

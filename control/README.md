@@ -175,7 +175,7 @@ iOS clears a saved copy after about seven days of no use. Daily use keeps it.
 Open `control/sw.js`. Raise the version number:
 
 ```js
-var CACHE_NAME = 'pfc-control-0.1.0';   // raise this on every release
+var CACHE_NAME = 'pfc-control-0.1.2';   // raise this on every release
 ```
 
 Phones keep serving the old copy until this number changes.
