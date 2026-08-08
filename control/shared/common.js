@@ -71,15 +71,35 @@ function safeStatus(key) {
 /* ── DEFAULT ITEM TEMPLATE ────────────────────────────────────────── */
 
 /**
- * The standard item list. Admin loads this into the new project form with
- * every item ticked. Nothing here is fixed in the app's logic. Once a
- * project exists, the app shows whatever that project's Sheet contains.
+ * THIS BLOCK IS THE SEED FOR A NEW BUILDING.
+ *
+ * Admin loads it into the new project form, sends it up in the create
+ * payload, and the server writes it into that building's _Config. After
+ * that the building reads its own config and never looks here again. So
+ * changing anything below changes what the NEXT building starts with, and
+ * nothing about a building that already exists.
+ *
+ * reference/PFC_Master_Template.xlsx is the drawing of this. No code reads
+ * it. Change one, change the other by hand.
+ */
+
+/**
+ * The standard item list — fourteen items, down from seventeen in 0.1.
+ *
+ * Unit Door, Passage, Privacy, Dummy, Spring Stops and Hinge Stops stopped
+ * being items and became subtypes. Handles, Stops and Bathtub are new.
+ *
+ * The trade: Passage and Privacy now share one status row, so you can no
+ * longer read that the passage handles are done and the privacy ones are
+ * not. Progress got coarser so that logging could get finer. That was the
+ * choice, not an oversight.
  */
 var DEFAULT_PHASES = [
   {
     key: 'phase1',
     label: 'Phase 1 — Doors & Windows',
-    items: ['Interior Doors', 'Exterior Door(s)', 'Unit Door', 'Windows', 'Attic Hatch', 'Handrail']
+    items: ['Interior Doors', 'Exterior Door(s)', 'Windows', 'Attic Hatch',
+            'Handrail', 'Bathtub']
   },
   {
     key: 'phase2',
@@ -89,10 +109,83 @@ var DEFAULT_PHASES = [
   {
     key: 'phase3',
     label: 'Phase 3 — Hardware & Accessories',
-    items: ['Passage', 'Privacy', 'Dummy', 'Ball Catch', 'Deadbolts',
-            'Spring Stops', 'Hinge Stops', 'Mirrors', 'Bathroom Accessories']
+    items: ['Handles', 'Ball Catch', 'Deadbolts', 'Stops', 'Mirrors',
+            'Bathroom Accessories']
   }
 ];
+
+/**
+ * The reason list a building starts with. One list of eight per building,
+ * not one per phase and not one per item. An item narrows it with its own
+ * trim.
+ *
+ * Add-only once the building exists. Admin can add a reason and there is
+ * never a Delete button, so no record can ever point at a value that
+ * stopped existing.
+ *
+ * Warped was renamed Defective: Defective means it arrived wrong from the
+ * factory, Damaged means somebody hurt it after it arrived.
+ */
+var DEFAULT_REASONS = ['Wrong Size', 'Wrong Type', 'Wrong Swing', 'Wrong Color',
+                       'Missing', 'Damaged', 'Defective', 'Other'];
+
+/**
+ * The Waiting reason list. It never varies, so it is NOT stored per
+ * building and there is no trim against it. A Waiting record can attach to
+ * a whole phase, where there is no item to narrow it with.
+ */
+var WAITING_REASONS = ['Waiting on Another Trade', 'Awaiting Delivery',
+                       'Backordered', 'Site Not Ready', 'Other'];
+
+/**
+ * What each item starts with, keyed by its label.
+ *
+ *   types — the Subtype dropdown. Four items define one. Every other item
+ *           defines none and shows no dropdown at all.
+ *   trim  — the reasons this item does NOT offer, matched exactly against
+ *           DEFAULT_REASONS. Empty offers all eight.
+ *   hint  — grey placeholder text inside the empty needed box.
+ *
+ * Other is NOT in a types list. Logger adds it to the bottom of the
+ * dropdown itself, where it opens a text box. The typed text goes in that
+ * one record's subtype cell and never joins the list — a one-off stays a
+ * one-off, and making it permanent is an Admin Add.
+ *
+ * Every trim ships empty on purpose. An empty trim is never wrong, only
+ * wider than it needs to be, and Miguel narrows them through the Admin
+ * Lists card without a release. The test is responsibility, not the item:
+ * ask "does PFC own this", not "can this item have this". The framer hangs
+ * the patio and entry doors, so Wrong Swing comes off Exterior Door(s)
+ * even though the door plainly swings.
+ *
+ * Only the hint Miguel gave is filled in. A blank hint is never wrong,
+ * only less helpful, and Admin fills one in without a release too.
+ */
+var DEFAULT_ITEM_LISTS = {
+  'Interior Doors': {
+    types: ['Regular', 'Bypass', 'Bi-fold', 'Double', 'Pocket',
+            'Double Pocket', 'Dwarf', 'Unit Door'],
+    trim:  [],
+    hint:  'Size   Jamb   Swing'
+  },
+  'Exterior Door(s)': { types: ['Patio', 'Entry'],                        trim: [], hint: '' },
+  'Handles':          { types: ['Passage', 'Privacy', 'Dummy', 'Pocket'], trim: [], hint: '' },
+  'Stops':            { types: ['Spring', 'Hinge'],                       trim: [], hint: '' }
+};
+
+/**
+ * The three lists one item starts with. A custom item, or any item with no
+ * entry above, gets empty lists: all eight reasons, no subtype dropdown,
+ * no placeholder.
+ */
+function defaultItemLists(label) {
+  var found = DEFAULT_ITEM_LISTS[label];
+  return {
+    types: found ? found.types.slice() : [],
+    trim:  found ? found.trim.slice()  : [],
+    hint:  found ? found.hint          : ''
+  };
+}
 
 
 /* ── BACKEND ──────────────────────────────────────────────────────── */
