@@ -1,9 +1,7 @@
 # Changes needed in the master template
 
-**Status: each section carries its own.** Rewritten 2026-08-08 by
-`18-supersession-sweep`. The old file said "PROVISIONAL, do not start work yet"
-across the whole thing, which stopped being true section by section as tickets
-closed.
+**Status: FINAL, 2026-08-08.** Marked by `18-supersession-sweep` on its second
+pass. **Build from this file.**
 
 | Section | Status | Waits on |
 |---|---|---|
@@ -14,12 +12,24 @@ closed.
 | 5. The lists held in `_Config` | **FINAL** | nothing |
 | 6. The Dashboard tab | **FINAL** | nothing |
 | 7. What is not changing | **FINAL** | nothing |
-| 8. Still unknown | — | `15` |
+| 8. Nothing left unknown | **FINAL** | nothing |
 | 9. The default item list | **FINAL** | nothing |
 
-**This file is not marked FINAL as a whole, and must not be until `14` and `15`
-close.** `18` runs a second pass then. Section 5 went FINAL and section 9 was
-added when `13-admin-changes` closed on 2026-08-08.
+**What FINAL means here.** Every 0.2 ticket that could change a template column
+has closed, and the second sweep checked this file against all of them. It is a
+**spec**, not a discussion — a build session follows it as written and does not
+have to weigh it against anything.
+
+**What FINAL does not mean.** It does not freeze the app. `19` and the
+`list-projects` payload change nothing in the Sheet: they are server and phone
+work. If a later ticket ever does need a column, say so here and drop this line
+back to a section status.
+
+History: the old file said "PROVISIONAL, do not start work yet" across the whole
+thing, which stopped being true section by section as tickets closed. The first
+sweep replaced that with per-section statuses on 2026-08-08. Section 5 went FINAL
+and section 9 was added when `13-admin-changes` closed. Section 8 emptied when
+`15-suggestion-list` closed, and the second sweep marked the file whole.
 
 Template in Drive: `PFC/Master Template/PFC_Master_Template.xlsx`
 ID `1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`
@@ -61,7 +71,7 @@ a plain list, unlike the Unit Tracker tab and its six header rows.
 | F | `reason` | one value from the building's list of eight | See section 5 |
 | G | `other_text` | free text | Only when the reason is `Other` |
 | H | `subtype` | `Bypass`, `Privacy` | **Blank on an item that defines no types.** Added by `17` |
-| I | `needed` | free text, such as `32" 6" RH` | Optional on a Waiting record |
+| I | `needed` | free text, such as `32 6 RH` | Optional on a Waiting record |
 | J | `quantity` | a number | How many are needed |
 | K | `state` | `Open`, `Fixed` or `Cancelled` | The filter column |
 | L | `created` | date, `yyyy-mm-dd` | A real date cell, not text |
@@ -331,9 +341,9 @@ Both items that sat here are answered. **This section is now empty on purpose.**
 `15` did add one thing to this file, but to **section 5**, not here: a **`hint`**
 key per item in `_Config`, for the needed box placeholder.
 
-**One piece of stale text this file still carries**, for `18` to sweep: every
-`32" 6" RH` example. `15` dropped the inch marks, so the standard is now
-**`32 6 RH`**.
+**Swept 2026-08-08 by `18`.** The one `32" 6" RH` example this file carried is now
+**`32 6 RH`**, in section 1 column I. `15` dropped the inch marks. Nothing else in
+this file used the old form.
 
 ## 9. The default item list — FINAL
 

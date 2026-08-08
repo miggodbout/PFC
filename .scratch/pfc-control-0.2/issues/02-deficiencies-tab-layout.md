@@ -4,6 +4,12 @@ Type: grilling
 Status: resolved
 Blocked by: 01, 07
 
+> **Nomenclature correction, added by `18-supersession-sweep` 2026-08-08. Every
+> `32" 6" RH` below is stale text.** `15-suggestion-list` dropped the inch marks.
+> The standard needed line is **`32 6 RH`**. This changes no column and no rule —
+> the `needed` cell is free text either way. The examples are left as written,
+> because the sweep does not rewrite a resolved ticket.
+
 ## Question
 
 How does the new Deficiencies tab lay out in a project Sheet?

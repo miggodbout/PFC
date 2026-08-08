@@ -176,22 +176,13 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
   doing". Holds Progress, and closes records.
 - **Logger** — one form. Answers "this one door is wrong". Writes records only.
 
-Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. Read them
-before `09`:
-- **`supersessions.md`** — which decision wins wherever two disagree. First pass
-  2026-08-08, widened the same day by `13`. **`14`, `15` and `19` have all
-  closed, so the second pass is takeable and it is next.** That is `18`, and it
-  is the last thing before `09`. **Order: `18`, then `09`.**
-  **`19` handed `18` one conflict to settle**, written at the end of that ticket:
-  `14` rule 4 has `list-projects` send **item** counts so the phone never trusts
-  the Sheet's own `overall` word, but `19` made the count **units**, and unit
-  statuses out of `readOverallColumn` are Sheet formula output one level down.
-  `18` decides whether that is close enough.
-- **`template-changes.md`** — the master template spec. Nine sections. Section 5
-  went FINAL when `13` closed, and section 9, **the default item list**, was added
-  by it. **Section 8 is now empty**: `15` took no template change for the
-  suggestion pool, and `14` answered the archive drop. The file needs only `18`'s
-  sweep before it is FINAL.
+Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. **`18` closed
+on 2026-08-08 and all three are now final. Read them before `09`, in this order:**
+- **`supersessions.md`** — which decision wins wherever two disagree. **47
+  entries, both passes done.** Read it before trusting any single sentence in a
+  resolved ticket. The last section settles the `14` versus `19` conflict in full.
+- **`template-changes.md`** — the master template spec. Nine sections, **FINAL as
+  a whole**. It is a spec, not a discussion. Build the Sheet from it.
 - **`code-inventory.md`** — the 0.1 code read against all seventeen tickets.
   Every rollup call site, everywhere the demo data reaches, the exact lines each
   ticket deletes, and nine things no ticket owns. Written 2026-08-08.
@@ -239,7 +230,8 @@ sun and colour blindness and hue does not:
   around rollup formulas and already finds a unit row with no extra calls.
 - [What one deficiency record holds](issues/01-deficiency-record-fields.md) — one
   record is one problem and one needed line, with a count. The needed line stays
-  free text, helped by suggestions and the hint `ex: 32" 6" RH`. The reason list
+  free text, helped by suggestions and a hint (**`15` later replaced that hint —
+  it is a `Size Jamb Swing` placeholder now, not an `ex:` line**). The reason list
   follows the phase, not the item. **Progress and problems split apart:** the
   dropdown keeps Not Started, In Progress and Complete, while Deficiency and
   Waiting become flags driven by open records. `On Hold` is renamed **Waiting**.
@@ -462,7 +454,8 @@ sun and colour blindness and hue does not:
   — **three facts, three shapes**, so the two reds never collide: a round dot for
   Progress, a flag glyph for a site flag, and a **corner badge carrying `!`** for
   a failed save, hanging off the chip outside its border. Neither red moved.
-  Miguel picked **variant C**: the chip gets a **hairline bar** on its bottom
+  Miguel picked **variant C** (see `18` for how its one open conflict landed):
+  the chip gets a **hairline bar** on its bottom
   edge, and so does the floor header. That closes the fraction-or-bar question
   `11` line 270 left open by name, and the answer is **both, split by level** — a
   bar where you glance, a number where you read, and the exact fraction stays on
@@ -471,8 +464,8 @@ sun and colour blindness and hue does not:
   done`, never `148/216 items`. That **amends `14` and makes it cheaper** —
   checked in the code, `handleListProjects` at `Code.js:194` reads one column of
   per-unit statuses and never touches the item grid, so counting units is free
-  and counting items would mean reading every Tracker grid on the list. It also
-  leaves `18` one conflict, written in the Notes above. **The chip carries both
+  and counting items would mean reading every Tracker grid on the list. It left
+  `18` one conflict, **now settled — see the `18` entry below.** **The chip carries both
   flag kinds and no numbers**, which narrows `11` at the chip and nowhere else.
   The floor header puts its marks on **a line of their own**, so they never break
   in a different place on every floor. Unit 206 — blocked by a Phase 1 Waiting
@@ -480,6 +473,34 @@ sun and colour blindness and hue does not:
   case the ticket was opened for. Checked one level up: the Tracking row and
   `14`'s greyed finished building both still read. Asset:
   `prototypes/19-building-markers.html`.
+
+- [Sweep the 0.2 notes for decisions that were later overruled](issues/18-supersession-sweep.md)
+  — **the corpus is clean, and `09` is the only open ticket left.** Both passes
+  done. `supersessions.md` holds **47 entries**, `template-changes.md` is **FINAL
+  as a whole**, and `code-inventory.md` needed nothing. **Read all three before
+  `09`.** The sweep decides nothing on its own, with one exception: `19` handed it
+  a live conflict and it took the call. **`14` rule 4 versus `19`, settled: the
+  counts `list-projects` sends are `units done, units total` plus the raw open
+  flag counts.** `14`'s real content survives — the server sends **numbers, never
+  a verdict**, so `worst(statuses)` and the `overall` word both go and the phone
+  still applies `11`'s rule itself. What `14` gives up is that the unit statuses
+  are Sheet formula output; three things hold that down, and the **open flag
+  counts are raw rows**, so the common failure cannot hide a live building. **The
+  alternative was mis-priced and the sweep corrected it:** reading the raw item
+  grid is the **same number of Apps Script calls**, 760 cells against 36. It lost
+  anyway, because it puts a **third copy of the rollup rule** in the server and
+  `11` capped it at two on purpose. **A `3 finished buildings are not shown` line
+  was offered and Miguel turned it down**, and the sweep agreed after arguing both
+  sides — he knows his two live jobs by name, the count cannot say which building,
+  and 0.3's Archive lists them anyway. `14` is unchanged. The pass also found two
+  faults nobody had listed: **`supersessions.md` held two entries numbered 35 to
+  37**, and **`15`'s dead "Settled early" section had no pointer**, the same fault
+  the first pass fixed on `12`'s sketch. **The `32" 6" RH` sweep was deliberately
+  not a blanket replacement** — two arguments depend on the inch marks being
+  there, so specs were rewritten, resolved tickets got a banner, and those two
+  were left alone. **One thing stays wrong on purpose:** `Code.js:1300-1315` still
+  advertises the deleted `update-item` action, because this map writes no
+  production code. `09` must fold that deletion into the plan.
 
 ## Not yet specified
 

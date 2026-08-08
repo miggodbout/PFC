@@ -5,11 +5,15 @@ Produced by `18-supersession-sweep`, 2026-08-08.
 One line per overruled decision. Read this before `09-write-0.2-build-plan`, and
 before trusting any single sentence in a resolved ticket.
 
-**This is a partial pass.** `18` is meant to run last, after `13`, `14` and `15`
-close. **`13` closed on 2026-08-08 and added entries 30 to 34.** `14` and `15` are
-still open. Everything below comes from a ticket that has **already** closed, so
-none of it can be undone by the two that remain. A second pass is still owed, and
-the last section says exactly what it must check.
+**Second pass run 2026-08-08. Every 0.2 ticket that can supersede another has
+closed**, so this file is complete for 0.2. Entries 1 to 29 are the first pass;
+30 to 34 came from `13`, 35 to 37 from `14`, 38 to 40 from `15`, 41 and 42 from
+Miguel's Exterior Doors answer, and 43 onward from `19`.
+
+**Entry numbers changed on the second pass.** `14` and `15` both wrote their
+three entries as 35 to 37, so the file held two of each. `15`'s three are now 38
+to 40, and the Exterior Doors pair moved from 38 and 39 to 41 and 42. Every
+pointer in the tickets was moved with them.
 
 ---
 
@@ -248,45 +252,79 @@ limit is the only thing that drops a copy, which is what `03` already builds.
 
 ---
 
-## What the second pass still owes
+## What the second pass did — DONE 2026-08-08
 
-Run this before `09`. **`13`, `14` and `15` have all closed, so the second pass is
-takeable now. Nothing blocks it.**
+Every line this section owed is done. **Nothing is owed before `09`.**
 
-- ~~**`13`**~~ **closed 2026-08-08.** Its supersessions are entries 30 to 34
-  above, and `template-changes.md` sections 5 and 9 carry the result.
-- ~~**`14`**~~ **closed 2026-08-08.** It confirmed that `03`'s archived-building
-  drop **does** fire in 0.2, so `03` line 88 stops being "not final". It also
-  superseded three things the sweep should carry, listed in the new section below.
-  No template change: the counts it adds to `list-projects` are a server change and
-  take no new column.
-- ~~**`15`**~~ **closed 2026-08-08.** The answer was "built from records the phone
-  already holds", so **`template-changes.md` section 8 is now empty** and the file
-  is one sweep away from FINAL. `15` added a `hint` key to section 5 and
-  superseded three things, listed below.
-- Re-check that nothing in `13`, `14` or `15` quotes a Deficiencies-tab column
-  letter, a five-status list, or the word `Warped`.
-- **Sweep every `32" 6" RH` in the repo.** `15` dropped the inch marks and the
-  standard is now `32 6 RH`. Known sites: `01` (the hint text), `02` (column H),
-  `17`, `template-changes.md`, and `CLAUDE.md` if it carries one.
-- Then, and only then, mark `template-changes.md` **FINAL**.
+- ~~**`13`**~~ closed. Entries 30 to 34. `template-changes.md` sections 5 and 9
+  carry the result.
+- ~~**`14`**~~ closed. Entries 35 to 37. It confirmed `03`'s archived-building drop
+  fires in 0.2, and **`03` had already stopped calling that rule "not final"** —
+  re-checked this pass, nothing to fix. No template change.
+- ~~**`15`**~~ closed. Entries 38 to 40. `template-changes.md` section 8 emptied.
+  `15` added a `hint` key to section 5.
+- ~~**`19`**~~ closed. Entries 43 to 47, in the new section at the end.
+- ~~Re-check `13`, `14`, `15` and `19` for a Deficiencies-tab column letter, a
+  five-status list, or the word `Warped`.~~ **Checked. All clean.** No `Warped` in
+  any of the four. No five-status list. The one column letter is `15` line 141,
+  which cites `02` column D for the `item` key — **still correct**, because `17`
+  added `subtype` at column H and every letter before H held its place.
+- ~~**Sweep every `32" 6" RH`.**~~ **Done, and not by blanket replacement.** See
+  the note below.
+- ~~Mark `template-changes.md` **FINAL**.~~ **Done.** The whole file, not section
+  by section.
+
+### How the nomenclature sweep was done, and why not by replacement
+
+`15` dropped the inch marks, so the standard needed line is **`32 6 RH`**. The
+obvious move was to replace every `32" 6" RH` in the repo. **That would have
+broken two arguments**, so the sweep split the sites three ways:
+
+1. **Rewritten in place, where the string is a spec a build session copies.**
+   `template-changes.md` section 1, column I. `map.md`'s gist of `01`.
+   `.scratch/0.3-backlog.md`, the 0.5 export entry, which cited the dead
+   `ex: 32" 6" RH` hint as if it still existed.
+2. **Annotated, not rewritten, where the string sits inside a resolved ticket.**
+   `01`, `02`, `06`, `12` and `17` each gained one banner at the top of the file
+   naming the new form. The examples below the banner are untouched, because
+   `18`'s own hard limit is that the sweep does not rewrite a resolved ticket.
+   One banner beats twenty edits and a reader hits it first.
+3. **Left exactly as written, twice, because the inch marks are the point.**
+   - `15`'s normalisation worked examples — `stored 32" 6" RH -> 326rh MATCH`.
+     Stripping quote marks is what the normaliser *does*. Remove them from the
+     example and the example stops showing anything.
+   - `.scratch/0.3-backlog.md`, the 0.5 cleanup entry, where `32" 6" RH` against
+     `32" 6 RH` is the illustration of two spellings of one door.
+   - The prototypes, per `18`'s rule that prototypes are throwaway assets.
+
+### Two things this pass found that were not on the list
+
+- **The entry numbers collided.** `14` and `15` each wrote their three entries as
+  35 to 37, so this file held two of each. Renumbered — see the note at the top.
+- **`15`'s dead "Settled early" section had no pointer.** The section reads as
+  settled and the line that kills it sits 70 lines below. Same fault the first
+  pass fixed on `12`'s form sketch. A `DEAD` banner now sits above it.
+- **`03` never said what `get-project` sends from the Deficiencies tab**, because
+  the tab did not exist when `03` was written. Entry 40 records it; `03` now
+  carries the pointer as well, so a build session reading `03` alone cannot miss
+  it.
 
 ---
 
 ## Superseded by `15-suggestion-list`, 2026-08-08
 
-35. `15`'s whole **"Settled early, 2026-08-07"** section plans a seed suggestion
+38. `15`'s whole **"Settled early, 2026-08-07"** section plans a seed suggestion
     list that Miguel writes, Interior Doors first. **The resolution deletes it.**
     Chips come from records across every building on the phone, so a new job
     inherits the vocabulary on day one and the seed has no gap to fill. Entry 18
     above said `17` had *narrowed* the seed. It is now **gone**, not narrowed.
     Miguel writes no seed content and no seed ships in `common.js` or `_Config`.
-36. `01` set the needed-line hint as **`ex: 32" 6" RH`**, and `02`, `17` and
+39. `01` set the needed-line hint as **`ex: 32" 6" RH`**, and `02`, `17` and
     `template-changes.md` copy the form. **`15` wins twice over.** The inch marks
     are dropped — the standard is **`32 6 RH`** — and the hint is no longer an
     example at all. It is a **per-item placeholder naming the parts**:
     `Size   Jamb   Swing`, in crew words, held as a `hint` key in `_Config`.
-37. `03-local-copy-rules` never said which record states `get-project` sends.
+40. `03-local-copy-rules` never said which record states `get-project` sends.
     **`15` settles it: the whole Deficiencies tab, every state.** This is an
     addition to `03`, not a contradiction of it, but the build plan must read it
     here — `03`'s own text does not mention records at all.
@@ -302,9 +340,9 @@ the map's Not yet specified is untouched.
 
 Both entries come from one answer, given after `15` closed and before `18`'s
 second pass. Neither is a new feature. Entry 38 deletes work the map had listed
-as owed before `09`; entry 39 settles a contradiction the first pass missed.
+as owed before `09`; entry 42 settles a contradiction the first pass missed.
 
-38. **`17` recorded a gap that does not exist.** Its Exterior Doors section says a
+41. **`17` recorded a gap that does not exist.** Its Exterior Doors section says a
     defective patio or entry door is "a real problem that Miguel would want
     recorded, and it is one PFC will never fix", and the map carried it as a rule
     owed before `09` — candidates being a third record state, a flag that does not
@@ -315,7 +353,7 @@ as owed before `09`; entry 39 settles a contradiction the first pass missed.
     rather than a fault. **`11-rollup-rules` wins untouched. Nothing is built and
     no ticket `19` exists.** `17` carries a correction block; the map's Not yet
     specified entry is struck.
-39. **Three tickets disagree on whether Exterior Door(s) defines a subtype list.**
+42. **Three tickets disagree on whether Exterior Door(s) defines a subtype list.**
     `12-logger-door` line 276 and `17-reason-list-scope` line 178 both name it
     beside Windows and Baseboards as defining **none**, so no dropdown appears.
     `13-admin-changes` line 304 then gave it **`Patio, Entry`** in the new 14-item
@@ -330,3 +368,133 @@ as owed before `09`; entry 39 settles a contradiction the first pass missed.
 Neither entry disturbs `17`'s reason trim. `Wrong Swing`, `Wrong Type` and
 `Wrong Color` still come off Exterior Doors, because PFC did not choose the door.
 Miguel restated that reasoning in the same answer.
+
+---
+
+## Added by `19-building-and-floor-markers`, 2026-08-08
+
+43. **`05` puts a red dot on the unit chip for a held edit.** `19` found that this
+    red sits beside `06`'s Deficiency red on the same chip, and two reds of two
+    meanings on one 77px target cannot be told apart. The failed-save mark is now a
+    **corner badge carrying `!`**, hung outside the chip's top right corner.
+    **`19` wins.** Neither red moved — the marks were given **different shapes and
+    different places** instead. The rule behind it: three facts, three shapes, so
+    the screen survives bright sun and colour blindness.
+44. **`11` says every level shows both flag kinds with their own counts.** `19`
+    narrowed it at **the unit chip only**: the chip draws both flag kinds and
+    **no numbers**. **`19` wins at the chip.** Every other level — floor header,
+    Tracking row, Unit screen — keeps its counts exactly as `11` wrote them.
+    **Record this as a narrowing, not a reversal.**
+45. **`11` line 270 left "fraction or bar" open by name.** `19` answers **both,
+    split by level**: a hairline bar on the bottom edge of a unit chip and of a
+    floor header, a written count beside it (`12 units · 5 done`), and the exact
+    item fraction only on the Unit screen. **A unit with nothing started draws no
+    bar at all**, not an empty track. The open question is closed.
+46. **`05` seam 2 was written as half a rule.** It said a held mark rolls **up**
+    through anything that can close, and never said what happens when that thing
+    opens. `19` wrote the other half: **it rolls back down.** The whole rule is
+    *a header reports what it hides* — a closed floor header carries the flag
+    counts and the not-saved chip, an open one carries none of them, because every
+    chip under it carries its own. **Not a supersession: `05` is completed, not
+    overruled.** The bar, the count and the status pill stay either way, and the
+    rule does not fire on the Unit screen, where phases never collapse.
+47. **`14` rule 4 sends `list-projects` item counts. `19` made every count above
+    the Unit screen units.** **`19` wins, and Miguel confirmed the source on
+    2026-08-08.** `list-projects` sends **units done, units total and the raw open
+    flag counts**, and the unit statuses come from the Sheet's per-unit
+    `COMPLETION` column through `readOverallColumn` at `Code.js:1098`. See the
+    section below for what `14` keeps and what it gives up.
+
+---
+
+## The `14` versus `19` conflict — SETTLED by Miguel, 2026-08-08
+
+`19` found this and handed it over rather than deciding it, because it is a
+decision and `18` runs next. This is entry 47 in full.
+
+### What each ticket said
+
+- **`14` rule 4.** `list-projects` must send **item** counts, and the phone
+  applies `11`'s rule to them. The reason: the phone must not trust the Sheet's
+  own `overall` word, because drift that hides a live building is not cosmetic.
+- **`19`.** Every count above the Unit screen is **units**, not items. A floor
+  reads `12 units · 5 done`, never `148/216 items`. So the payload becomes units
+  done and units total, read from the per-unit `COMPLETION` column.
+- **The conflict.** That column is a Sheet formula too, one level down from the
+  item grid. `14` refused to trust exactly that kind of thing.
+
+### The decision
+
+**`19` wins on both halves. The count is units, and the source is the
+`COMPLETION` column.**
+
+`list-projects` sends, per building:
+
+    unitsDone, unitsTotal, deficiencies, waiting
+
+The phone applies `11`'s rule to those four numbers.
+
+### What `14` keeps
+
+**Rule 4's real content survives untouched: the server sends numbers, never a
+verdict.** `worst(statuses)` at `Code.js:204` goes, and the `overall` word goes
+with it. That was the load-bearing half — `worst()` is the deleted worst-wins
+rule, applied in server code, and it gave the phone a judgement it could not
+re-check. Counts give the phone the judgement back.
+
+**The open-flag half of `11`'s rule never touches a formula.** The flag counts are
+raw rows out of the Deficiencies tab. Hiding a building needs every unit reading
+Complete **and** zero open records, so the common failure — real work left with a
+record logged — cannot hide a building whatever the formula says.
+
+### What `14` gives up, stated plainly
+
+The unit statuses are formula output. If `buildRollupFormula` ever wrote a wrong
+formula in the falsely-Complete direction, a live building would leave Tracking,
+and 0.2 has no door onto it until Archive ships in 0.3.
+
+Three things hold that down, and none of them is a new feature:
+
+1. The formula is **machine-written by the same release** that does the counting.
+   It is not hand-kept, and `CLAUDE.md` puts the rollup columns out of bounds for
+   a hand edit. The documented escape hatch touches **status cells**, which the
+   formula consumes correctly.
+2. **`_Config.version` rises to 2** per `13`, so an old Sheet with an old formula
+   is refused with a clear message instead of drawn wrong.
+3. **`get-project` reads the raw grid.** Open the building and the phone
+   recomputes everything from item statuses, so the fault could only ever live on
+   the one screen that does not open it.
+
+### The option that was turned down, and the honest price
+
+**The server could read the whole Tracker grid and work out each unit itself**,
+trusting no formula anywhere.
+
+**`19` mis-priced this and the sweep corrected it: the call count is the same.**
+One `getRange().getValues()` either way, and `SpreadsheetApp.openById` — which
+dominates the time — is already paid on every building by `handleListProjects`.
+The grid is about 760 cells against 36. More cells, not more calls.
+
+It was still turned down, for a reason that is not cost: **it puts a third copy
+of the rollup rule in the code.** `11` settled on two on purpose — the phone,
+which the app trusts, and the Sheet formula, so the Sheet reads by hand — and
+called the drift between them cosmetic. A third copy in the server is new code to
+keep in step and a new place drift can appear, and that drift would have no
+screen to show itself on.
+
+### One thing offered and turned down by Miguel
+
+**A grey line under the Tracking list reading `3 finished buildings are not
+shown`.** It is not a door and opens nothing; it was offered as a smoke alarm for
+the fault above. Miguel turned it down on 2026-08-08 and the sweep agreed with
+him after arguing it both ways:
+
+- He runs one or two live jobs at a time and knows them by name. A missing row is
+  noticed because he goes looking for the job, not because a count is off by one.
+- The count cannot say **which** building, so it does not shorten the fix. Either
+  way you open the project Sheet in Drive.
+- **0.3's Archive lists finished buildings by name.** The line is a stopgap for
+  exactly one release, then it is dead weight.
+
+`14` is unchanged: a finished building leaves the Tracking list in 0.2 and there
+is no door onto it until Archive ships.

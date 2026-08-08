@@ -1,10 +1,19 @@
 # Write the 0.2 build plan
 
 Type: task
-Status: open
-Blocked by: **18 only.** `19` resolved 2026-08-08 and settled the Building
-screen's markers. `18` sweeps last so nothing makes it stale. Every other 0.2
-ticket is resolved (17, 13, 14, 15 and 19 all resolved 2026-08-08).
+Status: open — **takeable. Nothing blocks it.**
+Blocked by: **nothing. `18` resolved 2026-08-08**, both passes done. Every 0.2
+ticket is now resolved (13, 14, 15, 17, 18 and 19 all resolved 2026-08-08).
+
+**This is the last ticket on the map.** Read `../supersessions.md` (47 entries),
+`../template-changes.md` (FINAL as a whole) and `../code-inventory.md` first, in
+that order. `18` swept the corpus so this session does not have to reconcile
+contradictions while also writing a plan.
+
+**One thing `18` left for this ticket on purpose:** `control/appscript/Code.js`
+lines 1300 to 1315 still advertise the `update-item` action that `04` deleted for
+`save-batch`. It is the first thing a build session reads in that file. `18`
+writes no production code, so the deletion belongs in this plan.
 
 ## Question
 
@@ -21,9 +30,10 @@ cross-references. Read that output first.
 **Two of those files exist already, from the sweep's first pass on 2026-08-08:**
 
 - `../supersessions.md` — which decision wins wherever two disagree.
-- `../template-changes.md` — rewritten, now nine sections. Section 5 went FINAL
-  when `13` closed, and section 9, the default item list, was added by it.
-  **Section 8 still waits on `15`.**
+- `../template-changes.md` — rewritten, now nine sections. **The whole file is
+  FINAL as of the sweep's second pass, 2026-08-08.** Build the Sheet from it and
+  do not weigh it against anything. Section 8 emptied when `15` closed: the
+  suggestion chips take no template change at all.
 - `../code-inventory.md` — **read this one before writing the file-by-file
   section below.** It is the 0.1 code measured against all seventeen tickets:
   every call site of the rollup, every place the demo data reaches, the exact

@@ -4,6 +4,11 @@ Type: grilling
 Status: resolved 2026-08-08
 Blocked by: none
 
+> **Nomenclature correction, added by `18-supersession-sweep` 2026-08-08. Every
+> `32" 6" RH` below is stale text.** `15-suggestion-list` dropped the inch marks.
+> The standard needed line is **`32 6 RH`**. This ticket's split — dimensions
+> typed, type picked from a dropdown — is untouched.
+
 ## Question
 
 A Reason list is offered per phase today. Should it narrow to the item, and who
@@ -182,7 +187,7 @@ that item defines:
     opening, not swing or size, and they tell two records on one item apart.
     Windows and Baseboards are still right. The line above is stale too:
     **`Hardware` is a phase, not an item**, and `13` made the item **Handles**
-    with those same four subtypes. See `supersessions.md` entries 30 and 39, and
+    with those same four subtypes. See `supersessions.md` entries 30 and 42, and
     the correction block on this ticket's Exterior Doors section below.
 
 **Width, depth and swing stay free text.** Miguel's words: "Width, Depth and
@@ -277,7 +282,7 @@ not of our concern."
 list `13` gave it. Line 178 of this ticket says it defines none, and `13` wins.
 Miguel reconfirmed it when the contradiction was put to him — Patio and Entry
 name *which opening*, not swing or size, and they are what tells two records on
-one item apart. See `supersessions.md` entry 39.
+one item apart. See `supersessions.md` entry 42.
 
 Old text below, kept for its reasoning.
 

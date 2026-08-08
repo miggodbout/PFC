@@ -344,6 +344,31 @@ is the right place to put a closed building. Logged in `.scratch/0.3-backlog.md`
 
 ### 4. The server sends the numbers, the phone applies the rule
 
+> **AMENDED by `19-building-and-floor-markers`, settled by `18` and confirmed by
+> Miguel on 2026-08-08. The counts are UNITS, not items.**
+>
+> `list-projects` sends **units done, units total, and the open flag counts**.
+> `19` made every count above the Unit screen a unit count, because a floor of 12
+> units printing `148/216 items` is a four-digit fraction nobody reads. Items stay
+> on the Unit screen, where you are looking at items.
+>
+> **The unit statuses come from the Sheet's per-unit `COMPLETION` column**, via
+> `readOverallColumn` at `Code.js:1098`. That is formula output, which is the kind
+> of thing this rule was written to distrust. `18` weighed it and took it. **What
+> this rule really bought survives untouched: the server sends numbers, never a
+> verdict** — `worst(statuses)` and the `overall` word both go, so the phone still
+> applies `11`'s rule itself. And the **open flag counts are raw rows** from the
+> Deficiencies tab, so the common failure cannot happen.
+>
+> **The cost note below is also wrong**, and `19` corrected it.
+> `handleListProjects` opens every Sheet but reads **one column**, never the item
+> grid. Counting units is free. Counting items would have meant reading every
+> Tracker grid on the list — the same number of calls, but 760 cells against 36,
+> and a third copy of the rollup rule in the server. Full reasoning in
+> `supersessions.md`, entry 47 and the section at the end of that file.
+>
+> The old text stands below as the reasoning that led here.
+
 `list-projects` gains three numbers per building: **items Complete, items total,
 and open flags.** The phone runs `11-rollup-rules` on them. The Sheet's own
 `overall` word is not what decides whether a building disappears.
@@ -440,7 +465,8 @@ None of the above closes a door, which was the requirement:
 Five items, all small:
 
 1. `list-projects` sends Complete, total and open-flag counts per building, and
-   its server-side `worst()` at `Code.js:204` goes.
+   its server-side `worst()` at `Code.js:204` goes. **Units, not items** — see the
+   amendment on rule 4 above.
 2. The Tracking list runs the four-step order of tests above.
 3. `control/tracker/index.html:74` gains a second empty message.
 4. The phone remembers, for the session only, which buildings it watched go

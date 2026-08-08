@@ -5,6 +5,12 @@ Status: resolved
 Resolved: 2026-08-07
 Blocked by: 01
 
+> **Nomenclature correction, added by `18-supersession-sweep` 2026-08-08. Every
+> `32" 6" RH` below is stale text.** `15-suggestion-list` dropped the inch marks.
+> The standard needed line is **`32 6 RH`**, and the `ex:` hint under the box
+> became a per-item placeholder inside it, `Size   Jamb   Swing`. The free-text
+> argument this ticket makes is untouched — the box is free text either way.
+
 ## Question
 
 Should Tracker become read-only, with a separate Logger door for entering work?
@@ -280,7 +286,7 @@ dropdown, above its text box, offering whatever types the item defines.
     opening, not swing or size, and they tell two records on one item apart.
     Windows and Baseboards are still right. The line above is stale too:
     **`Hardware` is a phase, not an item**, and `13` made the item **Handles**
-    with those same four subtypes. See `supersessions.md` entries 30 and 39.
+    with those same four subtypes. See `supersessions.md` entries 30 and 42.
 
 The custom-item objection dies the same way it died on `01`: an item that defines
 no types shows no dropdown at all. Nothing lands empty and nothing has to be

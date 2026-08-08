@@ -4,6 +4,16 @@ Type: grilling
 Status: resolved
 Blocked by: none
 
+> **Nomenclature correction, added by `18-supersession-sweep` 2026-08-08. Every
+> `32" 6" RH` below is stale text.** `15-suggestion-list` dropped the inch marks.
+> The standard needed line is **`32 6 RH`**. The examples below are left as
+> written, because the sweep does not rewrite a resolved ticket.
+>
+> **The hint is also gone.** This ticket sets the grey box text as
+> `ex: 32" 6" RH`. `15` replaced it with a per-item placeholder that names the
+> parts instead of showing an example: **`Size   Jamb   Swing`**, held as a
+> `hint` key in `_Config`. See `supersessions.md` entry 39.
+
 ## Question
 
 What fields does one deficiency record carry, and does an On Hold record use the

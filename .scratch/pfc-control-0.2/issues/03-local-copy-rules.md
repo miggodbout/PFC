@@ -59,6 +59,13 @@ every item is a column. `handleGetUnit` in `control/appscript/Code.js` already
 reads one row with one `getValues` call. Reading the whole grid is the same one
 call. Fifty spinners become one.
 
+> **Added by `18-supersession-sweep` 2026-08-08.** This ticket never said what
+> `get-project` sends from the **Deficiencies tab**, because the tab did not exist
+> when it was written. `15-suggestion-list` settled it: **the whole tab, every
+> state — Open, Fixed and Cancelled.** Fixed records feed a suggestion chip, so
+> trimming the payload to open records would empty the chip row. This adds to the
+> answer above; it contradicts nothing in it. See `supersessions.md` entry 40.
+
 After the call lands, Tracking, Building, Floor and Unit all draw from the phone
 with no server call at all.
 

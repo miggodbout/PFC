@@ -1,13 +1,85 @@
 # Sweep the 0.2 notes for decisions that were later overruled
 
 Type: task
-Status: **first pass done 2026-08-08, widened by 13, 14 and 15 the same day.
-The second pass is now owed and nothing blocks it.**
-Blocked by: **nothing. `19-building-and-floor-markers` closed 2026-08-08**, and
-it was the last ticket that could have made this sweep stale. This runs next,
-right before `09-write-0.2-build-plan`.
+Status: **resolved 2026-08-08.** Both passes done. First pass 2026-08-08, widened
+by 13, 14 and 15 the same day; second pass the same day, after 19 closed.
+Blocked by: nothing.
 
-**Order: `18`, then `09`.**
+**`09-write-0.2-build-plan` is now the only open ticket on the map, and nothing
+blocks it.**
+
+---
+
+## Answer — second pass, 2026-08-08
+
+**The corpus is clean. Build from it.**
+
+**Read these three files before `09`, in this order:**
+
+1. **`../supersessions.md`** — 47 entries. Which decision wins wherever two
+   disagree. **Read it before trusting any single sentence in a resolved ticket.**
+2. **`../template-changes.md`** — **FINAL as a whole**, not section by section.
+   It is a spec. Follow it as written.
+3. **`../code-inventory.md`** — the 0.1 code read against every ticket.
+
+### The one decision this pass had to take
+
+`19` handed over a live conflict rather than settling it. **`14` rule 4** has
+`list-projects` send **item** counts, so the phone never trusts the Sheet's own
+word. **`19`** made every count above the Unit screen **units**, and unit statuses
+come out of the Sheet's `COMPLETION` column — formula output, one level down from
+the item grid.
+
+**Settled: `19` wins, and Miguel confirmed the source.** `list-projects` sends
+**units done, units total and the raw open flag counts**.
+
+- **`14`'s real content survives.** The server sends numbers, never a verdict.
+  `worst(statuses)` at `Code.js:204` goes and the `overall` word goes with it, so
+  the phone still applies `11`'s rule itself.
+- **The open flag counts are raw rows**, not a formula, so the common failure —
+  work left with a record logged — cannot hide a live building.
+- **`19` mis-priced the alternative and the sweep corrected it.** Reading the raw
+  item grid is the **same number of Apps Script calls**, not more; only 760 cells
+  against 36. It was still turned down, because it puts a **third copy of the
+  rollup rule** in the server, and `11` capped it at two on purpose.
+- **A `3 finished buildings are not shown` line was offered and turned down** by
+  Miguel, and the sweep agreed after arguing it both ways. `14` is unchanged.
+
+Full write-up: `../supersessions.md`, entry 47 and the section at the end.
+
+### What the second pass produced
+
+- **`supersessions.md`** — entries 43 to 47 added from `19`. Entry numbers 35 to
+  42 renumbered, because `14` and `15` had both written theirs as 35 to 37 and the
+  file held two of each. Every pointer in the tickets moved with them.
+- **`template-changes.md` marked FINAL as a whole**, with a note saying what FINAL
+  does and does not cover.
+- **The `32" 6" RH` sweep, done three ways, not by blanket replacement.** Two
+  arguments depend on the inch marks being there — `15`'s normalisation examples
+  and the 0.5 export entry in `.scratch/0.3-backlog.md`. Specs were rewritten,
+  resolved tickets got a banner, those two were left alone. Reasoning is in
+  `supersessions.md`.
+- **Correction banners added** to `01`, `02`, `06`, `12`, `17` (nomenclature),
+  `03` (what `get-project` sends from the Deficiencies tab), `14` (rule 4 units),
+  and a `DEAD` banner on `15`'s "Settled early" section.
+- **Stale cross-references cleared** in `09` (section 8 no longer waits on `15`)
+  and `12`, `17` (entry numbers).
+
+### What it checked and found clean
+
+- **No `Warped`, no five-status list, no stale column letter** in `13`, `14`, `15`
+  or `19`. The one column letter is `15` line 141 citing `02` column D for `item`,
+  which is still correct — `17` added `subtype` at H and every letter before H
+  held its place.
+- **`03` line 88 had already stopped calling the archive drop "not final"**, fixed
+  when `14` resolved. Nothing to do.
+
+### One thing left in place on purpose
+
+**`control/appscript/Code.js` lines 1300 to 1315** still advertise the
+`update-item` action that `04` deleted. This map writes no production code, so it
+stays. **`09` must fold the deletion into the build plan** — it is the first thing
+a build session reads when it opens that file. Entry 23.
 
 **What `19` added to the sweep:**
 - **One live conflict to settle, and `19` handed it over rather than deciding it.**
@@ -32,7 +104,8 @@ right before `09-write-0.2-build-plan`.
   corner badge carrying `!`, so it cannot be read as `06`'s Deficiency red.
 
 **What `15` added to the sweep**, beyond the three supersessions already written
-into `supersessions.md` as entries 35 to 37:
+into `supersessions.md` as entries 38 to 40 (they were written as 35 to 37, which
+collided with `14`'s three; the second pass renumbered them):
 - **Every `32" 6" RH` in the repo is stale text.** `15` dropped the inch marks
   and the standard needed line is now `32 6 RH`. Known sites: `01`'s hint text,
   `02` column H, `17`, `template-changes.md`.

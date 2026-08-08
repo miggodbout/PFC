@@ -41,6 +41,15 @@ So this is not a polish ticket.
 
 ## Settled early, 2026-08-07
 
+> **DEAD. Do not build from this section.** Pointer added by
+> `18-supersession-sweep` 2026-08-08, because the section reads as settled and the
+> line that kills it is 70 lines below, under **The seed list is deleted**.
+> **No seed list ships anywhere** — not in `common.js`, not in `_Config`, not in
+> the template. Chips are built from records across every building on the phone,
+> so a new job inherits the vocabulary on day one and the seed has no gap to fill.
+> Miguel writes no seed content. Everything below is the reasoning that led there,
+> kept on purpose. See `supersessions.md` entry 38.
+
 **A first-ever building gets a seed list, and Miguel writes the content.** This
 was the last point in the list above. Miguel raised it himself, asking whether
 there was a plan to lay out the variables each item can have — a door is Regular,

@@ -6,6 +6,16 @@ Resolved: 2026-08-08
 Assignee: Claude (session of 2026-08-07, finished 2026-08-08)
 Blocked by: 01 (resolved), 12 (resolved)
 
+> **Nomenclature correction, added by `18-supersession-sweep` 2026-08-08. Every
+> `32" 6" RH` below is stale text.** `15-suggestion-list` dropped the inch marks.
+> The standard needed line is **`32 6 RH`**.
+>
+> **The `ex: 32" 6" RH` line under the needed box is also gone.** `15` replaced it
+> with a per-item placeholder **inside** the empty box, naming the parts rather
+> than showing an example: `Size   Jamb   Swing`. It costs no screen height, which
+> matters here — this ticket measured the control budget. See `supersessions.md`
+> entry 39.
+
 ## Question
 
 How does a person add, correct, and close a deficiency record on a phone?
