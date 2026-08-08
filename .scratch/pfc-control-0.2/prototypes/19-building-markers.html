@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PROTOTYPE — building and floor markers (ticket 19)</title>
+
+<!-- The real PFC Control theme. Nothing here is styled by hand except the
+     prototype scaffolding at the bottom of this file. -->
+<link rel="stylesheet" href="../../../control/shared/theme.css">
+
+<style>
+/* =====================================================================
+   THROWAWAY PROTOTYPE — .scratch/pfc-control-0.2/prototypes/
+   =====================================================================
+   Question (ticket 19): three marks now land on the same two controls, and
+   nobody has drawn them together. What does a floor header look like, and
+   what does a unit chip look like, when a unit is part done, holds two kinds
+   of flag, and has a save that failed?
+
+   Variants, switchable with the bar at the bottom:
+     A — Quiet chip.   The chip carries marks only. Every number is on the
+                       floor header.
+     B — Chip reports. The chip adds its own fraction, 14/18.
+     C — Bar, not numbers. The chip carries a hairline progress bar, and the
+                       floor header carries a bar beside its fraction.
+
+   Two switches sit beside the variants, because they cross all three:
+     - Held mark:  corner badge  vs  plain red dot  (ticket 19, point 4)
+     - Floor count: items  vs  units                (raised while drawing)
+
+   Fake data. No server. Nothing is saved. Do not build this into the app.
+   ===================================================================== */
+
+
+/* ── THE THREE MARKS ───────────────────────────────────────────────────
+   The whole point of this ticket is that three different facts land on one
+   77px chip. They are told apart by SHAPE first, colour second, because a
+   colour-blind reader and a reader in bright sun both lose colour before
+   they lose shape.
+
+     round dot     = Progress.        Grey, amber, green.
+     flag glyph    = a Flag on site.  Red Deficiency, blue Waiting.
+     corner badge  = the phone could not save. Red, with a glyph in it.
+
+   That is the answer to point 4, the red-on-red collision: the two reds
+   never share a shape and never share a position. */
+
+/* Progress dot already exists in the theme as .dot-only. */
+
+/* A flag, drawn small enough to sit on a chip. It takes its colour from
+   currentColor, so one glyph serves both flag kinds. */
+.flagmark { display: block; flex-shrink: 0; }
+.flagmark--def  { color: #E85C5C; }
+.flagmark--wait { color: #6C9CFF; }
+
+/* The row of marks under a chip number. */
+.chip-marks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 10px;
+}
+
+/* The corner badge for a held edit. It hangs on the chip's top right corner,
+   half outside the border, so it never queues up with the marks row. */
+.held-badge {
+  position: absolute;
+  top: -5px; right: -5px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #E85C5C;
+  border: 2px solid var(--surface-1);   /* cuts it away from the chip edge */
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; line-height: 1;
+  color: #2A0B0B;
+}
+/* The comparison shape: 05's plain red dot, no glyph, no corner.
+   Note the class on <body> is `mode-dot`, not `held-dot`. A body class that
+   matches a component class turns the whole page into that component — which
+   is exactly what happened the first time this file was drawn. */
+body.mode-dot .held-badge {
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border: none;
+  font-size: 0;
+}
+
+.unit-chip { position: relative; overflow: visible; }
+
+
+/* ── CHIP EXTRAS, PER VARIANT ────────────────────────────────────────── */
+
+/* Variant B: the chip prints its own fraction. */
+.chip-frac {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--fg-6);
+  line-height: 1;
+}
+
+/* Variant C: a hairline bar pinned to the bottom edge of the chip.
+   It costs no height, because it sits on the border, not in the flow. */
+.chip-bar {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+}
+.chip-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--dot);   /* takes the Progress colour */
+}
+/* Variant C needs a little room under the marks so the bar does not touch. */
+body.v-C .unit-chip { min-height: 56px; padding-bottom: 8px; }
+
+
+/* ── FLOOR HEADER ──────────────────────────────────────────────────────
+   Rebuilt for 0.2. The old header was label / "N units" / pill / caret.
+   A closed floor is the only thing on screen for every unit under it, so it
+   now carries the count and both flag kinds as well. They go on the SECOND
+   line, not beside the pill, or a long address leaves the pill no room. */
+
+.fh-main { flex: 1; min-width: 0; }
+
+.fh-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.fh-count {
+  font-size: 12px;
+  color: var(--fg-6);
+  white-space: nowrap;
+}
+
+/* The marks get a line of their own rather than trailing the count. Left to
+   wrap on one line they break in a different place on every floor, which
+   reads as a mistake. A closed floor with no problem never draws this line. */
+.fh-marks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+/* A flag with its count, sized to sit in a header sub line. */
+.flagchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.flagchip--def  { background: rgba(224,82,82,0.18);  border: 1px solid rgba(224,82,82,0.40);  color: #F08080; }
+.flagchip--wait { background: rgba(91,141,239,0.18); border: 1px solid rgba(91,141,239,0.40); color: #8CB0FF; }
+
+/* The held mark on a floor header. Same shape language as the chip badge,
+   but it can afford a word here, because a header is a full-width row. */
+.fh-held {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: rgba(224,82,82,0.18);
+  border: 1px solid rgba(224,82,82,0.40);
+  color: #F08080;
+  font-size: 11px; font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.fh-held .bang {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: #E85C5C; color: #2A0B0B;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+}
+
+/* Variant C: a bar in the header sub line. */
+.fh-bar {
+  width: 64px; height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.fh-bar i { display: block; height: 100%; border-radius: 2px; background: var(--dot); }
+
+
+/* ── SYNC BAR, carried over from ticket 05 ─────────────────────────────
+   Drawn here only because a held edit cannot exist without it. It is not
+   this ticket's question. */
+
+.syncbar {
+  margin: 0 16px 2px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px; font-weight: 600;
+  background: rgba(224,82,82,0.14);
+  border: 1px solid rgba(224,82,82,0.40);
+  color: #F08080;
+}
+.syncbar .held-dot-s { width: 8px; height: 8px; border-radius: 50%; background: #E85C5C; flex-shrink: 0; }
+.syncbar .grow { flex: 1; }
+.syncbar .more { color: var(--fg-5); font-weight: 700; }
+
+
+/* ── TRACKING ROW CHECK, one level up ──────────────────────────────────
+   Ticket 19 says: confirm the answer still reads on the Tracking row. It
+   uses the theme's .row, so only the marks are new here. */
+
+.tr-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.row--done { opacity: 0.45; }
+.row--done .tag-done {
+  margin-left: 8px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px;
+  color: var(--good);
+}
+
+
+/* ── PROTOTYPE SCAFFOLDING — none of this ships ────────────────────── */
+
+.proto-note {
+  margin: 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.14);
+  font-size: 12.5px; line-height: 1.5;
+  color: var(--fg-5);
+}
+.proto-note b { color: var(--accent); }
+.proto-h {
+  margin: 22px 16px 8px;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--accent-2);
+}
+.proto-sep { height: 1px; background: var(--line-soft); margin: 26px 16px 0; }
+
+.switcher {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  background: rgba(13,13,13,0.96);
+  border-top: 1px solid var(--line-menu);
+  padding: 8px 10px calc(8px + var(--btm-safe));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sw-row { display: flex; align-items: center; gap: 6px; }
+.sw-lab { font-size: 10px; font-weight: 700; color: var(--fg-7); width: 46px; flex-shrink: 0; letter-spacing: 0.4px; }
+.sw-row button {
+  flex: 1;
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line-input);
+  color: var(--fg-5);
+  font-size: 11.5px; font-weight: 700;
+}
+.sw-row button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+body { padding-bottom: 150px; }
+
+/* The whole question is whether three marks fit on a 77px chip. A 4-column
+   grid stretched across a desktop screen lies about that, so the prototype
+   pins itself to a phone width wherever it is opened. */
+html {
+  max-width: 400px;
+  margin: 0 auto;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.switcher { max-width: 400px; margin: 0 auto; }
+
+/* Side-by-side compare block for the count question. */
+.cmp { display: flex; gap: 10px; margin: 0 16px; }
+.cmp > div { flex: 1; min-width: 0; }
+.cmp-lab { font-size: 10.5px; font-weight: 700; color: var(--fg-7); margin: 0 0 6px 2px; letter-spacing: 0.4px; }
+</style>
+</head>
+
+<body class="v-C mode-badge">
+
+<header class="hdr">
+  <a class="hdr-back press" href="#" aria-label="Go back">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles">
+    <h1 class="hdr-title">120 Maple Street</h1>
+    <div class="hdr-sub">48 units · 4 floors</div>
+  </div>
+</header>
+
+<!-- Ticket 05's sync bar. Present because floor 2 and floor 3 hold held edits. -->
+<div class="syncbar">
+  <span class="held-dot-s"></span>
+  <span class="grow">2 edits did not save</span>
+  <span class="more">Outbox ›</span>
+</div>
+
+<main id="screen"></main>
+
+<div class="proto-sep"></div>
+<div class="proto-h">Check one level up — the Tracking screen</div>
+<div id="tracking"></div>
+
+<div class="proto-sep"></div>
+<div class="proto-h">The floor count: items or units?</div>
+<div class="cmp">
+  <div>
+    <div class="cmp-lab">ITEMS</div>
+    <div class="card"><div class="floor-head" style="min-height:auto">
+      <span class="fh-main">
+        <span class="floor-label" style="display:block">Floor 2</span>
+        <span class="fh-sub"><span class="fh-count">148/216 items</span></span>
+      </span>
+    </div></div>
+  </div>
+  <div>
+    <div class="cmp-lab">UNITS</div>
+    <div class="card"><div class="floor-head" style="min-height:auto">
+      <span class="fh-main">
+        <span class="floor-label" style="display:block">Floor 2</span>
+        <span class="fh-sub"><span class="fh-count">12 units · 5 done</span></span>
+      </span>
+    </div></div>
+  </div>
+</div>
+<div class="proto-note" style="margin-top:10px">
+  <b>Why this came up.</b> Ticket 11 writes the count as <code>14/18</code>, which
+  is items, and ticket 14 sends items to the Tracking screen. A floor of 12 units
+  holds 216 items, so the same rule prints <code>148/216</code>. It is exact and
+  nobody reads it. The screen is answering "how is floor 2 doing", and the honest
+  unit of that answer is a unit. Switch <b>COUNT</b> below to compare.
+</div>
+
+<div class="proto-sep"></div>
+<div class="proto-h">What each variant is</div>
+<div class="proto-note" id="variant-note"></div>
+
+
+<!-- ── switcher ─────────────────────────────────────────────────────── -->
+<div class="switcher">
+  <div class="sw-row">
+    <span class="sw-lab">VARIANT</span>
+    <button type="button" data-v="A">A · quiet chip</button>
+    <button type="button" data-v="B">B · chip reports</button>
+    <button type="button" data-v="C" class="on">C · bars ✓</button>
+  </div>
+  <div class="sw-row">
+    <span class="sw-lab">HELD</span>
+    <button type="button" data-h="badge" class="on">corner badge</button>
+    <button type="button" data-h="dot">plain red dot</button>
+  </div>
+  <div class="sw-row">
+    <span class="sw-lab">COUNT</span>
+    <button type="button" data-c="units" class="on">units done</button>
+    <button type="button" data-c="items">items done</button>
+  </div>
+</div>
+
+
+<script>
+/* =====================================================================
+   FAKE DATA
+   =====================================================================
+   Every awkward case ticket 19 names is in here on purpose:
+     - a floor where every unit is clean and complete   (floor 1)
+     - a floor mixing all three marks                   (floor 2)
+     - a closed floor hiding a held edit and flags      (floor 3)
+     - a unit blocked by a Phase 1 Waiting record, nothing started (206)
+     - a unit holding a failed save AND a deficiency    (203)
+   ===================================================================== */
+
+var TOTAL = 18;   /* items per unit */
+
+function u(label, progress, done, def, wait, held) {
+  return { label: label, progress: progress, done: done, total: TOTAL,
+           def: def || 0, wait: wait || 0, held: !!held };
+}
+
+var FLOORS = [
+  { label: 'Floor 1', open: false, units: [
+      u('101','complete',18), u('102','complete',18), u('103','complete',18),
+      u('104','complete',18), u('105','complete',18), u('106','complete',18),
+      u('107','complete',18), u('108','complete',18), u('109','complete',18),
+      u('110','complete',18), u('111','complete',18), u('112','complete',18)
+  ]},
+
+  { label: 'Floor 2', open: true, units: [
+      u('201','complete',18),
+      u('202','in_progress',14),
+      /* the red-on-red case: a failed save AND a deficiency on one chip */
+      u('203','in_progress',11,1,0,true),
+      u('204','in_progress',9,2,1),
+      u('205','in_progress',16,0,1),
+      /* the case that made this ticket urgent: blocked, nothing started */
+      u('206','not_started',0,0,1),
+      u('207','not_started',0),
+      u('208','not_started',0),
+      u('209','in_progress',5),
+      u('210','complete',18),
+      u('211','not_started',0),
+      u('212','not_started',0)
+  ]},
+
+  /* closed, and it hides a held edit plus both flag kinds */
+  { label: 'Floor 3', open: false, units: [
+      u('301','in_progress',12,1,0),
+      u('302','in_progress',7,0,2,true),
+      u('303','not_started',0),
+      u('304','in_progress',3),
+      u('305','not_started',0), u('306','not_started',0),
+      u('307','not_started',0), u('308','not_started',0),
+      u('309','not_started',0), u('310','not_started',0),
+      u('311','not_started',0), u('312','not_started',0)
+  ]},
+
+  { label: 'Floor 4', open: false, units: [
+      u('401','not_started',0), u('402','not_started',0), u('403','not_started',0),
+      u('404','not_started',0), u('405','not_started',0), u('406','not_started',0),
+      u('407','not_started',0), u('408','not_started',0), u('409','not_started',0),
+      u('410','not_started',0), u('411','not_started',0), u('412','not_started',0)
+  ]}
+];
+
+var STATUS_LABEL = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  complete:    'Complete'
+};
+
+
+/* =====================================================================
+   ROLLUP — ticket 11's rule, counted, not ordered
+   ===================================================================== */
+
+/** All Complete reads Complete. All Not Started reads Not Started. Anything
+    else reads In Progress. An open flag blocks Complete, and never raises
+    Not Started. */
+function rollup(values, hasOpenFlag) {
+  if (!values.length) return null;
+  var allComplete   = values.every(function (v) { return v === 'complete'; });
+  var allNotStarted = values.every(function (v) { return v === 'not_started'; });
+
+  if (allComplete)   return hasOpenFlag ? 'in_progress' : 'complete';
+  if (allNotStarted) return 'not_started';
+  return 'in_progress';
+}
+
+/** A unit's own displayed Progress. The stored value is downgraded to
+    In Progress while an open flag sits on it — ticket 11, "store what is
+    set, display what is true". */
+function unitDisplay(unit) {
+  var flagged = (unit.def + unit.wait) > 0;
+  if (unit.progress === 'complete' && flagged) return 'in_progress';
+  return unit.progress;
+}
+
+function floorRollup(floor) {
+  var flagged = floor.units.some(function (x) { return (x.def + x.wait) > 0; });
+  return rollup(floor.units.map(unitDisplay), flagged);
+}
+
+
+/* =====================================================================
+   MARKS
+   ===================================================================== */
+
+/** One flag glyph, small enough for a chip. Colour comes from the class. */
+function flagGlyph(kind, size) {
+  var h = size || 11;
+  var w = Math.round(h * 0.82);
+  return '<svg class="flagmark flagmark--' + kind + '" width="' + w + '" height="' + h + '" ' +
+            'viewBox="0 0 9 11" fill="none" aria-hidden="true">' +
+           '<path d="M1.2 0.5v10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+           '<path d="M2.2 1.1h5.6L6.2 3.2l1.6 2.1H2.2z" fill="currentColor"/>' +
+         '</svg>';
+}
+
+/** The marks row under a chip number: Progress dot, then any flags.
+    No counts. A count on a 77px chip is a number nobody reads, and the
+    floor header above it already carries the totals. */
+function chipMarks(unit) {
+  var out = '<span class="chip-marks">' +
+              '<span class="dot-only s-' + unitDisplay(unit) + '"></span>';
+  if (unit.def)  out += flagGlyph('def', 10);
+  if (unit.wait) out += flagGlyph('wait', 10);
+  return out + '</span>';
+}
+
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+
+var variant = 'C';   /* C is the pick, 2026-08-08. A and B are kept to compare. */
+var countBy = 'units';
+
+function chipHtml(unit) {
+  var pct  = Math.round(unit.done / unit.total * 100);
+  var disp = unitDisplay(unit);
+
+  var frac = (variant === 'B')
+    ? '<span class="chip-frac">' + unit.done + '/' + unit.total + '</span>'
+    : '';
+
+  /* Nothing started draws no bar at all, not an empty track. An empty track
+     and a missing bar say the same thing, and a floor of twelve empty tracks
+     is twelve marks that carry no news. */
+  var bar = (variant === 'C' && pct > 0)
+    ? '<span class="chip-bar s-' + disp + '"><i style="width:' + pct + '%"></i></span>'
+    : '';
+
+  var held = unit.held ? '<span class="held-badge">!</span>' : '';
+
+  /* The label a screen reader hears. It has to say the same three facts the
+     marks say, or the marks are decoration. */
+  var says = 'Unit ' + unit.label + ', ' + STATUS_LABEL[disp] +
+             ', ' + unit.done + ' of ' + unit.total + ' items' +
+             (unit.def  ? ', ' + unit.def  + ' deficiency' : '') +
+             (unit.wait ? ', ' + unit.wait + ' waiting'    : '') +
+             (unit.held ? ', one edit did not save'        : '');
+
+  return '<a class="unit-chip press" href="#" aria-label="' + says + '">' +
+           '<span class="num">' + unit.label + '</span>' +
+           frac +
+           chipMarks(unit) +
+           bar + held +
+         '</a>';
+}
+
+
+function floorHtml(floor, index) {
+  var status = floorRollup(floor);
+
+  var def  = floor.units.reduce(function (n, x) { return n + x.def;  }, 0);
+  var wait = floor.units.reduce(function (n, x) { return n + x.wait; }, 0);
+  var held = floor.units.some(function (x) { return x.held; });
+
+  var doneUnits = floor.units.filter(function (x) { return unitDisplay(x) === 'complete'; }).length;
+  var doneItems = floor.units.reduce(function (n, x) { return n + x.done;  }, 0);
+  var allItems  = floor.units.reduce(function (n, x) { return n + x.total; }, 0);
+
+  var count = (countBy === 'units')
+    ? floor.units.length + ' units · ' + doneUnits + ' done'
+    : doneItems + '/' + allItems + ' items';
+
+  var floorPct = Math.round(doneItems / allItems * 100);
+  var bar = (variant === 'C' && floorPct > 0)
+    ? '<span class="fh-bar s-' + status + '"><i style="width:' + floorPct + '%"></i></span>'
+    : '';
+
+  /* A header reports what it HIDES. Open the floor and its chips carry their
+     own marks, so repeating the totals up here is noise on a screen that is
+     already busy. Settled by Miguel on 2026-08-08.
+     This is ticket 05's rule finished: 05 said a held mark must roll up
+     through anything that can close. The other half is that it rolls back
+     down when that thing opens.
+     The count, the bar and the status pill stay either way, because you
+     cannot work them out by eye from twelve chips. */
+  var flags = floor.open ? '' :
+    (def  ? '<span class="flagchip flagchip--def">'  + flagGlyph('def', 9)  + def  + '</span>' : '') +
+    (wait ? '<span class="flagchip flagchip--wait">' + flagGlyph('wait', 9) + wait + '</span>' : '');
+
+  var heldChip = (held && !floor.open)
+    ? '<span class="fh-held"><span class="bang">!</span>1 not saved</span>'
+    : '';
+
+  return '<section class="card floor">' +
+           '<button type="button" class="floor-head press" aria-expanded="' + floor.open + '" ' +
+                   'onclick="toggleFloor(' + index + ')">' +
+             '<span class="fh-main">' +
+               '<span class="floor-label" style="display:block">' + floor.label + '</span>' +
+               '<span class="fh-sub">' +
+                 bar +
+                 '<span class="fh-count">' + count + '</span>' +
+               '</span>' +
+               ((flags || heldChip)
+                 ? '<span class="fh-marks">' + flags + heldChip + '</span>'
+                 : '') +
+             '</span>' +
+             pillHtml(status) +
+             '<span class="caret' + (floor.open ? ' open' : '') + '">' +
+               '<svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden="true">' +
+                 '<path d="M1 1.5L6 6.5l5-5" stroke="rgba(255,255,255,0.45)" stroke-width="1.8" ' +
+                       'stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+             '</span>' +
+           '</button>' +
+           (floor.open
+             ? '<div class="floor-body">' + floor.units.map(chipHtml).join('') + '</div>'
+             : '') +
+         '</section>';
+}
+
+
+function pillHtml(status) {
+  return '<span class="pill pill--sm s-' + status + '">' +
+           '<span class="dot"></span><span class="txt">' + STATUS_LABEL[status] + '</span>' +
+         '</span>';
+}
+
+
+function render() {
+  document.getElementById('screen').innerHTML =
+    '<div class="body">' + FLOORS.map(floorHtml).join('') + '</div>';
+  renderTracking();
+  renderNote();
+}
+
+
+function toggleFloor(index) {
+  var wasOpen = FLOORS[index].open;
+  FLOORS.forEach(function (f) { f.open = false; });
+  FLOORS[index].open = !wasOpen;
+  render();
+}
+
+
+/* ── the same marks one level up, on the Tracking screen ─────────────── */
+
+var BUILDINGS = [
+  { name: '120 Maple Street', sub: '48 units · 4 floors',
+    status: 'in_progress', doneUnits: 13, units: 48, doneItems: 471, items: 864,
+    def: 4, wait: 4, held: true, finished: false },
+  { name: '88 Church Ave', sub: '24 units · 2 floors',
+    status: 'in_progress', doneUnits: 22, units: 24, doneItems: 418, items: 432,
+    def: 0, wait: 1, held: false, finished: false },
+  /* ticket 14: a building that went Complete during this session stays,
+     greyed, until the next app open */
+  { name: '7 Weldon Court', sub: '12 units · flat',
+    status: 'complete', doneUnits: 12, units: 12, doneItems: 216, items: 216,
+    def: 0, wait: 0, held: false, finished: true }
+];
+
+function renderTracking() {
+  var html = BUILDINGS.map(function (b) {
+    var count = (countBy === 'units')
+      ? b.units + ' units · ' + b.doneUnits + ' done'
+      : b.doneItems + '/' + b.items + ' items';
+
+    var bar = (variant === 'C')
+      ? '<span class="fh-bar s-' + b.status + '"><i style="width:' +
+          Math.round(b.doneItems / b.items * 100) + '%"></i></span>'
+      : '';
+
+    var flags =
+      (b.def  ? '<span class="flagchip flagchip--def">'  + flagGlyph('def', 9)  + b.def  + '</span>' : '') +
+      (b.wait ? '<span class="flagchip flagchip--wait">' + flagGlyph('wait', 9) + b.wait + '</span>' : '');
+
+    var heldChip = b.held
+      ? '<span class="fh-held"><span class="bang">!</span>2 not saved</span>'
+      : '';
+
+    return '<a class="row press card' + (b.finished ? ' row--done' : '') + '" href="#" ' +
+              'style="margin:0 16px 10px">' +
+             '<span class="row-main">' +
+               '<span class="row-title">' + b.name +
+                 (b.finished ? '<span class="tag-done">FINISHED</span>' : '') + '</span>' +
+               /* Same two-line shape as a floor header. A Tracking row never
+                  opens, so its marks always show. */
+               '<span class="tr-sub">' + bar +
+                 '<span class="fh-count">' + count + '</span>' +
+               '</span>' +
+               ((flags || heldChip)
+                 ? '<span class="fh-marks">' + flags + heldChip + '</span>'
+                 : '') +
+             '</span>' +
+             pillHtml(b.status) +
+           '</a>';
+  }).join('');
+
+  document.getElementById('tracking').innerHTML = html;
+}
+
+
+/* ── notes ───────────────────────────────────────────────────────────── */
+
+var NOTES = {
+  A: '<b>A — Quiet chip.</b> The chip carries three things and no numbers: a ' +
+     'round Progress dot, a red flag if a Deficiency is open, a blue flag if a ' +
+     'Waiting record is open. Every number is on the floor header. ' +
+     'The argument: a chip is a target, not a report. You look at a floor to ' +
+     'find which units want you, then you tap one. <b>Watch unit 206</b> — ' +
+     'nothing started, blocked by a Phase 1 Waiting record. It is now the only ' +
+     'grey chip on floor 2 wearing a blue flag, which is the case this whole ' +
+     'ticket exists for.',
+
+  B: '<b>B — Chip reports.</b> A adds <code>14/18</code> under the number, so ' +
+     'the chip answers "how far along" without a tap. The cost is height and ' +
+     'noise: the chip grows about 14px, and twelve fractions on one floor is ' +
+     'twelve numbers to read where the point was to not read. Compare floor 2 ' +
+     'against A and judge whether the number earns its space.',
+
+  C: '<b>C — Bars, not numbers. This is the pick, 2026-08-08.</b> The chip gets ' +
+     'a hairline bar on its bottom edge, coloured by Progress, and the floor ' +
+     'header gets the same bar beside its count. This is the answer to point 3 ' +
+     'of the ticket, fraction or bar, and it says <b>both, split by level</b>: ' +
+     'a bar where you glance, a number where you read. A unit with nothing ' +
+     'started draws <b>no bar at all</b>, not an empty track, because an empty ' +
+     'track is a mark carrying no news. The accepted cost: a 60px bar cannot ' +
+     'tell 15/18 from 16/18. The Unit screen still prints the exact fraction.'
+};
+
+function renderNote() {
+  document.getElementById('variant-note').innerHTML = NOTES[variant] +
+    '<br><br><b>The red-on-red answer, in every variant.</b> Ticket 05 puts a ' +
+    'red dot on the chip for a failed save. Ticket 06 makes a Deficiency red. ' +
+    'Here they never share a shape or a place: a Deficiency is a <b>flag glyph ' +
+    'in the marks row</b>, a failed save is a <b>badge on the corner</b>, ' +
+    'outside the chip, carrying a "!". <b>Unit 203 holds both at once</b> — ' +
+    'switch HELD to "plain red dot" to see what 05\'s shape does to that chip.' +
+    '<br><br><b>A header reports what it hides.</b> Settled 2026-08-08. Open a ' +
+    'floor and its flag counts and its "not saved" chip come off the header, ' +
+    'because every chip under it now carries its own marks. Tap floor 2 shut ' +
+    'and tap floor 3 open to watch the marks move. The count, the bar and the ' +
+    'status pill stay either way — you cannot work those out by eye.';
+}
+
+
+/* ── switcher wiring ─────────────────────────────────────────────────── */
+
+document.querySelectorAll('.sw-row button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    btn.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
+    btn.classList.add('on');
+
+    if (btn.dataset.v) {
+      variant = btn.dataset.v;
+      document.body.classList.remove('v-A', 'v-B', 'v-C');
+      document.body.classList.add('v-' + variant);
+    }
+    if (btn.dataset.h) {
+      document.body.classList.toggle('mode-dot',   btn.dataset.h === 'dot');
+      document.body.classList.toggle('mode-badge', btn.dataset.h === 'badge');
+    }
+    if (btn.dataset.c) countBy = btn.dataset.c;
+
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

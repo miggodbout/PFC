@@ -2,9 +2,9 @@
 
 Type: task
 Status: open
-Blocked by: **19, then 18.** `19` decides the Building screen's markers, opened
-2026-08-08. `18` sweeps last so nothing makes it stale. Every other 0.2 ticket is
-resolved (17, 13, 14 and 15 all resolved 2026-08-08).
+Blocked by: **18 only.** `19` resolved 2026-08-08 and settled the Building
+screen's markers. `18` sweeps last so nothing makes it stale. Every other 0.2
+ticket is resolved (17, 13, 14, 15 and 19 all resolved 2026-08-08).
 
 ## Question
 

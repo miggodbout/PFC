@@ -3,13 +3,33 @@
 Type: task
 Status: **first pass done 2026-08-08, widened by 13, 14 and 15 the same day.
 The second pass is now owed and nothing blocks it.**
-Blocked by: **`19-building-and-floor-markers`, opened 2026-08-08.** `15` closed
-that day and was the last of the original set, but `19` opened after it and will
-close after this ticket would have. This runs last, right before
-`09-write-0.2-build-plan`. Run it earlier and the tickets that close after it
-make it stale again — which is exactly what `19` would do.
+Blocked by: **nothing. `19-building-and-floor-markers` closed 2026-08-08**, and
+it was the last ticket that could have made this sweep stale. This runs next,
+right before `09-write-0.2-build-plan`.
 
-**Order: `19`, then `18`, then `09`.**
+**Order: `18`, then `09`.**
+
+**What `19` added to the sweep:**
+- **One live conflict to settle, and `19` handed it over rather than deciding it.**
+  `14` rule 4 has `list-projects` send **items** Complete and items total per
+  building, so the phone applies `11`'s rule instead of trusting the Sheet's own
+  `overall` word. `19` made every count above the Unit screen **units**, so the
+  payload becomes units Complete and units total. Those come from
+  `readOverallColumn` at `Code.js:194`, which is **Sheet formula output one level
+  down** — the same kind of thing `14` refused to trust. Decide whether that is
+  close enough, or whether `list-projects` must send raw item counts anyway.
+  `19` also found that `14` mis-stated the cost: `handleListProjects` opens every
+  Sheet but reads **one column**, never the item grid.
+- **`19` narrows `11` at the unit chip only.** `11` says every level shows both
+  flag kinds with their own counts. A chip shows both kinds and **no numbers**.
+  Every other level keeps its counts. Record it as a narrowing, not a reversal.
+- **`19` finishes `05` seam 2**, which said a held mark rolls up through anything
+  that can close and never said what happens when it opens. The whole rule is now
+  *a header reports what it hides.*
+- **`11` line 270 is closed.** Fraction or bar was left open by name there. `19`
+  answers both, split by level.
+- **`05`'s "red dot on the unit chip" is superseded.** The failed-save mark is a
+  corner badge carrying `!`, so it cannot be read as `06`'s Deficiency red.
 
 **What `15` added to the sweep**, beyond the three supersessions already written
 into `supersessions.md` as entries 35 to 37:

@@ -168,10 +168,14 @@ Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 Three files at the top of `.scratch/pfc-control-0.2/`, not tickets. Read them
 before `09`:
 - **`supersessions.md`** — which decision wins wherever two disagree. First pass
-  2026-08-08, widened the same day by `13`. **`14` and `15` have both closed, so
-  the second pass is now takeable.** That is `18`, and it is the last thing before
-  `09` — but **`19` opened on 2026-08-08 and goes first.** It would close after
-  `18` and make the sweep stale again. **Order: `19`, then `18`, then `09`.**
+  2026-08-08, widened the same day by `13`. **`14`, `15` and `19` have all
+  closed, so the second pass is takeable and it is next.** That is `18`, and it
+  is the last thing before `09`. **Order: `18`, then `09`.**
+  **`19` handed `18` one conflict to settle**, written at the end of that ticket:
+  `14` rule 4 has `list-projects` send **item** counts so the phone never trusts
+  the Sheet's own `overall` word, but `19` made the count **units**, and unit
+  statuses out of `readOverallColumn` are Sheet formula output one level down.
+  `18` decides whether that is close enough.
 - **`template-changes.md`** — the master template spec. Nine sections. Section 5
   went FINAL when `13` closed, and section 9, **the default item list**, was added
   by it. **Section 8 is now empty**: `15` took no template change for the
@@ -181,20 +185,24 @@ before `09`:
   Every rollup call site, everywhere the demo data reaches, the exact lines each
   ticket deletes, and nine things no ticket owns. Written 2026-08-08.
 
-Opened 2026-08-08, after every other ticket had closed:
-- **[`19-building-and-floor-markers`](issues/19-building-and-floor-markers.md)** —
-  a prototype ticket. Three marks now land on the same two controls, and nobody
-  drew them together: **completion**, **flags** and a **failed save**, on the
-  Building screen's floor headers and unit chips. `11` line 267 deferred the
-  drawing of the flag marks to `06` and `05`, and both drew only what their own
-  question needed — `06` the Unit screen, `05` the pending marks. The Building
-  screen was never covered.
-- It became urgent when Miguel ruled out a whole-unit Waiting level: a blocked
-  unit is a **phase-level Waiting record on Phase 1**, so with no mark on the
-  chip it looks exactly like a unit nobody has started.
-- It also picks up two things left open elsewhere: **fraction or bar** for the
-  count, deferred by `11` line 270, and the **red-on-red collision** between
-  `05`'s held-edit dot and `06`'s Deficiency chip.
+Rule found by `19` and stated by Miguel on 2026-08-08:
+- **A header reports what it hides.** A floor header carries its flag counts and
+  its not-saved chip only **while the floor is closed**. Open it and every chip
+  under it carries its own marks, so the totals come off the header.
+- It finishes the rule `05` started. `05` said a held mark rolls **up** through
+  anything that can close. The other half was never written: it rolls back
+  **down** when that thing opens.
+- The count, the bar and the status pill stay either way — you cannot work those
+  out by eye from twelve chips. **It does not fire on the Unit screen**, where
+  phases never collapse.
+
+Marks, settled by `19`. Three facts, three shapes, because shape survives bright
+sun and colour blindness and hue does not:
+- **Round dot** — Progress. Grey, amber, green. Unchanged from 0.1.
+- **Flag glyph** — a flag on site. Red Deficiency, blue Waiting.
+- **Corner badge with `!`** — the phone could not save. It hangs off the chip's
+  top right corner, outside the chip. **This is the red-on-red answer:** neither
+  red moved, they just never share a shape or a place.
 
 ## Decisions so far
 
@@ -438,6 +446,29 @@ Opened 2026-08-08, after every other ticket had closed:
   Miguel's stated bet that a standard door size stays standard. Pushing on the
   new-phone case produced the closed-jobs scoping rule in the Notes above, plus
   **four seams 0.2 must leave open** for the 0.3 Archive.
+
+- [How the Building screen marks completion, flags and failed saves](issues/19-building-and-floor-markers.md)
+  — **three facts, three shapes**, so the two reds never collide: a round dot for
+  Progress, a flag glyph for a site flag, and a **corner badge carrying `!`** for
+  a failed save, hanging off the chip outside its border. Neither red moved.
+  Miguel picked **variant C**: the chip gets a **hairline bar** on its bottom
+  edge, and so does the floor header. That closes the fraction-or-bar question
+  `11` line 270 left open by name, and the answer is **both, split by level** — a
+  bar where you glance, a number where you read, and the exact fraction stays on
+  the Unit screen. **A unit with nothing started draws no bar at all**, not an
+  empty track. **The count is units, not items:** a floor reads `12 units · 5
+  done`, never `148/216 items`. That **amends `14` and makes it cheaper** —
+  checked in the code, `handleListProjects` at `Code.js:194` reads one column of
+  per-unit statuses and never touches the item grid, so counting units is free
+  and counting items would mean reading every Tracker grid on the list. It also
+  leaves `18` one conflict, written in the Notes above. **The chip carries both
+  flag kinds and no numbers**, which narrows `11` at the chip and nowhere else.
+  The floor header puts its marks on **a line of their own**, so they never break
+  in a different place on every floor. Unit 206 — blocked by a Phase 1 Waiting
+  record, nothing started — now reads a grey dot with a blue flag, which is the
+  case the ticket was opened for. Checked one level up: the Tracking row and
+  `14`'s greyed finished building both still read. Asset:
+  `prototypes/19-building-markers.html`.
 
 ## Not yet specified
 
