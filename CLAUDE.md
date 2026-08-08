@@ -260,7 +260,9 @@ Two exceptions, both deliberate:
 
 - 0.1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
 - 0.2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from 0.3.
-- 0.3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script.
+- 0.3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script. **Plus the Archive window**, which `14` moved here on 2026-08-08.
+  - **Scoping rule, stated by Miguel on 2026-08-08:** anything about a **closed job** belongs to the Archive, and the Archive is 0.3 — "while still leaving openings in 0.2 for them." Four items landed in 0.3 under this one rule: the Archive window, the GC punch list, an abandoned job that never leaves Tracking, and rebuilding the chip history on a new phone. Settle the next one with the rule, not a fresh argument.
+  - **The second half binds 0.2.** Leaving the openings is work. The short version: **the server keeps answering with everything, and the phone does the hiding.** Trimming a payload because 0.2 does not draw it takes away the Archive's way in.
 - 0.4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
 - 0.5: PDF export, material order summaries.
 

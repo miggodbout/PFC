@@ -50,6 +50,20 @@ Design principle Miguel stated, on 2026-08-06:
   the row is the control you set Progress with, so hiding it takes away the only
   way to correct a mis-tap. Do not propose hiding finished items again.
 
+Scoping rule Miguel stated on 2026-08-08, while closing `15`:
+- **Anything about a closed job belongs to the Archive, and the Archive is 0.3.**
+  His words: "Anything about closed jobs should be pushed there, while still
+  leaving openings in 0.2 for them."
+- It is not a new decision. It is the reason behind three that were each argued
+  on their own: the **Archive window** deferred by `14`, the **GC punch list**
+  deferred by `16`, and **rebuilding chips from finished jobs' Sheets**, raised
+  and deferred on `15`. Use it to settle the next one without a fresh argument.
+- **The second half binds 0.2.** Leaving the openings is work, not inaction. The
+  seams `15` owes are listed at the end of that ticket; the shortest version is
+  that **the server keeps answering with everything, and the phone does the
+  hiding.** A later session that trims a payload "because 0.2 does not draw it"
+  takes away the Archive's way in.
+
 Guideline Miguel proposed on 2026-08-08, and called a suggestion, not a rule:
 - **Aim for one new window per MINOR release.** A window is a screen you reach
   from the Hub or from a door of its own. It exists to hold back scope creep, so
@@ -385,8 +399,11 @@ before `09`:
   Logger form.** Three consequences are written at the end of that ticket and
   nowhere else: **the phone now holds three separate stores** with three different
   lifetimes; **a brand new phone has no chips at all**, which is the real price of
-  deleting the seed; and **counts never decay**, which rests on Miguel's stated
-  bet that a standard door size stays standard.
+  deleting the seed; and **the tail expires** — unused 12 months *and* used fewer
+  than three times — while a line you use often never decays, which rests on
+  Miguel's stated bet that a standard door size stays standard. Pushing on the
+  new-phone case produced the closed-jobs scoping rule in the Notes above, plus
+  **four seams 0.2 must leave open** for the 0.3 Archive.
 
 ## Not yet specified
 

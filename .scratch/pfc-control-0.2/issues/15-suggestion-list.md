@@ -232,8 +232,24 @@ reachable by typing.
 
 **Pruning: least used goes first, ties broken by oldest last-used.** The same
 rule that orders the chips, so the line that leaves is always the one furthest
-from the row. A twelve-month expiry was offered and turned down. It can throw
-away the most-used line in the group after one slow season.
+from the row.
+
+**One expiry rule sits above it, added by Miguel on 2026-08-08 after the first
+pass.** A line goes early if it is **unused for 12 months and was used fewer than
+three times**. Both tests, not either.
+
+    36 6 RH   x40   last used Jun 2025   protected, count is 40
+    30 4 LH   x1    last used Mar 2025   expired
+
+A plain twelve-month expiry was drawn first and it had a real fault: it drops a
+size you have logged forty times because the last job did not use it, and you
+then retype it and it re-enters at count 1, behind everything. **Adding the count
+test removes the fault at no cost**, because a line used once or twice is never
+in the top three, so the rule can never take away a chip you can see.
+
+Note what expiry is and is not for. **The cap already stops the index growing**,
+so this is about freshness, not size. Its only real work is stopping a stale
+one-off squatting in a group that is not yet full.
 
 **When the fold happens:** a building's lines are folded into the index
 immediately **before** its copy is deleted, in the same step, whether the copy is
@@ -407,15 +423,45 @@ after an install pulls a live building whole — records included, per this
 ticket — so the chips fill from the server, not from local history. The empty
 case is a genuinely new phone opening a genuinely new job.
 
-**Counts never decay, and that rests on a bet Miguel stated.** His words on
-2026-08-08: "most common suggestions will probably sort themselves well so I'd
-like to keep the history, but it should probably have a limit so we don't end up
-with 1000's of chips."
+**Miguel pushed on this, correctly, and it produced a scoping rule.** His point:
+the common sizes are sitting in the Sheets, so why can a new phone not go and get
+them? The answer is that it can. `handleListProjects` at `Code.js:182` walks every
+Sheet in the Projects folder, and `14` had the **phone** hide finished buildings,
+not the server, so a new phone already receives the id of every job it has ever
+run. A `rebuild-suggestions` action reading one tab per Sheet is a small piece of
+work.
 
-So the index keeps a use count forever and nothing ages out on a clock — a
-twelve-month expiry was offered and turned down. **The assumption is that a
-standard door size stays standard.** If it ever stops being true, the symptom is
-specific and easy to name: a size that was standard years ago sits first in the
-row and will not move, because ordering is by count and the count only ever grows.
-The fix at that point is the expiry rule that was turned down here, not a redesign.
+**He ruled it 0.3 anyway, and gave the reason as a rule: anything about closed
+jobs belongs to the Archive, and the Archive is 0.3.** That single line now
+explains three deferrals that were each argued separately — the Archive window
+from `14`, the GC punch list from `16`, and this. It is on the map.
+
+**What 0.2 must leave open for it**, his words: "still leaving openings in 0.2 for
+them." Four seams, all free, all things a later session could destroy by tidying:
+
+1. **`list-projects` keeps returning every building, finished or not.** `14` put
+   the finished-building test in the **drawing** layer. Never move it into the
+   server answer as an optimisation — that deletes the Archive's discovery for
+   free, and `14` already warns that drawing rules and storage rules must stay
+   separate.
+2. **`get-project` keeps returning every record state.** Do not add a state filter
+   later to trim the payload. Archive is a filter over records, per `14`.
+3. **The index row shape holds item, subtype, type, needed, count and last used.**
+   That is enough to be re-fed from a server source without changing shape.
+4. **The index stays its own store**, so a future version can refill it without
+   touching the building copies or the outbox.
+
+**Counts do not decay on their own, and that rests on a bet Miguel stated.** His
+words on 2026-08-08: "most common suggestions will probably sort themselves well
+so I'd like to keep the history, but it should probably have a limit so we do not
+end up with 1000's of chips."
+
+**Amended the same day.** He came back and added the tail expiry above — unused
+for 12 months **and** used fewer than three times. So the bet is now narrower than
+it was: a line you use often still never decays, however long the gap, and only
+the tail ages out. **The assumption left standing is that a standard door size
+stays standard.** If that ever stops being true the symptom is easy to name — a
+size that was standard years ago sits first in the row and will not move, because
+ordering is by count and a protected count only ever grows. The fix at that point
+is to drop the count test from the expiry rule, which is a one-line change.
 Nothing else in the build depends on it.
