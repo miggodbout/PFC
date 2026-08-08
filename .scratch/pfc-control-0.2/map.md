@@ -142,6 +142,24 @@ Added by `15-suggestion-list`, 2026-08-08:
   part means: `Size   Jamb   Swing`. One per item, held in `_Config`, edited in
   Admin. It is crew vocabulary — **Size** and **Jamb**, not width and depth.
 
+Settled by Miguel on 2026-08-08, closing the last open item before `18`:
+- **Exterior Door(s) is an ordinary item. It needs no special rule.** `17` raised
+  a gap — a defective patio or entry door is a problem PFC will never fix, yet an
+  open flag blocks Complete — and the map carried it as work owed before `09`.
+  **The premise was wrong.** PFC does not fix the door, but PFC does fix the
+  **casing and build-out around it**, and a defective door sends the crew back to
+  redo them. The record describes real PFC work, so the flag blocks Complete
+  correctly. Miguel: "it should act just like windows, bathtub, baseboard, etc,
+  it just got confusing because it is technically a door."
+- **Nothing is built.** No new record state, no non-blocking flag, no never-block
+  rule. `11-rollup-rules` stands as written. No ticket `19`.
+- **Its reason trim is unchanged** — `Wrong Swing`, `Wrong Type` and `Wrong Color`
+  stay off, because PFC did not choose the door.
+- **It keeps its `Patio, Entry` subtype list**, per `13`. Patio and Entry name
+  which opening, not swing or size, and they tell two records on one item apart.
+  This overrules the "no dropdown" lines in `12` and `17`. Four items define a
+  list, as written above.
+
 Doors, settled in `12-logger-door`. Two doors, split by task, not by permission:
 - **Tracker** — a tree. Tracking, Building, Floor, Unit. Answers "how is floor 2
   doing". Holds Progress, and closes records.
@@ -438,16 +456,9 @@ before `09`:
   Reason-Other are open together. Recommended answer, written up on `13`: pin Save
   to the bottom of the screen instead of leaving it in the scroll flow. It needs
   one line from Miguel at build time and does not gate anything before that.
-- **A record for a problem PFC will never fix.** Found on 2026-08-08 while
-  resolving `17`. Miguel: Exterior Doors are patio and entry doors that the
-  framer installs, PFC only builds out and trims around them, and "they are often
-  defective and need repairs but we do not handle that." Every record in the
-  model today is a task for PFC. An open flag of either kind blocks Complete on
-  its item, per `11`, so logging a defective exterior door would stop that item
-  reading Complete after PFC finished everything it owns. Candidates: a record
-  state that is neither Open nor Fixed, a record that carries no flag, or a rule
-  that some items never block. Do not build ahead of it — write the rule down
-  before `09`, or push it to 0.3 on purpose.
+- ~~**A record for a problem PFC will never fix.**~~ **Closed 2026-08-08. The
+  premise was wrong, so nothing is built.** See the Notes above and the
+  correction block on `17`.
 
 ## Out of scope
 

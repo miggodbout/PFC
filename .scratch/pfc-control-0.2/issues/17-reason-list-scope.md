@@ -248,6 +248,32 @@ the other six. Neither becomes an item in Admin.
 
 ### Exterior Doors: PFC does not own the door
 
+**CORRECTION, 2026-08-08. The gap this section opened is closed, and the premise
+that opened it was wrong.** Miguel: "if there is an issue we do need to return to
+it to fix the build out / casing, so it should act just like windows, bathtub,
+baseboard, etc, it just got confusing because it is technically a door."
+
+PFC does not fix the **door**. PFC does fix the **casing and build-out around
+it**, and a defective door sends the crew back to redo them. So a record on
+Exterior Door(s) describes real PFC work, the flag blocks Complete correctly, and
+the item needs no special treatment at all. **No new record state, no
+non-blocking flag, and no never-block rule.** `11-rollup-rules` is right as
+written. The map's Not yet specified entry is deleted and no ticket `19` was
+opened.
+
+**The reason trim below is unchanged.** `Wrong Swing`, `Wrong Type` and
+`Wrong Color` still come off, for exactly the reason given below. Miguel restated
+it in the same breath: "I didn't want swing or size, etc on them because it is
+not of our concern."
+
+**Confirmed the same day:** Exterior Door(s) **keeps** the `Patio, Entry` subtype
+list `13` gave it. Line 178 of this ticket says it defines none, and `13` wins.
+Miguel reconfirmed it when the contradiction was put to him — Patio and Entry
+name *which opening*, not swing or size, and they are what tells two records on
+one item apart. See `supersessions.md` entry 39.
+
+Old text below, kept for its reasoning.
+
 Miguel explained this on 2026-08-08, and it is the reason `Wrong Swing` does not
 belong on the item even though an exterior door plainly swings.
 

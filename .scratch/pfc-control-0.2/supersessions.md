@@ -295,3 +295,38 @@ One thing `15` deliberately did **not** overrule: `06`'s control budget. The chi
 row and the placeholder were both already drawn in the `06` prototype, so the
 Logger form **stays at seven controls**. The Save-under-the-keyboard question in
 the map's Not yet specified is untouched.
+
+---
+
+## Settled by Miguel on 2026-08-08, on Exterior Door(s)
+
+Both entries come from one answer, given after `15` closed and before `18`'s
+second pass. Neither is a new feature. Entry 38 deletes work the map had listed
+as owed before `09`; entry 39 settles a contradiction the first pass missed.
+
+38. **`17` recorded a gap that does not exist.** Its Exterior Doors section says a
+    defective patio or entry door is "a real problem that Miguel would want
+    recorded, and it is one PFC will never fix", and the map carried it as a rule
+    owed before `09` — candidates being a third record state, a flag that does not
+    block, or a never-block item rule. **Miguel overruled the premise, not the
+    reasoning.** PFC does not fix the door, but PFC does fix the **casing and
+    build-out around it**, and a defective door sends the crew back to redo them.
+    So the record is ordinary PFC work, and the flag blocking Complete is correct
+    rather than a fault. **`11-rollup-rules` wins untouched. Nothing is built and
+    no ticket `19` exists.** `17` carries a correction block; the map's Not yet
+    specified entry is struck.
+39. **Three tickets disagree on whether Exterior Door(s) defines a subtype list.**
+    `12-logger-door` line 276 and `17-reason-list-scope` line 178 both name it
+    beside Windows and Baseboards as defining **none**, so no dropdown appears.
+    `13-admin-changes` line 304 then gave it **`Patio, Entry`** in the new 14-item
+    table, and `template-changes.md` sections 5 and 9 copy `13`. **`13` wins, and
+    Miguel reconfirmed it directly when the conflict was put to him.** Patio and
+    Entry name *which opening*, not swing or size, and they are the only thing
+    that tells two records on one item apart. **Four items define a list**, as the
+    map says: Interior Doors, Exterior Door(s), Handles, Stops. `12` and `17` are
+    the stale text. **`template-changes.md` needs no edit for this** — it already
+    follows `13`.
+
+Neither entry disturbs `17`'s reason trim. `Wrong Swing`, `Wrong Type` and
+`Wrong Color` still come off Exterior Doors, because PFC did not choose the door.
+Miguel restated that reasoning in the same answer.
