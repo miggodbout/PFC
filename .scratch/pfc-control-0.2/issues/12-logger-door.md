@@ -275,6 +275,12 @@ dropdown, above its text box, offering whatever types the item defines.
 - **Hardware** — Passage, Privacy, Dummy, Pocket
 - **Windows, Exterior Doors, Baseboards** — none defined, **no dropdown appears,
   and the form is exactly as this ticket drew it**
+  - **CORRECTED 2026-08-08. Exterior Door(s) does define a list: `Patio, Entry`.**
+    `13` gave it one and Miguel reconfirmed it — Patio and Entry name which
+    opening, not swing or size, and they tell two records on one item apart.
+    Windows and Baseboards are still right. The line above is stale too:
+    **`Hardware` is a phase, not an item**, and `13` made the item **Handles**
+    with those same four subtypes. See `supersessions.md` entries 30 and 39.
 
 The custom-item objection dies the same way it died on `01`: an item that defines
 no types shows no dropdown at all. Nothing lands empty and nothing has to be

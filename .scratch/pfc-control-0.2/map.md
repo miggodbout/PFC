@@ -448,7 +448,11 @@ before `09`:
   already carries the right comment about it. What is genuinely left: adding the
   Logger and Outbox screens to the `SHELL` list, and the standing habit of
   raising `CACHE_NAME`.
-- Whether a photo belongs on a deficiency record in 0.2, or later.
+- ~~Whether a photo belongs on a deficiency record in 0.2, or later.~~ **Settled
+  since 2026-08-06 and listed here in error. No photo in 0.2.** `01`'s Answer
+  says "No photo in 0.2", the Decisions entry above repeats it, and
+  `template-changes.md` section 7 is FINAL with **no photo column**. Nothing is
+  open. A later version is free to revisit it, which is not a 0.2 question.
 - **Where Save sits on the Logger form when both `Other` boxes open.** Raised by
   `13` on 2026-08-08, when Miguel gave the Subtype list its own `Other` text box.
   `06` budgeted six controls and warned that more pushes Save under the keyboard.

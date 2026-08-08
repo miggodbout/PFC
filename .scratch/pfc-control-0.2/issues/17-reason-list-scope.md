@@ -177,6 +177,13 @@ that item defines:
 - **Hardware** — Passage, Privacy, Dummy, Pocket
 - **Windows, Exterior Doors, Baseboards** — none defined, so no dropdown appears
   and the form does not change at all
+  - **CORRECTED 2026-08-08. Exterior Door(s) does define a list: `Patio, Entry`.**
+    `13` gave it one and Miguel reconfirmed it — Patio and Entry name which
+    opening, not swing or size, and they tell two records on one item apart.
+    Windows and Baseboards are still right. The line above is stale too:
+    **`Hardware` is a phase, not an item**, and `13` made the item **Handles**
+    with those same four subtypes. See `supersessions.md` entries 30 and 39, and
+    the correction block on this ticket's Exterior Doors section below.
 
 **Width, depth and swing stay free text.** Miguel's words: "Width, Depth and
 Swing should be text, the rest should be dropdown." So `32" 6" RH` is still
