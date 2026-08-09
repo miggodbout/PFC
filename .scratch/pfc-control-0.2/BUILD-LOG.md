@@ -2102,3 +2102,94 @@ for good.** See the two standing notes at the top of `CLAUDE.md`.
 ### Next
 
 Step 5 — Admin, and test points 14 and 15. Subtype editing lands there.
+
+---
+
+## Session 17 — 2026-08-09
+
+**Step:** still 4. Two tweaks to the bar session 16 shipped, asked for after
+Miguel looked at it.
+**Branch:** `0.2` at `20528db`, merged to `main` and pushed.
+**Deployed:** no. Nothing in `Code.js` changed. The backend already sends
+`phaseCounts` and it was confirmed live at the start of this session.
+**Merged to main:** **yes.** `CACHE_NAME` is `pfc-control-0.2-step4-fix3`.
+
+Miguel: "I like the split but it is quite busy."
+
+### A unit chip has no bar
+
+The floor header keeps its bar and the Unit screen keeps the one in its
+corner. Twelve chip hairlines under a header that has one of its own read as
+noise, and a chip already carries the Progress dot.
+
+The floor's bar stays because that total is the thing you **cannot** work out
+by eye from twelve chips. The chip's own number is one tap away.
+
+`.unit-chip`'s `padding-bottom: 5px` went with it — it only ever reserved
+room for the bar — so the marks now sit centred. `.unit-chip .bar` is
+deleted.
+
+### "Building View" meant the Buildings list, and it already had the split
+
+Worth writing down, because the first reading was wrong. Miguel asked for the
+three-phase split on the Building view. Two things had to be checked before
+building anything:
+
+- The Buildings list rows already call `barHtml` on a rollup carrying
+  `phaseCounts`. A live `curl` at `list-projects` confirmed the server sends
+  it. So the code path was complete.
+- `building.html`'s header has no bar of its own, which made "add a corner bar
+  there, like the Unit screen" look like the ask.
+
+It was neither. He meant the Buildings list, and **the split was already
+drawing there and could not be seen.**
+
+### Why it could not be seen, and the rule that changed
+
+Elsliger 36-B on the day: phase 1 at 115/144, phase 2 at 8/72, phase 3 at
+48/252. Every phase part way, so every run amber, so three amber runs butted
+into one amber block — pixel for pixel the old single fill.
+
+A run only turns green at 100%, and **a whole building rarely closes a phase
+until the end.** So session 16's rule, "two amber phases in a row are
+indistinguishable from one longer amber run, which is the point", hid the
+split completely at the level Miguel looks at most.
+
+**That rule is reversed.** Every join but the last now carries a seam. Miguel
+picked it over fixed thirds, which he had already turned down in session 16
+for a different reason.
+
+The seam is an **inset shadow on the run's own right edge**, not a border and
+not a spacer between runs. Both of those add a pixel per join, and the runs
+summing to exactly `itemsDone` is the whole point of the bar. Drawn inside
+the width the run already has, the arithmetic session 16 checked over 320
+combinations still holds.
+
+Two consequences that fall out of it, both wanted:
+
+- **The last drawn run has no seam.** It is the leading edge of progress, and
+  a cut there reads as a gap in front of the empty track.
+- **A phase with nothing done draws no run, so it adds no seam.** Phase 1 and
+  phase 3 with an empty phase 2 between them show **one** seam. That is one
+  visible boundary, which is the number of boundaries there are.
+
+The comments in `common.js` and `theme.css` both say why the old rule went,
+so a later session does not restore it as a tidy-up.
+
+### Tested
+
+`phaseRunsHtml` run against the live `list-projects` numbers and three edge
+cases: a finished phase 1, an empty middle phase, and a single drawing phase.
+Widths still sum to `itemsDone` — 36-B comes to 36.538%, which is 171/468.
+
+**Not opened on a phone, and not opened in a browser.** Both tweaks are
+visual, so both still need Miguel's eye.
+
+### Open
+
+Everything session 16 left open is still open. Nothing here touched the two
+OPEN words, the phone checks, or the wifi slash.
+
+### Next
+
+Unchanged — step 5, Admin, and test points 14 and 15.
