@@ -45,7 +45,7 @@
     justify-content: center;
   }
   /* The glyph turns back, so it sits upright inside the diamond. */
-  .diamond > span { transform: rotate(-45deg); display: flex; }
+  .diamond > span { transform: rotate(-45deg); display: flex; color: #0D0D0D; }
 
   .hub-label { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; color: var(--fg-2); }
   .hub-sub   { font-size: 12.5px; margin-top: 3px; color: var(--fg-5); }
@@ -89,6 +89,7 @@
 
 var CARDS = [
   { label: 'Tracking',        sub: 'Buildings & units',            href: 'tracker/index.html', icon: 'bars' },
+  { label: 'Logging',         sub: 'Record an issue',              href: 'logging/index.html', icon: 'flagBig' },
   { label: 'Set Up Building', sub: 'Create or change a building',  href: 'setup/index.html',   icon: 'plus' },
   { label: 'Deficiencies', sub: 'Coming soon' },
   { label: 'Materials',    sub: 'Coming soon' },

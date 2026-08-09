@@ -12,7 +12,7 @@
    The phone keeps serving the old copy until the number changes.
    ===================================================================== */
 
-var CACHE_NAME = 'pfc-control-0.2-step3-fix5';
+var CACHE_NAME = 'pfc-control-0.2-step4';
 
 /** The app's own files. Everything needed to open with no signal. */
 var SHELL = [
@@ -26,6 +26,7 @@ var SHELL = [
   './tracker/building.html',
   './tracker/unit.html',
   './tracker/queue.html',
+  './logging/index.html',
   './setup/index.html'
 ];
 

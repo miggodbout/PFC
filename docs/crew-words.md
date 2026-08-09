@@ -159,6 +159,33 @@ Writing his name into the app would break the first time that is not true.
 
 ---
 
+## The Logging screen — checked 2026-08-09, when it was built
+
+Logging added more new words than any screen in the app. Every string it
+draws is listed here. **Six field names come straight from the build plan**
+(section 5.7) and were settled with the design, not at build time.
+
+| String | Where | Status |
+|---|---|---|
+| `Type`, `Item`, `Subtype`, `Needed`, `Count`, `Reason` | the six field labels | **Settled** in plan 5.7 |
+| `Deficiency` / `Waiting` | the two Type buttons | **Settled** above. They are the two kinds of issue |
+| `Whole phase — Doors & Windows` | the first Item row, on a Waiting record | **Settled** in plan 5.7 |
+| `Choose an item`, `Choose a type`, `Choose a reason` | the empty row of each dropdown | Plain, active, names the action |
+| `Where are you?` | the sheet that sets Building, Unit and Phase | Plain question. It is the one thing that sheet asks |
+| `set unit` / `change` | the button on the place bar | `set unit` while the unit is blank, `change` after |
+| `Type the unit number.` / `No unit 201 in this building.` | under the unit box | Says what to do, then what was found |
+| `Saved · waiting to send` | the strip after a save | `waiting to send` matches `queued` in meaning and is what the row shows |
+| `Logged here` | the list of this visit's records | **Settled** in plan 5.7 |
+| `Cancel` | on a Logged here row | It undoes a record. `Delete` is taken, and means losing a queued edit |
+| `Use it` / `Keep mine` | the near-match prompt | **Settled** in plan 5.7 |
+| `Fix all 3` | above more than one open record | **Settled** in plan 5.4 |
+| `Fixed` / `Undo` | on a record row in Tracker | `Fixed` is the state the Sheet stores. `Undo` is the mis-tap answer |
+| `Set Complete` / `Not yet` | the green card | **Settled** in plan 5.4 |
+| `No building on this phone` | Logging with no local copy | Says the state. The button under it says the action |
+| `Type it` / `Say what it is` | the two `Other` boxes | Short, active, and different from each other on purpose |
+
+Two rows are **OPEN**, added below.
+
 ## Open rows
 
 A word this file does not cover gets a row here rather than a guess at build
@@ -167,6 +194,8 @@ time. An OPEN row does not block building a screen. It blocks shipping one.
 | Word | Where | Status |
 |---|---|---|
 | `Job site` | Hub subtitle `Job site tracker`, and the `description` in `manifest.json` and the `<meta>` tag | **OPEN.** Raised 2026-08-09 while applying this file to the code. `Job` is a code word meaning one queued edit, and it may not appear on a screen — but `job site` is one compound word for the physical place, and it is what the crew says out loud. The two do not read as the same word. Left as it is until Miguel calls it. The alternative is `Site tracker` |
+| `Subtype` | The Logging field under Item | **OPEN.** Raised 2026-08-09 while building Logging. It comes from the build plan, so it is not a guess — but the crew does not say "subtype" out loud. They say the value itself: a Bypass, a Privacy, a Spring stop. `Kind` and `Style` are the alternatives, and `Type` is already taken by the field above it |
+| `Needed` | The Logging hero field | **OPEN.** From the plan, and it is the field the whole screen exists for. On its own as a label it reads short. `What is needed` is the alternative, and it is what the empty box says on an item with no hint |
 | `Deficiencies` | The greyed Hub card | **OPEN** on purpose. It is a 0.3 placeholder for a window that does not exist. Whether it stays `Deficiencies` or becomes `Issues` is decided when that window is designed, not before |
 
 ---
@@ -181,4 +210,10 @@ not a blocker for building a screen — it is a blocker for shipping one.
 in the app: Type, Subtype, Needed, Reason, Count, and every dropdown behind them.
 Those get checked here before they are written, not after.
 
-Open rows live in the section above. There are two.
+Open rows live in the section above. There are four: `Job site`,
+`Deficiencies`, and the two Logging raised — `Subtype` and `Needed`.
+
+**Logging was the test of this file, and it held.** Every string on the
+screen was checked before it was written, and the two the file could not
+settle became OPEN rows instead of guesses. Neither one blocks the screen.
+Both block shipping 0.2.

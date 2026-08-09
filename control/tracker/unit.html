@@ -62,6 +62,26 @@ var copy     = null;   // the whole building
 var place    = null;   // { unit, group } inside it
 var openMenu = null;   // item key of the open status dropdown
 
+/* Which flag's record list is open. One at a time, keyed by item key, or
+   by 'phase:<key>' for the Waiting records that hang on a whole phase.
+   A FLAG IS A BUTTON AND ITS RECORDS STAY SHUT UNTIL IT IS TAPPED. Three
+   records drawn under every item push the next item ~150px down. */
+var openRecs = null;
+
+/* Which Progress option was tapped while it was blocked. The reason line
+   only appears after somebody asks for it. */
+var blockedTapped = null;
+
+/* Record ids marked Fixed during THIS VISIT to this unit.
+   A fixed record leaves Tracker — but not the instant you tap it, or a
+   mis-tap is unrecoverable on the phone. It stays in place, struck
+   through, with Undo beside it. Leave the unit and it is gone. */
+var fixedHere = {};
+
+/* The item whose green card is showing. It asks once, after the last open
+   record on an item is fixed, and it never sets Complete by itself. */
+var greenFor = null;
+
 /* True once the phone has refused to store an edit. It stays up until the
    next tap succeeds, because the person has to be told BEFORE they walk
    away thinking the change is saved. */
@@ -178,13 +198,121 @@ function phaseHtml(phase) {
   });
   var flags = countFlags(copy, { unit: unitKey, phase: phase.key });
 
+  // A WAITING RECORD CAN HANG ON A WHOLE PHASE, with no item under it.
+  // "Phase 2 is waiting on the painters" is not about any one item, so it
+  // sits on the phase header — behind a tap, like every other flag. It is
+  // the flag that would cost the most height if it opened by itself: it
+  // sits above seven items.
+  var scope   = 'phase:' + phase.key;
+  var onPhase = openRecords(copy, { unit: unitKey, phase: phase.key, item: '' });
+  var shown   = withFixedHere(onPhase, { unit: unitKey, phase: phase.key, item: '' });
+
+  var marks = shown.length
+    ? '<div class="flag-row">' + flagButton(scope, 'waiting', onPhase.length) + '</div>'
+    : '';
+
   return '<section class="phase">' +
            '<div class="phase-head">' +
              '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
+             marks +
              pillHtml(rollupOf(statuses, flags), 'xs') +
            '</div>' +
+           (openRecs === scope ? recordsHtml(shown, onPhase, scope) : '') +
            phase.items.map(itemHtml).join('') +
          '</section>';
+}
+
+
+/**
+ * One flag chip, as a button that opens the records under it.
+ *
+ * The count on the chip is the OPEN count. A record fixed a moment ago is
+ * still drawn in the list under it, but it is not a problem any more and
+ * it must not be counted as one.
+ */
+function flagButton(scope, kind, count) {
+  var open = (openRecs === scope);
+
+  return '<button type="button" class="flag-btn press" ' +
+                 'aria-expanded="' + open + '" ' +
+                 'onclick="toggleRecs(event,' + attr(scope) + ')">' +
+           flagChipHtml(kind, count) +
+         '</button>';
+}
+
+
+/**
+ * The open records, plus any this visit has just fixed.
+ *
+ * The fixed ones are read back out of the copy by id, so the line they
+ * show is the line the Sheet now holds.
+ */
+function withFixedHere(open, filter) {
+  var out  = open.slice();
+  var seen = {};
+  out.forEach(function (record) { seen[record.record_id] = true; });
+
+  Object.keys(fixedHere).forEach(function (id) {
+    if (seen[id]) return;
+    var record = recordById(copy, id);
+    if (!record) return;
+    if (filter.unit  !== undefined && record.unit  !== filter.unit)  return;
+    if (filter.phase !== undefined && record.phase !== filter.phase) return;
+    if (filter.item  !== undefined && record.item  !== filter.item)  return;
+    out.push(record);
+  });
+
+  return out;
+}
+
+
+/**
+ * The record list under one flag.
+ *
+ * A row reads   Bypass · 32 6 RH  x1  [ Fixed ]
+ *
+ * Fix all appears only above MORE THAN ONE open record. One record does
+ * not need a bulk button, and the button would then sit on every flag in
+ * the app.
+ */
+function recordsHtml(shown, open, scope) {
+  var all = shown.map(function (record) { return recordHtml(record, scope); }).join('');
+
+  var bulk = (open.length > 1)
+    ? '<button type="button" class="btn btn-small btn-ghost press fix-all" ' +
+              'onclick="fixAll(event,' + attr(scope) + ')">Fix all ' + open.length + '</button>'
+    : '';
+
+  return '<div class="recs">' + bulk + all + '</div>';
+}
+
+
+function recordHtml(record, scope) {
+  var gone = (record.state !== 'Open');
+
+  // The reason only prints when there is no needed line to print instead.
+  // A door size says more than "Wrong Size" does, and both together push
+  // the row onto two lines.
+  var reason = (record.reason === 'Other' && record.other_text)
+    ? record.other_text
+    : record.reason;
+
+  var parts = [];
+  if (record.subtype) parts.push(escapeHtml(record.subtype));
+  parts.push(escapeHtml(record.needed || reason || 'No line'));
+
+  var act = gone
+    ? '<span class="rec-done">Fixed</span>' +
+      '<button type="button" class="btn btn-small btn-ghost press" ' +
+              'onclick="undoFix(event,' + attr(record.record_id) + ',' + attr(scope) + ')">Undo</button>'
+    : '<button type="button" class="btn btn-small btn-ghost press" ' +
+              'onclick="fixRecord(event,' + attr(record.record_id) + ',' + attr(scope) + ')">Fixed</button>';
+
+  return '<div class="rec' + (gone ? ' rec--fixed' : '') + '">' +
+           '<span class="rec-line">' + parts.join(' <span class="rec-sub">·</span> ') + '</span>' +
+           '<span class="rec-qty">x' + (record.quantity || 1) + '</span>' +
+           '<span class="rec-acts">' + act + '</span>' +
+         '</div>';
 }
 
 
@@ -212,6 +340,19 @@ function itemHtml(item) {
   var mark = held ? '<span class="ring ring--bad"></span>'
                   : (job ? '<span class="ring"></span>' : '');
 
+  // The item's own records. THE ROW STAYS ONE LINE — the flags go on a
+  // line under the name, and the records themselves stay shut until a
+  // flag is tapped.
+  var open  = openRecords(copy, { unit: unitKey, item: item.key });
+  var shown = withFixedHere(open, { unit: unitKey, item: item.key });
+
+  var chips = '';
+  if (flags.deficiency) chips += flagButton(item.key, 'deficiency', flags.deficiency);
+  if (flags.waiting)    chips += flagButton(item.key, 'waiting', flags.waiting);
+  // Fix the last record and the chip goes, but the list under it stays
+  // open for this visit, holding the struck-through row and its Undo.
+  var recs = (openRecs === item.key) ? recordsHtml(shown, open, item.key) : '';
+
   return '<div class="item' + (held ? ' item--held' : '') + '">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(item.label) + '</span>' +
@@ -227,29 +368,67 @@ function itemHtml(item) {
                menu +
              '</span>' +
            '</div>' +
+           (chips ? '<div class="flag-row">' + chips + '</div>' : '') +
+           recs +
+           (greenFor === item.key ? greenCardHtml(item) : '') +
            (held ? fixCardHtml(item, job, key) : '') +
          '</div>';
 }
 
 
+/**
+ * THE GREEN CARD. It asks. It never sets Complete by itself.
+ *
+ * Fixing the last record on an item is the moment the item usually becomes
+ * Complete, and walking back into the dropdown for it is a tap the person
+ * has already earned. But "usually" is not "always" — the door can be
+ * fixed and still not hung — so the app asks and the crew answers.
+ */
+function greenCardHtml(item) {
+  return '<div class="green-card">' +
+           '<div class="green-text">Every record on ' + escapeHtml(item.label) +
+             ' is fixed. Set it to Complete?</div>' +
+           '<div class="green-acts">' +
+             '<button type="button" class="btn btn-small btn-primary press" ' +
+                     'onclick="setCompleteFromCard(event,' + attr(item.key) + ')">Set Complete</button>' +
+             '<button type="button" class="btn btn-small btn-ghost press" ' +
+                     'onclick="closeGreen(event)">Not yet</button>' +
+           '</div>' +
+         '</div>';
+}
+
+
+/**
+ * The Progress dropdown.
+ *
+ * COMPLETE IS UNTAPPABLE WHILE AN OPEN ISSUE SITS ON THE ITEM, and it
+ * KEEPS ITS NORMAL COLOUR. It carries a small red dot instead, and the
+ * reason appears only when somebody taps it.
+ *
+ * The greyed row shipped first and Miguel turned it down: dimmed text
+ * reads as broken, and a sentence sitting under the panel before anybody
+ * asked a question is a sentence nobody reads. The dot asks to be tapped
+ * and the answer arrives at the moment it is wanted.
+ */
 function menuHtml(item, key, blocked) {
   var options = CYCLE.map(function (option) {
     var off = blocked && option === 'complete';
 
     return '<button type="button" class="status-opt press s-' + option +
-                  (option === key ? ' on' : '') + (off ? ' blocked' : '') + '" ' +
+                  (option === key ? ' on' : '') + '" ' +
                   (off ? 'aria-disabled="true" ' : '') +
-                  'onclick="' + (off ? 'event.stopPropagation()'
+                  'onclick="' + (off ? 'blockedTap(event,' + attr(item.key) + ')'
                                      : 'chooseStatus(event,' + attr(item.key) + ',\'' + option + '\')') + '">' +
              '<span class="dot"></span>' +
              '<span class="txt">' + STATUS[option].label + '</span>' +
+             (off ? '<span class="blocked-dot"></span>' : '') +
            '</button>';
   }).join('');
 
   // "issue", never "flag". A flag is what the code calls it. The crew
   // calls an open Deficiency or an open Waiting an issue.
-  var note = blocked
-    ? '<div class="status-note">Fix the open issue first. Then Complete comes back.</div>'
+  var note = (blocked && blockedTapped === item.key)
+    ? '<div class="status-note status-note--tapped">Fix the open issue first. Then Complete comes back.</div>'
     : '';
 
   return '<div class="status-menu" id="menu-' + escapeHtml(item.key) + '">' +
@@ -307,6 +486,128 @@ function attr(text) {
 function toggleMenu(event, itemKey) {
   event.stopPropagation();     // keeps the page listener from closing it again
   openMenu = (openMenu === itemKey) ? null : itemKey;
+  blockedTapped = null;
+  render();
+}
+
+
+/** Somebody tapped Complete while an issue is open. Now the reason shows. */
+function blockedTap(event, itemKey) {
+  event.stopPropagation();
+  blockedTapped = itemKey;
+  render();
+}
+
+
+/* ── RECORDS ──────────────────────────────────────────────────────── */
+
+/** Opens one flag's record list, and closes whichever was open. */
+function toggleRecs(event, scope) {
+  event.stopPropagation();
+  openRecs = (openRecs === scope) ? null : scope;
+  render();
+}
+
+
+/**
+ * Marks one record Fixed.
+ *
+ * NOTHING MOVES IN THE SHEET. The row keeps its place and gains a state of
+ * Fixed and a closed date, so 0.5 can still show it to a supplier and 0.3
+ * can still list it. A record is never deleted and never moved.
+ *
+ * The whole record goes back on the queue, not just the state — a job
+ * carries the final value, which is what makes a retry safe.
+ */
+function fixRecord(event, recordId, scope) {
+  event.stopPropagation();
+  setRecordState(recordId, 'Fixed');
+  fixedHere[recordId] = true;
+  askGreen(scope);
+  render();
+}
+
+
+/** Puts a fixed record back. The mis-tap answer, and the only one there is. */
+function undoFix(event, recordId, scope) {
+  event.stopPropagation();
+  setRecordState(recordId, 'Open');
+  delete fixedHere[recordId];
+  greenFor = null;
+  render();
+}
+
+
+/** Every open record under one flag, fixed in one tap. */
+function fixAll(event, scope) {
+  event.stopPropagation();
+
+  recordsUnder(scope).forEach(function (record) {
+    setRecordState(record.record_id, 'Fixed');
+    fixedHere[record.record_id] = true;
+  });
+
+  askGreen(scope);
+  render();
+}
+
+
+/** The open records one scope holds — an item key, or 'phase:<key>'. */
+function recordsUnder(scope) {
+  if (scope.indexOf('phase:') === 0) {
+    return openRecords(copy, { unit: unitKey, phase: scope.slice(6), item: '' });
+  }
+  return openRecords(copy, { unit: unitKey, item: scope });
+}
+
+
+/**
+ * Writes one record's state onto the queue.
+ *
+ * storageRefused is set the same way a status tap sets it: the phone
+ * refusing to store an edit is the one failure no retry fixes, so it has
+ * to reach the screen before the person walks away.
+ */
+function setRecordState(recordId, state) {
+  var record = recordById(copy, recordId);
+  if (!record) return;
+
+  var next = makeRecord(record);
+  next.state  = state;
+  next.closed = (state === 'Open') ? '' : todayStamp();
+
+  storageRefused = !queueRecord(projectId, next);
+  if (!storageRefused) Queue.wake();
+}
+
+
+/**
+ * Asks about Complete, but only when the question makes sense.
+ *
+ * Not on a phase — a phase has no Progress control. Not on an item that
+ * already reads Complete. And not while another open record is left.
+ */
+function askGreen(scope) {
+  greenFor = null;
+  if (scope.indexOf('phase:') === 0) return;
+  if (recordsUnder(scope).length) return;
+
+  var stored = ((copy.status || {})[unitKey] || {})[scope] || 'not_started';
+  if (paintedStatus(projectId, unitKey, scope, stored) === 'complete') return;
+
+  greenFor = scope;
+}
+
+
+function setCompleteFromCard(event, itemKey) {
+  greenFor = null;
+  chooseStatus(event, itemKey, 'complete');
+}
+
+
+function closeGreen(event) {
+  event.stopPropagation();
+  greenFor = null;
   render();
 }
 
@@ -377,7 +678,8 @@ function placeOpenMenu() {
    structured record in the Deficiencies tab replaced the note — it says
    what is wrong, what is needed and how many, and 0.5 can add it up.
 
-   Step 4 puts the flag chips and the record list on this screen.
+   Step 4 put those records on this screen: the flag chips under each item
+   name, the list behind a tap on one, and Logging writes them.
 */
 
 
@@ -392,8 +694,11 @@ function placeOpenMenu() {
 */
 
 function closeAll() {
-  if (openMenu === null) return;
+  // The record list is NOT closed here. It was opened on purpose and the
+  // person is reading it; the dropdown is the thing that traps you.
+  if (openMenu === null && blockedTapped === null) return;
   openMenu = null;
+  blockedTapped = null;
   render();
 }
 

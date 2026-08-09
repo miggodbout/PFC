@@ -1098,3 +1098,261 @@ select.input {
   animation: spin 700ms linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+
+/* ── STEP 4 — RECORDS ON THE UNIT SCREEN ─────────────────────────── */
+/*
+   A row inside a bordered card needs its own side padding. The Unit screen
+   runs its rows under the page padding with no card around them, so .item
+   sits at 2px there and looks right. On the Queue screen the same row sits
+   inside .card and the text lands 3px off the border.
+*/
+.card .item { padding-left: 12px; padding-right: 12px; }
+
+/* The flag chip, as a button. Tap it and the records under it open.
+   One rule, no exception: records stay shut until the flag is tapped. */
+.flag-btn {
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  margin: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.flag-btn[aria-expanded="true"] { background: rgba(255,255,255,0.07); }
+
+/* The row of flag chips under an item name, or on a phase header. */
+.flag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* The record list, open under its item. */
+.recs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  margin-top: 2px;
+  border-left: 2px solid var(--line-soft);
+}
+.rec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+.rec-line {
+  flex: 1; min-width: 0;
+  font-size: 13px;
+  color: var(--fg-4);
+  line-height: 1.35;
+  word-break: break-word;
+}
+.rec-sub { color: var(--fg-6); }
+.rec-qty {
+  font-size: 12px; font-weight: 700;
+  color: var(--fg-6);
+  flex-shrink: 0;
+}
+
+/* A record marked Fixed stays for this visit only, struck through, with
+   Undo beside it. Leave the unit and it is gone. Nothing moves in the
+   Sheet — the row keeps its place with Fixed and a closed date. */
+.rec--fixed .rec-line { opacity: 0.45; text-decoration: line-through; }
+.rec--fixed .rec-qty  { opacity: 0.45; }
+.rec-done {
+  font-size: 12px; font-weight: 700;
+  color: #4CAF6D;
+  flex-shrink: 0;
+}
+
+.rec-acts { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Fix all, on an item holding more than one open record. */
+.fix-all { align-self: flex-start; margin: 2px 0 4px 10px; }
+
+/*
+   THE GREEN CARD. Fix the last open record on an item and it ASKS once.
+   It never sets Complete by itself — the crew sets Progress, always.
+*/
+.green-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(76,175,109,0.35);
+  background: rgba(76,175,109,0.10);
+  margin-top: 8px;
+}
+.green-text { font-size: 13px; color: var(--fg-3); line-height: 1.45; }
+.green-acts { display: flex; gap: 8px; }
+.green-acts .btn-small { flex: 1; }
+
+/*
+   THE BLOCKED Complete ROW keeps its normal colour and carries a red dot.
+   The reason only appears when somebody taps it. A greyed row read as a
+   broken app; a row that says nothing until you ask reads as a rule.
+*/
+.status-opt .blocked-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #E85C5C;
+  flex-shrink: 0;
+}
+.status-note--tapped { color: #F08080; }
+
+
+/* ── STEP 4 — LOGGING ────────────────────────────────────────────── */
+
+/* The place bar. Two lines, always: one line wrapped on a phone and the
+   wrap pushed the whole form down a row. */
+.place-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255,255,255,0.04);
+}
+.place-lines { flex: 1; min-width: 0; }
+.place-1 {
+  font-size: 15px; font-weight: 700;
+  color: var(--fg-2);
+  word-break: break-word;
+}
+.place-2 { font-size: 12.5px; color: var(--fg-6); margin-top: 2px; }
+.place-set { flex-shrink: 0; }
+
+/* The form scrolls behind the pinned Save bar. */
+.log-form { display: flex; flex-direction: column; gap: 16px; }
+.log-form--off { opacity: 0.4; pointer-events: none; }
+
+/* The Needed box is the hero field, and the only one at full height. */
+.needed-box {
+  min-height: 58px;
+  font-size: 17px;
+}
+
+/* The three suggestion chips. Four wrap the row. */
+.suggest {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.suggest-chip {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-line);
+  background: rgba(222,116,82,0.10);
+  color: var(--fg-3);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+
+/* Count: minus, the number, plus. It starts at 1 and never goes under it. */
+.qty { display: flex; align-items: center; gap: 12px; }
+.qty-btn {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-input);
+  background: rgba(255,255,255,0.06);
+  color: var(--fg-2);
+  font-size: 22px; font-weight: 700;
+  cursor: pointer;
+}
+.qty-n {
+  min-width: 40px;
+  text-align: center;
+  font-size: 19px; font-weight: 700;
+  color: var(--fg-1);
+}
+
+/*
+   THE PINNED SAVE BAR.
+
+   position: fixed alone does not track the iOS software keyboard — the bar
+   ends up under it, or floating in the middle of the screen. The bottom is
+   set from window.visualViewport instead, on its resize and scroll events.
+   See setSaveBarBottom() in logging/index.html.
+*/
+.save-bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px 20px calc(10px + var(--btm-safe));
+  background: rgba(13,13,13,0.94);
+  border-top: 1px solid var(--line-soft);
+  backdrop-filter: blur(8px);
+  z-index: 40;
+}
+.save-bar .btn { width: 100%; }
+
+/* Room under the form so the pinned bar never covers the last control. */
+.save-space { height: 92px; }
+
+/* The strip that confirms a save. It says it once and then the form is
+   ready for the next problem in the same room. */
+.saved-strip {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(76,175,109,0.35);
+  background: rgba(76,175,109,0.10);
+  color: #8FD6A6;
+  font-size: 13.5px; font-weight: 700;
+  text-align: center;
+}
+
+/* "Logged here" — what this visit has put on the queue. */
+.logged { display: flex; flex-direction: column; gap: 8px; }
+.logged-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+}
+.logged-line { flex: 1; min-width: 0; font-size: 13.5px; color: var(--fg-4); }
+.logged-row--gone .logged-line { opacity: 0.45; text-decoration: line-through; }
+
+/* The sheet that opens from the bottom to change the place. */
+.sheet-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 18px 20px calc(24px + var(--btm-safe));
+  border-radius: 18px 18px 0 0;
+  background: #161616;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sheet-title { font-size: 17px; font-weight: 700; color: var(--fg-1); }
+
+/* The near-match prompt. It fires on Save, never while typing. */
+.ask-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-line);
+  background: rgba(222,116,82,0.10);
+}
+.ask-text { font-size: 13.5px; color: var(--fg-3); line-height: 1.45; }
+.ask-acts { display: flex; gap: 8px; }
+.ask-acts .btn { flex: 1; }
