@@ -336,9 +336,8 @@ function itemHtml(item) {
   var menu = menuOpen ? menuHtml(item, key, blocked) : '';
 
   // One mark, never two: the ring while it is going, the red dot when it
-  // has stopped going.
-  var mark = held ? '<span class="ring ring--bad"></span>'
-                  : (job ? '<span class="ring"></span>' : '');
+  // has stopped going. The ring only turns while a call is in the air.
+  var mark = job ? queuedRingHtml(held) : '';
 
   // The item's own records. THE ROW STAYS ONE LINE — the flags go on a
   // line under the name, and the records themselves stay shut until a
@@ -386,7 +385,7 @@ function itemHtml(item) {
  */
 function greenCardHtml(item) {
   return '<div class="green-card">' +
-           '<div class="green-text">Every record on ' + escapeHtml(item.label) +
+           '<div class="green-text">Every issue on ' + escapeHtml(item.label) +
              ' is fixed. Set it to Complete?</div>' +
            '<div class="green-acts">' +
              '<button type="button" class="btn btn-small btn-primary press" ' +
