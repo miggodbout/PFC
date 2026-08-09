@@ -35,24 +35,29 @@
 // Change these two lines if you move the Drive folders.
 
 /**
- * Drive folder that holds the project Sheets folder. This is My Drive/PFC,
- * the same folder that holds Master Template and the camera app's
- * Project Logs.
+ * Drive folder that everything PFC Control owns sits inside.
+ * This is My Drive/PFC/Control, which holds Project Sheets and Master
+ * Template. The camera app's Project Logs stays outside it, and the two
+ * scripts share My Drive/PFC/Apps Scripts.
  *
- * Pinned by ID, not by name, on purpose. A name lookup from the top of My
- * Drive would silently build a second PFC folder the day this one is
- * renamed or moved, and every project made after that would vanish from
- * the app. An ID survives both.
+ * Pinned by ID, not by name, on purpose. A name lookup would silently
+ * build a second Control folder the day this one is renamed or moved, and
+ * every project made after that would vanish from the app with no error.
+ * An ID survives a rename and a move.
  *
  * Leave it empty to use the top level of My Drive instead.
  * To repoint it, open the folder in Drive and copy the ID from the address bar.
  */
-var PFC_ROOT_FOLDER_ID = '1fw8Wl7EEWIdHpr0QtD0vr6OBJDK86e2N';
+var PFC_ROOT_FOLDER_ID = '1SwrhzsObgZpaLsjJtP5ErsEZtt53ton9';
 
 /**
  * Name of the folder that holds every generated project Sheet.
- * Named to sit beside the camera app's "Project Logs", so the two systems
- * read apart at a glance inside PFC/.
+ *
+ * THIS ONE IS FOUND BY NAME, so it is the only Drive reference in either
+ * script that a move can break. Drag this folder somewhere else and
+ * getProjectsFolder will not find it — it will quietly create a new empty
+ * one and every existing project will disappear from the app. Move it only
+ * by moving the Control folder above, which is pinned by ID and carries it.
  */
 var PROJECTS_FOLDER_NAME = 'Project Sheets';
 
@@ -576,7 +581,7 @@ function handleCreateProject(data) {
 
     ss.setActiveSheet(ss.getSheetByName(TRACKER_SHEET_NAME));
 
-    // Move the new file into PFC/Project Sheets/.
+    // Move the new file into PFC/Control/Project Sheets/.
     var file = DriveApp.getFileById(ss.getId());
     file.moveTo(getProjectsFolder());
 
@@ -1634,7 +1639,7 @@ function resizeSheet(sheet, rows, cols) {
 
 // ── SMALL HELPERS ─────────────────────────────────────────────────────
 
-/** Finds or creates the PFC/Projects/ folder. */
+/** Finds or creates the PFC/Control/Project Sheets/ folder. */
 function getProjectsFolder() {
   var root = PFC_ROOT_FOLDER_ID
     ? DriveApp.getFolderById(PFC_ROOT_FOLDER_ID)
