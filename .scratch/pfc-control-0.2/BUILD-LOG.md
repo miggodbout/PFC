@@ -912,3 +912,48 @@ payload, the Logger window, the flag chips, the record list and the green card.
 Fold a landed record into the copy while you are in there. **PLAN CALL 3 needs
 one line from Miguel on his phone before Save is pinned to the bottom of the
 Logger form.**
+
+---
+
+## Session 8 — 2026-08-09
+
+**Step:** 4, not started. This session answered a plan call and nothing else.
+**Branch:** `0.2`.
+**Deployed:** no. **Merged to main:** no code changed. **CACHE_NAME:** untouched.
+
+**PLAN CALL 3 is answered. Save is pinned to the bottom of the Logger form.**
+
+Miguel was shown the two options side by side on his phone: the pinned Save bar
+with the form left one control per row, against Save in the scroll flow with
+Subtype and Count sharing a row and the place bar collapsed. **He chose the
+pinned bar.** He did not take the compressed form, so section 5.7's field order
+stands as written, one control per row.
+
+Two things came out of it that the plan did not say:
+
+- **The fallback is dead, not deferred.** Compressing the form was the answer to
+  a question that has now been answered another way. Do not reach for it later
+  as a tidy-up. If the screen runs short of height, the pinned bar is what pays.
+- **The bar has to survive the iOS keyboard.** `position: fixed` on iOS Safari
+  does not track the software keyboard, so a naive bar lands under it or floats
+  mid-screen. Size it off `window.visualViewport`. This is written into 5.7 and
+  it wants one look on a phone with the Needed box focused.
+
+Both are marked in 5.7, and section 12's table row 3 now reads ANSWERED.
+
+**Also confirmed for Miguel:** Logger is not on his phone and that is correct.
+There is no `control/logger/`, and `CARDS` in `control/index.html` still holds
+the five 0.1 cards. The greyed `Deficiencies` card is the 0.1 placeholder, not
+Logger. The `Log` card arrives with step 4, per 5.8.
+
+**Not landed:** everything from step 4 onward. `reference/PFC_Master_Template.xlsx`
+is still not updated, plan 1.7, unchanged since session 1.
+
+**Open:** everything session 7 left open, unchanged — the unfolded landed RECORD
+that step 4 must fix, the two ZZ test Sheets to trash, the three cosmetic things,
+and session 6's list. **PLAN CALL 3 is off that list.** No plan call is open now.
+
+**Next:** step 4, with nothing waiting on Miguel. Records in the `get-project`
+payload, the Logger window with its pinned Save bar, the flag chips, the record
+list and the green card. Fold a landed record into `copy.records` by `record_id`
+while you are in there.
