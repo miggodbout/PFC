@@ -536,6 +536,46 @@ var Store = {
     this.enforceLimit();
   },
 
+  /**
+   * Writes values the server has just accepted into the building copy.
+   *
+   * WITHOUT THIS, A SAVE THAT WORKED LOOKS LIKE A SAVE THAT FAILED. The
+   * screen paints a waiting edit out of the outbox, not out of the copy,
+   * and the job leaves the outbox the moment the server answers ok. So the
+   * paint disappears while the copy still holds the OLD value, and the row
+   * snaps back to what it said before the tap. On site that reads as a lost
+   * edit, and the crew taps it again.
+   *
+   * The server has already confirmed these values, so folding them in is
+   * not a guess. fetchedAt is deliberately NOT moved: it records when the
+   * server last spoke to us, and this is not a fetch.
+   *
+   * A refused write costs nothing here. The Sheet holds the value and the
+   * next fetch brings it back, so this never deletes a copy to make room —
+   * unlike the outbox, which holds the only copy of an unsent edit.
+   */
+  foldLanded: function (id, jobs) {
+    var held = this.read('project.' + id, null);
+    if (!held || !held.data) return;
+
+    var copy    = held.data;
+    var touched = false;
+
+    copy.status = copy.status || {};
+    jobs.forEach(function (job) {
+      // BUILD NOTE, step 4: a landed RECORD needs the same fold, into
+      // copy.records by record_id. Nothing creates one until Logger ships,
+      // so it is not written here — but the bug is identical. A saved
+      // record would vanish off the screen until the next fetch.
+      if (job.kind !== 'item') return;
+      copy.status[job.unitKey] = copy.status[job.unitKey] || {};
+      copy.status[job.unitKey][job.itemKey] = job.progress;
+      touched = true;
+    });
+
+    if (touched) this.write('project.' + id, { data: copy, fetchedAt: held.fetchedAt || 0 });
+  },
+
   /** Every building id the phone is holding a copy of. */
   projectIds: function () {
     var ids = [];
@@ -1061,15 +1101,29 @@ function classifyCallFailure(result) {
 }
 
 
-/** Files every result against its job. */
+/**
+ * Files every result against its job.
+ *
+ * A landed job comes off the shelf AND goes into its building copy, in this
+ * one pass, before anything redraws. The two belong together: the copy is
+ * what the screen falls back to the instant the paint goes, so leaving the
+ * copy behind shows the value the tap replaced. Landed jobs are grouped by
+ * building, so one copy is read and written once however many items landed
+ * on it.
+ */
 function applyOutcome(outcome, sent) {
   var results = outcome.results || {};
+  var landed  = {};
 
   sent.forEach(function (job) {
     var one = results[job.key];
 
     // A JOB LEAVES THE SHELF ON ok:true AND ON NOTHING ELSE.
-    if (one && one.ok) { Store.removeJob(job.key); return; }
+    if (one && one.ok) {
+      (landed[job.projectId] = landed[job.projectId] || []).push(job);
+      Store.removeJob(job.key);
+      return;
+    }
 
     if (one) { settleJob(job, one.retry, one.error, true); return; }
 
@@ -1078,6 +1132,10 @@ function applyOutcome(outcome, sent) {
     if (outcome.fail) {
       settleJob(job, outcome.fail.retry, outcome.fail.error, outcome.fail.burn);
     }
+  });
+
+  Object.keys(landed).forEach(function (projectId) {
+    Store.foldLanded(projectId, landed[projectId]);
   });
 }
 
