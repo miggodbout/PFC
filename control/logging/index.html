@@ -268,8 +268,6 @@ function draw() {
       '<button type="button" class="btn btn-primary press" ' +
               (missing ? 'disabled ' : '') + 'onclick="save()">Save</button>' +
     '</div>';
-
-  setSaveBarBottom();
 }
 
 
@@ -776,9 +774,6 @@ function paintSaveState() {
   } else if (note) {
     bar.removeChild(note);
   }
-
-  // The bar changed height, so its distance from the keyboard changed too.
-  setSaveBarBottom();
 }
 
 
@@ -981,32 +976,15 @@ function cancelLogged(id) {
 
 /* ── THE PINNED SAVE BAR ──────────────────────────────────────────── */
 /*
-   PLAN CALL 3: Save is pinned to the bottom of the screen and the form
-   scrolls behind it. The worst case is nine controls, when both Other
-   boxes are open, and Save falls under the keyboard at about six.
+   The bar is pinned to the bottom of the screen by CSS alone, and the
+   form scrolls behind it. There is no JavaScript here any more.
 
-   position: fixed alone does not track the iOS software keyboard. The bar
-   is sized off window.visualViewport instead, which reports the height
-   the keyboard leaves behind, on its resize and scroll events.
-
-   NEEDS ONE LOOK ON A REAL PHONE, with the Needed box focused.
+   It used to ride above the iOS software keyboard: a setSaveBarBottom()
+   read window.visualViewport on its resize and scroll events and set the
+   bar's bottom to whatever the keyboard was covering. Miguel reversed
+   that on 2026-08-09. The bar now sits at bottom: 0 and the keyboard
+   covers it while a box is focused. Close the keyboard to reach Save.
 */
-function setSaveBarBottom() {
-  var bar = document.getElementById('save-bar');
-  if (!bar) return;
-
-  var view = window.visualViewport;
-  if (!view) { bar.style.bottom = '0px'; return; }
-
-  // How much of the window the keyboard is covering.
-  var covered = window.innerHeight - view.height - view.offsetTop;
-  bar.style.bottom = Math.max(0, Math.round(covered)) + 'px';
-}
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', setSaveBarBottom);
-  window.visualViewport.addEventListener('scroll', setSaveBarBottom);
-}
 </script>
 </body>
 </html>
