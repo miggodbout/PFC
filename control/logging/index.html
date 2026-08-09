@@ -167,7 +167,8 @@ function draw() {
     return;
   }
 
-  var ready = !!(copy && unitKey);
+  var ready   = !!(copy && unitKey);
+  var missing = missingLine();
 
   screen.innerHTML =
     '<div class="body">' +
@@ -187,8 +188,9 @@ function draw() {
       '<div class="save-space"></div>' +
     '</div>' +
     '<div class="save-bar" id="save-bar">' +
+      (missing ? '<div class="save-note">' + escapeHtml(missing) + '</div>' : '') +
       '<button type="button" class="btn btn-primary press" ' +
-              (ready ? '' : 'disabled ') + 'onclick="save()">Save</button>' +
+              (missing ? 'disabled ' : '') + 'onclick="save()">Save</button>' +
     '</div>';
 
   slot.innerHTML = placeSheet ? placeSheetHtml() : '';
@@ -233,6 +235,23 @@ function phaseLabel() {
 
 
 /**
+ * The phase label with its own `Phase 1 —` dropped.
+ *
+ * The stored label already carries a number and a dash, so
+ * `Whole phase — ` + the label read `Whole phase — Phase 1 — Doors &
+ * Windows`. Two dashes in one line, and the second one says nothing.
+ * crew-words.md writes that row as `Whole phase — Doors & Windows`.
+ *
+ * The place bar keeps the full label. There the number is the useful part.
+ */
+function phaseName() {
+  var label = phaseLabel();
+  var match = label.match(/^\s*Phase\s*\d+\s*[—–-]\s*(.+)$/i);
+  return match ? match[1] : label;
+}
+
+
+/**
  * TYPE SITS ABOVE EVERYTHING because the two reason lists share no value.
  * It holds for the visit: four backordered locksets in one room cost one
  * tap, not four.
@@ -263,7 +282,7 @@ function itemFieldHtml() {
   var options = '';
 
   if (type === 'Waiting') {
-    options += option('', 'Whole phase — ' + phaseLabel(), itemKey === '');
+    options += option('', 'Whole phase — ' + phaseName(), itemKey === '');
   } else {
     options += option('', 'Choose an item', itemKey === '');
   }
@@ -315,7 +334,7 @@ function subtypeFieldHtml() {
 
   var box = (subtype === 'Other')
     ? '<input class="input input--sm" type="text" placeholder="Type it" ' +
-             'value="' + escapeHtml(subOther) + '" oninput="subOther = this.value">'
+             'value="' + escapeHtml(subOther) + '" oninput="typeSubOther(this.value)">'
     : '';
 
   return '<div class="field">' +
@@ -395,7 +414,7 @@ function reasonFieldHtml() {
 
   var box = (reason === 'Other')
     ? '<input class="input input--sm" type="text" placeholder="Say what it is" ' +
-             'value="' + escapeHtml(reasonOther) + '" oninput="reasonOther = this.value">'
+             'value="' + escapeHtml(reasonOther) + '" oninput="typeReasonOther(this.value)">'
     : '';
 
   return '<div class="field">' +
@@ -442,9 +461,9 @@ function loggedHtml() {
     var mark;
     if (gone)            mark = '<span class="rec-done">Cancelled</span>';
     else if (!job)       mark = '<span class="rec-done">✓</span>';
-    else if (job.held)   mark = '<span class="ring ring--bad"></span>';
+    else if (job.held)   mark = queuedRingHtml(true);
     else if (!navigator.onLine) mark = '<span class="queued-mark">' + ICON.offline + '</span>';
-    else                 mark = '<span class="ring"></span>';
+    else                 mark = queuedRingHtml(false);
 
     var act = gone ? '' :
       '<button type="button" class="btn btn-small btn-ghost press" ' +
@@ -617,6 +636,7 @@ function setReason(value) {
 
 function typeNeeded(text) {
   needed = text;
+  paintSaveState();
 
   // Redrawing the whole form here would take the keyboard down on every
   // keystroke. Only the chip row moves.
@@ -631,6 +651,47 @@ function typeNeeded(text) {
   if (row) { row.innerHTML = chips; return; }
   if (chips) render();
 }
+
+/* The two Other boxes. They type into a variable and move the Save bar,
+   and they never redraw — the keyboard is up while a person uses them. */
+function typeSubOther(text)    { subOther    = text; paintSaveState(); }
+function typeReasonOther(text) { reasonOther = text; paintSaveState(); }
+
+
+/**
+ * Refreshes the Save bar in place, with no redraw.
+ *
+ * The Needed box and the two Other boxes cannot call render() on a
+ * keystroke: the redraw takes the keyboard down mid-word, which is the
+ * whole reason render() puts the caret back. So they move the only two
+ * things a keystroke changes — the missing line, and whether Save can be
+ * tapped.
+ */
+function paintSaveState() {
+  var bar = document.getElementById('save-bar');
+  if (!bar) return;
+
+  var missing = missingLine();
+  var button  = bar.querySelector('button');
+  var note    = bar.querySelector('.save-note');
+
+  if (button) button.disabled = !!missing;
+
+  if (missing) {
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'save-note';
+      bar.insertBefore(note, bar.firstChild);
+    }
+    note.textContent = missing;
+  } else if (note) {
+    bar.removeChild(note);
+  }
+
+  // The bar changed height, so its distance from the keyboard changed too.
+  setSaveBarBottom();
+}
+
 
 /** Tap a chip and the STORED line is saved, punctuation and all. */
 function useChip(line) {
@@ -647,6 +708,41 @@ function bump(by) {
 /* ── SAVE ─────────────────────────────────────────────────────────── */
 
 /**
+ * The one thing the form still needs, in crew words, or ''.
+ *
+ * SAVE SAYS WHICH FIELD IS MISSING. A dimmed button on its own leaves a
+ * person tapping it, getting nothing, and having no way to learn why —
+ * which on site reads as an app that has stopped working.
+ *
+ * It names ONE field, the highest one still empty, so the line is the next
+ * thing to do rather than a list to work through. The order matches the
+ * form top to bottom.
+ *
+ * A Waiting record is allowed a blank Item: that is the `Whole phase` row,
+ * and it is a real choice. A Deficiency is always about one item.
+ */
+function missingLine() {
+  if (!copy)    return 'Choose a building.';
+  if (!unitKey) return 'Set the unit.';
+
+  if (type === 'Deficiency' && !itemKey) return 'Choose an item.';
+
+  var item = currentItem();
+  if (item && (item.types || []).length && !subtype) return 'Choose a type.';
+  if (subtype === 'Other' && !subOther.trim())       return 'Fill in the Subtype box.';
+
+  // The field the whole screen exists for. A record with no needed line
+  // gives the crew nothing to order and makes no chip for the next person.
+  if (!needed.trim()) return 'Type what is needed.';
+
+  if (!reason) return 'Choose a reason.';
+  if (reason === 'Other' && !reasonOther.trim()) return 'Fill in the Reason box.';
+
+  return '';
+}
+
+
+/**
  * THE NEAR-MATCH PROMPT FIRES HERE, ON SAVE, and never while typing.
  *
  * It only ever offers a line the chip row would have offered, because it
@@ -654,7 +750,7 @@ function bump(by) {
  * question is which spelling to store, not whether to store.
  */
 function save() {
-  if (!copy || !unitKey) return;
+  if (missingLine()) return;
 
   var hit = askLine ? null : nearMatch(currentGroup(), needed);
   if (hit) {
@@ -711,7 +807,7 @@ function writeRecord(line) {
   storageRefused = !queueRecord(projectId, record);
 
   if (!storageRefused) {
-    var name = item ? item.label : ('Whole phase — ' + phaseLabel());
+    var name = item ? item.label : ('Whole phase — ' + phaseName());
     loggedHere.push({
       id:        record.record_id,
       line:      (record.subtype ? record.subtype + ' · ' : '') + (line || name),

@@ -631,7 +631,16 @@ var Store = {
       }
     });
 
-    if (touched) this.write('project.' + id, { data: copy, fetchedAt: held.fetchedAt || 0 });
+    if (touched) {
+      this.write('project.' + id, { data: copy, fetchedAt: held.fetchedAt || 0 });
+
+      // THE MEMO HAS TO BE TOLD, and Store.write only moves the counter for
+      // the queue shelf. Without this line paintedRecords() keeps serving
+      // the list it built BEFORE the fold: the record comes off the shelf,
+      // the memo still says it is not in the copy, and the issue the crew
+      // logged one second ago disappears off the row.
+      jobsRev += 1;
+    }
   },
 
   /** Every building id the phone is holding a copy of. */
@@ -1624,14 +1633,6 @@ function applyOutcome(outcome, sent) {
       // The value the server took is now what the Sheet holds, so it goes
       // into the copy whatever has happened on the shelf since.
       (landed[job.projectId] = landed[job.projectId] || []).push(job);
-
-      // A RETAP WHILE THE CALL WAS IN THE AIR WINS, HERE TOO. If the job
-      // under this key is not the one that was sent, the person has set a
-      // new value since, and removing by key alone would throw that tap
-      // away with nothing to show for it. settleJob guards the failure
-      // path the same way. It stays and goes out on the next drain.
-      var fresh = Store.job(job.key);
-      if (fresh && fresh.at === job.at) Store.removeJob(job.key);
       return;
     }
 
@@ -1644,8 +1645,27 @@ function applyOutcome(outcome, sent) {
     }
   });
 
+  // THE COPY IS WRITTEN BEFORE THE SHELF IS EMPTIED, not after.
+  //
+  // Store.removeJob below calls Queue.changed(), and every screen listening
+  // redraws on the spot. Fold second and they all redraw from the copy as
+  // it stood BEFORE the fold — the record is off the shelf and not yet in
+  // the copy, so it paints as though it never existed. That is the whole
+  // reason this pass is ordered the way it is.
   Object.keys(landed).forEach(function (projectId) {
     Store.foldLanded(projectId, landed[projectId]);
+  });
+
+  Object.keys(landed).forEach(function (projectId) {
+    landed[projectId].forEach(function (job) {
+      // A RETAP WHILE THE CALL WAS IN THE AIR WINS, HERE TOO. If the job
+      // under this key is not the one that was sent, the person has set a
+      // new value since, and removing by key alone would throw that tap
+      // away with nothing to show for it. settleJob guards the failure
+      // path the same way. It stays and goes out on the next drain.
+      var fresh = Store.job(job.key);
+      if (fresh && fresh.at === job.at) Store.removeJob(job.key);
+    });
   });
 }
 
@@ -2105,6 +2125,23 @@ function queuedChipHtml(count) {
 
 
 /**
+ * The mark beside one queued edit, on a row.
+ *
+ * IT ONLY TURNS WHILE SOMETHING IS ACTUALLY GOING OUT. Standing in a
+ * basement the ring used to spin for ever, two lines under a bar reading
+ * `Offline`, and a spinner that never stops says "working" while nothing
+ * is working. Waiting gets a still ring — the same rule the sync bar
+ * already follows with its turning ring and its still slab.
+ *
+ * held  — the edit was refused and a person has to look. A still red dot.
+ */
+function queuedRingHtml(held) {
+  if (held) return '<span class="ring ring--bad"></span>';
+  return '<span class="ring' + (Queue.sending() ? '' : ' ring--wait') + '"></span>';
+}
+
+
+/**
  * The marks line — both flag counts, the not-saved chip and the queued chip.
  *
  * THE MARKS GET A LINE OF THEIR OWN. Left to trail the count they break in
@@ -2469,8 +2506,13 @@ function mountSyncBar(href) {
  *
  * The three shapes Miguel settled on:
  *
- *   offline, nothing queued    ■ Offline · updated 1:22 AM
- *   offline, three queued      ■ Offline · 3 edits queued
+ * The mark in front of the word Offline is the crossed-bars glyph, the same
+ * one a queued chip carries. It was a plain grey slab until the step 4 fix
+ * round: the slab means "waiting", which is right for `3 edits queued` on a
+ * phone that has signal, and wrong for a phone that has none.
+ *
+ *   offline, nothing queued    ▨ Offline · updated 1:22 AM
+ *   offline, three queued      ▨ Offline · 3 edits queued
  *                                updated 1:22 AM      Queue ›
  *   online, nothing queued     no bar at all
  *
@@ -2492,7 +2534,8 @@ function syncBarHtml(href) {
       kind = 'accent';
       parts.push('<span class="sync-ring"></span>Saving ' + editsText(counts.waiting) + '…');
     } else if (navigator.onLine === false || stale) {
-      parts.push('<span class="sync-slab"></span>Offline · ' + editsText(counts.waiting) + ' queued');
+      parts.push('<span class="sync-off">' + ICON.offline + '</span>Offline · ' +
+                 editsText(counts.waiting) + ' queued');
     } else {
       // Online, between retries. Saying "Offline" here would be a lie.
       parts.push('<span class="sync-slab"></span>' + editsText(counts.waiting) + ' queued');
@@ -2513,7 +2556,7 @@ function syncBarHtml(href) {
   if (!parts.length) {
     return '<div class="syncbar syncbar--quiet">' +
              '<div class="sync-row">' +
-               '<span class="sync-text"><span class="sync-slab"></span>Offline' +
+               '<span class="sync-text"><span class="sync-off">' + ICON.offline + '</span>Offline' +
                  (when ? '<span class="sync-sep">·</span>updated ' + escapeHtml(when) : '') +
                '</span>' +
              '</div>' +

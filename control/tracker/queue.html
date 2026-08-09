@@ -122,8 +122,7 @@ function jobHtml(job, canAct) {
   return '<div class="item">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(place.what) + '</span>' +
-             (canAct ? '<span class="ring ring--bad"></span>'
-                     : '<span class="ring"></span>') +
+             queuedRingHtml(canAct) +
            '</div>' +
            '<div class="item-details">' + escapeHtml(place.where) + '</div>' +
 

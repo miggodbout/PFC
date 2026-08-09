@@ -177,10 +177,13 @@ draws is listed here. **Six field names come straight from the build plan**
 | `Saved · waiting to send` | the strip after a save | `waiting to send` matches `queued` in meaning and is what the row shows |
 | `Logged here` | the list of this visit's records | **Settled** in plan 5.7 |
 | `Cancel` | on a Logged here row | It undoes a record. `Delete` is taken, and means losing a queued edit |
+| `This phone already has 32 6 RH. You typed 32" 6" RH.` | the near-match prompt, above its two buttons | Two short sentences, both active, no contraction. It states the two spellings and lets the buttons ask the question. Added 2026-08-09 in the step 4 fix round — only its buttons were listed before |
 | `Use it` / `Keep mine` | the near-match prompt | **Settled** in plan 5.7 |
 | `Fix all 3` | above more than one open record | **Settled** in plan 5.4 |
 | `Fixed` / `Undo` | on a record row in Tracker | `Fixed` is the state the Sheet stores. `Undo` is the mis-tap answer |
+| `Every issue on Interior Doors is fixed. Set it to Complete?` | the green card, above its two buttons | Added 2026-08-09 in the step 4 fix round. **It read `Every record on` and the code was changed, not the row** — `record` is a code word, and `issue` is the settled umbrella. One thing, one word |
 | `Set Complete` / `Not yet` | the green card | **Settled** in plan 5.4 |
+| `Choose a building.` · `Set the unit.` · `Type what is needed.` · `Fill in the Subtype box.` · `Fill in the Reason box.` | over the dimmed Save button, one at a time | Added 2026-08-09 in the step 4 fix round. Save names the one field it still needs. Each line is the action, and the first four reuse words already settled above |
 | `No building on this phone` | Logging with no local copy | Says the state. The button under it says the action |
 | `Type it` / `Say what it is` | the two `Other` boxes | Short, active, and different from each other on purpose |
 
@@ -217,3 +220,11 @@ Open rows live in the section above. There are four: `Job site`,
 screen was checked before it was written, and the two the file could not
 settle became OPEN rows instead of guesses. Neither one blocks the screen.
 Both block shipping 0.2.
+
+**Where it did not hold: whole sentences.** The step 4 test round found two
+crew-facing sentences missing — the near-match prompt and the green card
+question — while both of their buttons were listed. A button is easy to see
+as a string; a sentence inside a card reads as prose and gets skipped.
+**Check the sentences too, not only the labels.** Writing the green card row
+down is what caught `record` on a screen, a word this file settles as
+`issue` everywhere else.

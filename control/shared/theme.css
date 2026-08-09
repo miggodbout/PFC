@@ -596,11 +596,21 @@ button {
   animation: spin 750ms linear infinite;
 }
 
-/* Waiting: a still slab. It is not turning because nothing is happening. */
+/* Waiting: a still slab. It is not turning because nothing is happening.
+   Only used when the phone HAS signal and the edit is between retries. */
 .sync-slab {
   width: 11px; height: 11px; flex-shrink: 0;
   border-radius: 3px;
   background: rgba(255,255,255,0.30);
+}
+
+/* Offline: the crossed-bars glyph, not the slab. A slab says "waiting",
+   which is true of an edit on a phone that has signal and wrong on a phone
+   that has none. Same glyph a queued chip carries, so the two agree. */
+.sync-off {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 /* Failed: a red dot. The corner badge shape is reserved for a CHIP, where
@@ -638,6 +648,16 @@ button {
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 750ms linear infinite;
+}
+
+/* Waiting, with nothing in the air: the SAME ring, standing still.
+   It spun for ever in a basement, two lines under a bar reading Offline,
+   and a spinner that never stops says "working" while nothing is working.
+   The ring is drawn whole and dimmer, so the row still shows an edit is
+   on the shelf. It turns the moment a call goes out. */
+.ring--wait {
+  border-color: rgba(222,116,82,0.45);
+  animation: none;
 }
 
 /* Failed: a still red dot where the ring was. */
@@ -1292,8 +1312,18 @@ select.input {
 }
 .save-bar .btn { width: 100%; }
 
-/* Room under the form so the pinned bar never covers the last control. */
-.save-space { height: 92px; }
+/* What the form still needs, one field at a time, above the dimmed button.
+   Without it the dim is the only signal and it names nothing. */
+.save-note {
+  padding-bottom: 8px;
+  color: var(--fg-5);
+  font-size: 13px; font-weight: 600;
+  text-align: center;
+}
+
+/* Room under the form so the pinned bar never covers the last control.
+   Sized for the tall bar — the note line above the button. */
+.save-space { height: 116px; }
 
 /* The strip that confirms a save. It says it once and then the form is
    ready for the next problem in the same room. */
