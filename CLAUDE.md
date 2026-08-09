@@ -4,6 +4,72 @@ This file gives Claude Code persistent context for this repo. Read it before mak
 
 ---
 
+## Two Standing Notes — read these first
+
+Both were written by Miguel on 2026-08-09, after a session stopped short and
+asked permission for things he had already decided. They exist to stop that
+happening again.
+
+### 1. Ship it. The crew is not on this app yet.
+
+**PFC Control is under construction, and nobody but Miguel opens it.** The
+crew does not touch it until **0.4 at the earliest** — that is the QR Log
+and Status menu, the first release aimed at anyone else.
+
+So **commit and push without asking.** A bad push costs Miguel one reload.
+It cannot cost a carpenter his afternoon, because no carpenter is looking.
+The normal flow is: commit on the version branch, merge to `main`, push
+both. `main` is what GitHub Pages serves.
+
+Do not weigh "does this diff reach a crew phone" any more. Until 0.4, the
+answer is no.
+
+**What this does NOT change:** still bump `CACHE_NAME` on every push, still
+say plainly what was and was not tested, and still ask before anything
+destructive — a force push, a history rewrite, a hard reset, or deleting a
+Sheet. The rule is about hesitating, not about care.
+
+The camera app is the exception, and it always was. It IS in daily crew use.
+Its rules further down stand untouched.
+
+### 2. Claude is connected to Apps Script. Redeploy it yourself.
+
+`clasp` is installed and already logged in on this machine. **Never hand a
+redeploy back to Miguel as a manual step.** If a change to `Code.js` needs
+to be live, put it live in the same session, then say which version it
+became.
+
+For **PFC Control**, from `control/appscript/`:
+
+```
+clasp push --force
+clasp create-deployment --deploymentId <the id below> --description "what changed"
+```
+
+**Update the existing deployment. Never create a new one.** The deployment
+id is the one already inside `API_URL` in `control/shared/common.js`:
+
+```
+AKfycbzo9lCHMaxDqMEk6PPZouUWXG6dDeAMh3tHI0dtYExjCYE9DYDdT4vj8_YCrtnGjv5e
+```
+
+A new deployment mints a new URL, which orphans every phone still holding
+the old one. `clasp list-deployments` shows both the live one and a `@HEAD`
+entry — `@HEAD` is not it.
+
+Then **prove it landed**, rather than trusting the command. One `curl` at
+the web app URL with the action you changed, and read the field back:
+
+```
+curl -sL ".../exec?action=list-projects"
+```
+
+The same applies to the camera app's script in `appscript/`, with its own
+config and its own deployment. Both configs are gitignored and live only on
+this machine.
+
+---
+
 ## Writing Standard
 
 **UI text follows ASD-STE100 Simplified Technical English.** Every word the crew reads on a screen obeys these rules. A worker reads his phone in bad light, in a hurry, wearing gloves. Ambiguity costs him time.

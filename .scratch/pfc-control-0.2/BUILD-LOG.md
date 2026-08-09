@@ -1903,9 +1903,10 @@ Step 5 — Admin, and test points 14 and 15.
 
 **Step:** 4 — the second fix round, from Miguel's own test run.
 **Branch:** `0.2` at `7945e55`, merged to `main` and pushed.
-**Deployed:** **not yet.** `Code.js` gained one number, so this round DOES
-need an Apps Script redeploy — the first round in three sessions that does.
-See "The one deploy" below.
+**Deployed:** **yes — Apps Script version 10.** `Code.js` gained one number,
+so this round needed a redeploy, the first in three sessions that did. Done
+from this session with `clasp`, on the **same deployment id**, and confirmed
+by a live `list-projects` call. See "The one deploy" below.
 **Merged to main:** **yes.** `CACHE_NAME` is `pfc-control-0.2-step4-fix2`.
 
 The findings are `notes/0.2-step-4-testing.md`, twelve of them across Core,
@@ -2063,6 +2064,22 @@ plain one-colour bar, and every other screen colours by phase off the copy,
 because `projectRollup` passes `phaseCounts` straight through, undefined
 included. Same rule the sixth and seventh follow.
 
+**It was redeployed anyway, in this session.** `clasp push --force` then
+`clasp create-deployment --deploymentId <the id in API_URL>`, version 9 to
+**10**. Same id on purpose: a new deployment mints a new URL and orphans
+every phone holding the old one.
+
+Read back off the live URL, so this is the server talking and not the
+command's own output:
+
+```
+Elsliger 36-B  phase1 112/144   phase2 8/72   phase3 48/252
+Elsliger 36-C  phase1 1/144     phase2 0/72   phase3 0/252
+```
+
+**This is also the session where Miguel put the redeploy in Claude's hands
+for good.** See the two standing notes at the top of `CLAUDE.md`.
+
 ### Worth knowing
 
 - **The check ran against seeded data on `localhost:8731`**, not against a
@@ -2081,7 +2098,6 @@ included. Same rule the sixth and seventh follow.
 - **Needs a real phone:** the overscroll fix, the pinned Save with the
   keyboard up, the new chip x at thumb size, and the grey wifi mark at 15px.
 - Miguel's call on the slash through the wifi glyph.
-- The Apps Script redeploy for `phaseCounts`.
 
 ### Next
 
