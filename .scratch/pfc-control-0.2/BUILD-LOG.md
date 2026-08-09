@@ -2193,3 +2193,161 @@ OPEN words, the phone checks, or the wifi slash.
 ### Next
 
 Unchanged — step 5, Admin, and test points 14 and 15.
+
+---
+
+## Session 18 — 2026-08-09
+
+**Step:** 5 — Admin. Complete.
+**Branch:** `0.2` at `8eae1a3`, merged to `main` at `801cc81`. Both pushed.
+**Deployed:** **yes — Apps Script version 11.** Same deployment id, confirmed
+by reading `get-structure` back off the live URL.
+**Merged to main:** **yes.** `CACHE_NAME` is `pfc-control-0.2.0-dev.3`, raised
+with `tools/bump-version.ps1`.
+
+Everything plan section 6 lists for step 5 is built and tested: `rename-item`,
+the three list branches that skip the rebuild, `cancel-item-records`, the
+removal refusal, the Lists card, the Rename card, and the line 437 note. Test
+points 14 and 15 from the step 3 round are fixed with it.
+
+### The server
+
+**`rename-item`** moves the label and never the key, mirroring `rename-unit`.
+It rebuilds the Tracker tab, because the header text on the grid is the label,
+and it never touches the Deficiencies tab, because that tab stores the key.
+
+**`add-reason`, `add-type`, `set-trim` — and a fourth, `set-hint`.** The plan
+names three. **Plan 5.10 also puts a hint box in the Lists card**, and a box
+with nothing to call cannot save. `set-hint` is that call. It is one more entry
+in the same list and it behaves identically.
+
+`LIST_ONLY_OPS` at the top of `Code.js` is what `handleUpdateStructure` reads.
+A list op skips `readAllValues`, `rebuildTracker` and `rebuildDashboard`, and
+calls `writeConfig` alone.
+
+**`remove-item` gains the refusal**, and it runs in `handleUpdateStructure`,
+not in `applyStructureOp`. The refusal reads the Sheet; `applyStructureOp`
+only ever reads the config, and its doc comment says so. Keeping that true was
+worth the extra call site.
+
+**The refusal carries numbers, not only a sentence.** `apiCall` now puts the
+whole failure body on `result.data`, both on the fetch path and on the JSONP
+path. The panel reads `blocked.records` and `blocked.units` and writes its own
+line. Every other caller reads `reason` and `detail` and never looks at `data`
+unless `ok` is true.
+
+**`cancel-item-records`** sets every Open record on one item to Cancelled with
+today's date. Two column writes whatever the record count. **Cancelled, never
+Fixed** — removing an item says PFC is not doing that work, and Fixed would
+say somebody repaired twelve doors, in the tab a supplier claim is built from.
+
+**`get-structure` now sends `reasons` and each item's `types`, `trim` and
+`hint`.** The Lists card edits them, so it has to read them. Same three keys
+`get-project` already sends to Logging.
+
+### The screen
+
+Three cards: **Rename an item**, **Lists**, and the refusal panel inside
+Remove an item. Card order puts the three item ops together rather than
+following the plan's numbering — the plan enumerates them, it does not lay
+them out.
+
+**The Lists card holds a working copy of the trim and the hint.** Every tick
+redraws the card, so reading either off the elements at save time would lose
+what the redraw threw away. `seedListDrafts` refills them whenever the
+structure loads or the item changes.
+
+**A ticked box means the item OFFERS that reason. The trim stores the
+opposite.** An empty trim is the common case and it offers all eight, so the
+stored list is the short one.
+
+**The panel says `issues`, and the plan says `records`.** Amendment A3 says
+`crew-words.md` wins on any word the crew reads, and that file settles
+`record` as a code word and `issue` as the umbrella. Caught by writing the
+strings into `crew-words.md` before writing them into the screen — the same
+way the step 4 round caught `Every record on`.
+
+### Test points 14 and 15 — one cause, one fix
+
+Both were the shared offline sentence: *"The app opened from its saved copy.
+Move to a spot with signal, then try again."* **This screen holds no saved
+copy.** It always asks the server, by design, because a stale list here would
+offer a building that no longer exists. So the sentence pointed at something
+that does not exist, on the two screens where it was most alarming — one of
+them said the buildings were gone.
+
+`failText()` in `setup/index.html` answers offline with a sentence of its own
+and hands every other reason to `reasonText`. A timeout still reads
+*"The server did not answer in time"*, and E1/E2 still carry their codes.
+
+**A failed list and an empty list are now different things.** They both
+arrived as no buildings before.
+
+### Tested
+
+**68 checks in node**, `Code.js` loaded into a vm with fake `SpreadsheetApp`,
+`LockService` and `CacheService`: every branch of the five ops, the
+case-insensitive duplicate test, a trim value that is not on the building
+list, `Other` refused as a subtype, the refusal's counts and its singular
+wording, `cancel-item-records` leaving Fixed and Cancelled rows alone, and
+running it twice cancelling nothing more.
+
+**47 checks live**, against a throwaway building the round created itself.
+This is the plan's whole step 5 test list, on a real Sheet:
+
+| Plan test | Result |
+|---|---|
+| Add a subtype, the Tracker tab is not rebuilt and no status moves | **Confirmed.** The whole status grid and every `lastUpdated` stamp came back byte for byte identical |
+| Rename an item, every record still points at it | **Confirmed.** Four records, the subtype list, the trim and the Progress values all survived the rebuild |
+| Remove an item holding open records, Cancel all, the second Remove works | **Confirmed.** Refused at 3 open across 2 units, cancelled 3, removed on the second call |
+| A custom item offers all reasons and shows no subtype dropdown | **Confirmed.** `types: []`, `trim: []`, `hint: ''` |
+
+Also confirmed live: the Fixed record was left alone by Cancel all, the
+record on another item was untouched, and the removed item's records are
+**still in the Deficiencies tab** pointing at a key the config no longer
+names. That is deliberate — a record is history.
+
+**Then the screen in Chrome**, on the local `0.2` files. The six cards draw,
+the trim ticks read the stored trim inverted correctly, one tick flips one
+reason, text typed in the Hint box survives a tick, an item with no subtypes
+says so and offers all eight reasons, the refusal panel and its confirm draw
+and clear, and both offline lines read right. **Then the same screen against
+the live backend and the throwaway building**: the ninth reason the API round
+added drew as a chip, the hint it set read back into the box, and the custom
+item was offered. No console error on a clean load.
+
+### Worth knowing
+
+- **A throwaway building is on Drive: `ZZ 0.2 Step 5 Test`.** It was made by
+  the round, it is full of test records, and it should be trashed.
+  `1OybvFmL_0czn3Nnv-0_eSAtN-1QawEHuSABLEtK9xRw`.
+- **The two Elsliger buildings were not touched.** Every write in this session
+  went to the throwaway.
+- `Cancel all 1 issue` reads awkwardly at a count of one. It is grammatical
+  and rare. Left as it is.
+- **`Can not` and `cannot` now both appear**, in the refusal panel and in the
+  E2 line. The refusal spelling comes from plan 5.10 word for word. One of the
+  two should give, and it is a one-word change either way.
+
+### Open
+
+- **`Hint` is a new OPEN row in `crew-words.md`**, with `Example` as the
+  alternative. `Subtype` now names this screen too. The OPEN rows are five and
+  they block shipping 0.2, not building it.
+- Everything session 16 left open is still open: the phone checks — the
+  overscroll fix, the pinned Save with the keyboard up, the chip x at thumb
+  size, the grey wifi mark at 15px — and Miguel's call on the wifi slash.
+- The Save change from session 15, if Miguel wants Needed optional on a
+  Waiting record.
+
+### Next
+
+**Step 6 — the finish, and it is a full test round.** The seven Hub cards
+including the greyed Archive, the install nudge, the `sw.js` SHELL, `on_hold`
+renamed `waiting` everywhere, the theme classes, and a read of every comment
+this release made wrong. Then the round covers every step's list from plan
+section 6, and the release itself: `-Release 0.2.0`, the tag, and the GitHub
+Release.
+
+**The five OPEN words have to close before 0.2 ships.** They are the one
+thing on the list that needs Miguel and cannot be built around.
