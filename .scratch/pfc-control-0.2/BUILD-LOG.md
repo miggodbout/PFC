@@ -1129,3 +1129,158 @@ from this session first (there should not be one, since branch creation is
 also a write and would have failed the same way), then just re-run block 2
 following `HANDOFF.md` section 2 as if this session had not happened, and
 say so plainly in your own entry.
+
+---
+
+## Session 11 — 2026-08-09
+
+**Step:** 3 fix round, blocks 3, 4 and 5 of 5, in one sitting. **The fix round
+is complete.** Every block in `HANDOFF.md` has landed.
+
+**Branch:** `0.2`, commit `4b9dec3`, pushed.
+**Deployed:** yes — Apps Script version 9, redeployed onto the existing
+deployment id. The URL did not change.
+**Merged to main:** see the open item at the bottom.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix5`. `SHELL` needed no
+change — no file was renamed this round.
+
+### First: session 10's warning was wrong, and block 2 did ship
+
+The session 10 entry says in capitals that nothing from it reached GitHub, and
+tells the next session to re-run block 2 from scratch. **Do not.** Block 2 is on
+`origin/0.2` as `e668459` and `14b7087`, and it is on `origin/main` as well
+through the merge `7275731`. I checked the code, not just the log:
+`queuedChipHtml` is in `common.js`, `waitingIn` and `.ring--sm` are gone.
+
+I cannot tell from here how it got there — whether the push succeeded on a later
+try, or whether Miguel moved it across by hand. The commits are authored
+`Claude`, where blocks 1 and the handoff before them are authored `miggodbout`,
+which suggests the container's own commits made it over intact rather than being
+retyped. What matters is that the work exists and is live, so I built blocks 3 to
+5 on top of it. **The session 10 entry is left exactly as written** — a log that
+gets edited to look correct afterwards is worth nothing. This paragraph is the
+correction.
+
+### Block 3 — the bar fills by items, the count stays in units
+
+The defect was one line. `barHtml` filled from `roll.done`, and above the Unit
+screen `done` counts whole units finished. A floor of twelve half-built units has
+none finished, so the bar drew nothing — and `barHtml` returns an empty string
+when nothing is done, so it did not even draw an empty track. That is Miguel's
+"Missing: Building View, Floor View" exactly. Unit chips looked right the whole
+time because a unit rollup already counts items.
+
+`rollup()` now carries a second pair, `itemsDone` and `itemsTotal`, used by the
+bar alone. `groupRollup` sums that pair across its units. A caller that gives no
+item numbers falls back to the unit pair, which is why the unit level needed no
+change at all: there, `done` and `total` already are items.
+
+**The Buildings row needed the backend.** The server sent unit counts only, and
+the old comment there said counting items would mean reading the whole Tracker
+grid for every building. That turned out to overstate it: the item status columns
+are contiguous, and the Sheet is already open at that point, so `countItemCells`
+is one extra `getValues()` on an open Spreadsheet. The expensive part of that
+handler is `openById` on every project, and this adds none of it. **I asked
+Miguel before spending the deploy and he chose to send the counts.**
+
+It reads stored values, so an item held at In Progress by an open issue still
+counts Complete there. `unitsDone` already had that property, since it reads the
+Sheet's own rollup column, so this is not a new approximation — and it can only
+move a hairline bar by one item's width.
+
+`countText` changed shape with it: `12 units · 5 done` becomes `5/12 Units done`.
+The done number leads because it is the one being read.
+
+**The Unit screen got its bar**, under the pill, top right, stretched to the
+pill's width. **PLAN CALL: Miguel chose to keep the pill** rather than have the
+bar replace it. The reason to keep it is that a full bar beside `In Progress` is
+the only thing on that screen that shows an open issue holding a finished unit
+back — with the pill gone, a blocked unit and a finished one look identical.
+
+### Block 4 — `Exterior Door(s)` became `Exterior Doors`
+
+Three places in `common.js`, and the `slug` example comment in `Code.js` that
+used it. The derived key moves from `exterior_door_s` to `exterior_doors`.
+Nothing to migrate, per Miguel's confirmation that only ZZ tests exist.
+
+### Block 5 — the header stack, and two bugs with one root cause
+
+The stale line is no longer a banner of its own, so three stacked bars cannot
+happen. It rides on the sync bar in the three shapes Miguel drew.
+
+**The important half is not the layout.** The line used to be an argument to
+`render()`, so the next redraw — a queue change, an edit landing — painted over
+it. That is the whole "shows for ~5 secs and then disappears" report. It is state
+now: `markStale()` when a fetch fails, `markFresh()` when one lands, held outside
+the draw. A redraw cannot remove it and only a successful fetch can.
+
+The same shape of bug caused the red `Saving` flash. `sendJobs` answers `offline`
+without touching the network, so `drain()` set the sending state, painted
+`Saving 3 edits…` in accent, and went back to grey inside one frame — four times
+over in the trace below. `drain()` now stops before the paint when the phone is
+offline. **Nothing is stranded by that:** no try is burnt, the backoff timer is
+still armed, and the `online` event, returning to the app, and a pull down all
+still wake it. I tested that specifically, because an early return in a send loop
+is exactly the kind of fix that quietly eats a queue.
+
+`staleNoteHtml` and the `.banner--quiet` rule are deleted, both having lost their
+last caller.
+
+### Tested
+
+**Traced first, then driven in Chrome.** 51 checks across four Node traces:
+the item fill at every level and the old-payload fallback, the count text
+including singular and empty, all the sync bar shapes including held edits and
+the Queue screen's own linkless variant, and the offline flash reproduced against
+a rebuilt before-case and then shown gone.
+
+**Then a real smoke check** against the live backend on a local server, which is
+the part that actually earned its time:
+
+- The Buildings row draws a bar where it drew none before. The first ZZ project
+  is `unitsDone 0` but `itemsDone 1 / itemsTotal 18`, so the old code drew
+  nothing and the new code draws a sliver. The second is genuinely 0 done and
+  still correctly draws nothing.
+- Floor 2 draws a bar and reads `0/3 Units done`. Floor 1 has no item done and
+  draws no bar. Both correct.
+- **The Unit screen's new corner is clean** — pill on top, bar under it at the
+  pill's width, no repeat of the `#unit-pill` smoosh. This is the one thing I
+  would not have trusted a trace for, since it is the same element that broke
+  before.
+- It filled 33%, not the 67% I set. **That is the flag downgrade working**: one
+  of the two items I marked Complete carries a deficiency, so it displays In
+  Progress and does not count. A free confirmation of the rollup rule.
+- All three sync bar shapes rendered as drawn, and online-with-nothing-queued
+  leaves the slot genuinely empty.
+- No console errors anywhere, and the queue shelf was empty at the end — the
+  visual checks stubbed `Queue.counts` for one paint rather than writing jobs, so
+  nothing was queued and nothing was sent.
+
+`curl` against the live web app confirms `itemsDone` and `itemsTotal` are in the
+real answer.
+
+### Open
+
+- **The merge to `main` is not done**, and that is the one step that puts this on
+  a crew phone. `main` still serves `fix4`, which is blocks 1 and 2. Held for
+  Miguel deliberately rather than assumed.
+- **The backend is already redeployed and `main` is not.** This is safe in this
+  direction and only this direction: the new fields are additions, and the old
+  front end ignores fields it does not know. A phone on `fix4` keeps working
+  exactly as before until the merge.
+- **The offline glyph in the sync bar is still the grey slab.** Miguel's point 8
+  named that grey box specifically and asked for signal bars with a slash. Block
+  2 gave the glyph to chips; the bar kept the slab, and `HANDOFF.md` block 5
+  draws the slab in its own sketch. **I left it rather than widen the block
+  quietly.** It is a one-line change if he wants it — `ICON.offline` already
+  exists.
+- Everything session 9 and 10 left open that this round was not asked to touch:
+  `reference/PFC_Master_Template.xlsx`, the two ZZ test Sheets that step 4 wants
+  replaced with unsaturated data, and the unfolded landed RECORD.
+- Not this round, per `HANDOFF.md`: the greyed Complete (point 1, needs a flag to
+  look at, belongs to step 4, and it overrules a settled decision in `CLAUDE.md`
+  and ticket `05` that must be updated when built), and points 14 and 15 on the
+  setup screen, which step 5 owns.
+
+**Next:** merge to `main` when Miguel says so, then the step 3 test round — the
+gate. Step 4 does not start before that round reports back.

@@ -1,5 +1,16 @@
 # HANDOFF — the 0.2 step 3 fix round
 
+> **DONE, 2026-08-09. All five blocks have landed on `0.2`.** Blocks 1 and 2 in
+> sessions 9 and 10, blocks 3, 4 and 5 in session 11 (`4b9dec3`). Read this file
+> now for the reasoning behind a decision, not as a work order.
+>
+> **Session 10's entry in `BUILD-LOG.md` warns that block 2 never reached GitHub
+> and tells you to re-run it. That warning is wrong** — block 2 is on
+> `origin/0.2` and on `origin/main`. See the session 11 entry.
+>
+> What is left is the merge to `main` and then the step 3 test round, which is
+> the gate before step 4.
+
 Written 2026-08-09, end of session 9. Branch `0.2` at `42b9be9`.
 
 **Nothing here is step 4.** Step 3 shipped, Miguel tested it, and fifteen findings

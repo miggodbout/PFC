@@ -63,7 +63,7 @@ if (lastList) {
   // long-finished building would flash up greyed for a second before the
   // fetch lands and takes it away.
   rememberFinished(lastList);
-  draw(lastList, null);
+  draw(lastList);
 } else {
   screen.innerHTML = loadingHtml('Loading buildings…');
 }
@@ -72,7 +72,7 @@ mountSyncBar();
 
 // A held or a queued edit is a mark on a Tracking row, so the list
 // redraws whenever the queue changes.
-Queue.onChange(function () { if (lastList) draw(lastList, null); });
+Queue.onChange(function () { if (lastList) draw(lastList); });
 
 refresh();
 
@@ -86,15 +86,24 @@ function refresh() {
   return fetchProjects().then(function (result) {
     if (result.source === 'error') {
       // No stored list and no signal is the only blank case. With a list
-      // in hand the screen keeps it and says how old it is.
-      if (!lastList) screen.innerHTML = errorHtml(result.reason, result.detail);
-      else draw(lastList, result);
+      // in hand the screen keeps it, and the sync bar says how old it is.
+      if (!lastList) {
+        screen.innerHTML = errorHtml(result.reason, result.detail);
+        markFresh();          // nothing drew, so there is no copy to date
+      } else {
+        // Read the store again rather than trusting the copy taken at load.
+        // An earlier fetch this session may have refreshed it since.
+        var stored = Store.list();
+        markStale(stored ? stored.fetchedAt : 0);
+        draw(lastList);
+      }
       return;
     }
+    markFresh();
     lastList = result.projects;
     rememberFinished(result.projects);
     dropFinishedCopies(result.projects);
-    draw(result.projects, null);
+    draw(result.projects);
   });
 }
 
@@ -136,9 +145,10 @@ function dropFinishedCopies(projects) {
 
 /* ── DRAW ─────────────────────────────────────────────────────────── */
 
-function draw(projects, failure) {
-  var note = failure ? staleNoteHtml(held ? held.fetchedAt : 0) : '';
-  screen.innerHTML = '<div class="body">' + note + listHtml(projects) + '</div>';
+/* No stale-note argument. How old the copy is belongs to the sync bar, so
+   a redraw from a queue change cannot paint the line away. */
+function draw(projects) {
+  screen.innerHTML = '<div class="body">' + listHtml(projects) + '</div>';
 }
 
 
@@ -186,7 +196,7 @@ function rowHtml(project, wasFinished) {
              '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
              '<span class="row-sub">' + escapeHtml(shapeOf(project)) + '</span>' +
              '<span class="meta">' + barHtml(roll) +
-               '<span class="floor-count">' + escapeHtml(countText(roll, 'unit', 'units')) + '</span>' +
+               '<span class="floor-count">' + escapeHtml(countText(roll, 'Unit', 'Units')) + '</span>' +
              '</span>' +
              marks +
            '</span>' +

@@ -134,10 +134,31 @@ function rollup(counts, flags) {
     status = 'in_progress';
   }
 
+  /*
+   * THE BAR FILLS BY ITEMS. THE COUNT STAYS IN UNITS.
+   *
+   * Above the Unit screen, done counts whole units finished, and a floor of
+   * twelve half-built units has none of them. A bar filled from that number
+   * draws nothing at all on a floor that is plainly half done — which is
+   * what Miguel reported on the Buildings screen and on every floor header.
+   *
+   * So the bar carries a second pair of numbers, counted in items the whole
+   * way up. The text beside it still reads in units, because "5/12 Units
+   * done" is what a person walking the floor wants, not "148/216 Items".
+   *
+   * A caller with no item numbers to give falls back to the unit pair. At
+   * the Unit level that is not a fallback but the truth: there, done and
+   * total ALREADY count items.
+   */
+  var itemsTotal = (counts && counts.itemsTotal !== undefined) ? counts.itemsTotal : total;
+  var itemsDone  = (counts && counts.itemsDone  !== undefined) ? counts.itemsDone  : complete;
+
   return {
     status:     status,
     done:       complete,
     total:      total,
+    itemsDone:  itemsDone,
+    itemsTotal: itemsTotal,
     deficiency: deficiency,
     waiting:    waiting
   };
@@ -208,7 +229,7 @@ var DEFAULT_PHASES = [
   {
     key: 'phase1',
     label: 'Phase 1 — Doors & Windows',
-    items: ['Interior Doors', 'Exterior Door(s)', 'Windows', 'Attic Hatch',
+    items: ['Interior Doors', 'Exterior Doors', 'Windows', 'Attic Hatch',
             'Handrail', 'Bathtub']
   },
   {
@@ -265,7 +286,7 @@ var WAITING_REASONS = ['Waiting on Another Trade', 'Awaiting Delivery',
  * wider than it needs to be, and Miguel narrows them through the setup
  * Lists card without a release. The test is responsibility, not the item:
  * ask "does PFC own this", not "can this item have this". The framer hangs
- * the patio and entry doors, so Wrong Swing comes off Exterior Door(s)
+ * the patio and entry doors, so Wrong Swing comes off Exterior Doors
  * even though the door plainly swings.
  *
  * Only the hint Miguel gave is filled in. A blank hint is never wrong,
@@ -278,7 +299,7 @@ var DEFAULT_ITEM_LISTS = {
     trim:  [],
     hint:  'Size   Jamb   Swing'
   },
-  'Exterior Door(s)': { types: ['Patio', 'Entry'],                        trim: [], hint: '' },
+  'Exterior Doors':   { types: ['Patio', 'Entry'],                        trim: [], hint: '' },
   'Handles':          { types: ['Passage', 'Privacy', 'Dummy', 'Pocket'], trim: [], hint: '' },
   'Stops':            { types: ['Spring', 'Hinge'],                       trim: [], hint: '' }
 };
@@ -911,6 +932,26 @@ var Queue = {
     var jobs = self.waiting();
     if (!jobs.length) { self.stop(); return Promise.resolve({ sent: 0 }); }
 
+    /*
+     * OFFLINE NEVER ENTERS THE SENDING STATE.
+     *
+     * sendJobs answers "offline" without touching the network, so the bar
+     * flipped to the accent "Saving 3 edits…" and straight back to grey
+     * inside one frame. That flash was the only thing a person saw while
+     * standing in a basement, and it read as something going wrong. Stop
+     * before the paint rather than after it.
+     *
+     * Nothing is lost by waiting. The online event, coming back to the app,
+     * and a pull down all call wake(), and the backoff below keeps a slow
+     * timer running for the phone where none of those fire. No try is
+     * burnt, because nothing was attempted.
+     */
+    if (navigator.onLine === false) {
+      self._misses += 1;
+      self.schedule();
+      return Promise.resolve({ sent: 0 });
+    }
+
     var batch = jobs.slice(0, QUEUE_BATCH);
 
     self._sending = true;
@@ -1388,14 +1429,19 @@ function unitRollups(copy) {
 
 
 /**
- * One floor's rollup. IT COUNTS UNITS, NOT ITEMS.
+ * One floor's rollup. ITS VERDICT AND ITS COUNT ARE IN UNITS.
  *
- * Every count above the Unit screen is units: a floor reads
- * "12 units · 5 done", never "148/216 items".
+ * Every count above the Unit screen is units: a floor reads "5/12 Units
+ * done", never "148/216 Items".
+ *
+ * The bar is the one exception, and it is why the item totals are added up
+ * here as well. See rollup() for the reason.
  */
 function groupRollup(group, rolls) {
   var complete   = 0;
   var notStarted = 0;
+  var itemsDone  = 0;
+  var itemsTotal = 0;
   var flags      = { deficiency: 0, waiting: 0 };
 
   group.units.forEach(function (unit) {
@@ -1403,11 +1449,22 @@ function groupRollup(group, rolls) {
     if (!roll) return;
     if (roll.status === 'complete') complete += 1;
     else if (roll.status === 'not_started') notStarted += 1;
+
+    // A unit rollup counts items, so its done and total ARE the item pair.
+    itemsDone  += roll.itemsDone;
+    itemsTotal += roll.itemsTotal;
+
     flags.deficiency += roll.deficiency;
     flags.waiting    += roll.waiting;
   });
 
-  return rollup({ total: group.units.length, complete: complete, notStarted: notStarted }, flags);
+  return rollup({
+    total:      group.units.length,
+    complete:   complete,
+    notStarted: notStarted,
+    itemsDone:  itemsDone,
+    itemsTotal: itemsTotal
+  }, flags);
 }
 
 
@@ -1418,12 +1475,20 @@ function groupRollup(group, rolls) {
  * applies the rule to them. unitsNotStarted is the fifth number: without
  * it, "every unit Not Started" and "some unit In Progress" both arrive as
  * unitsDone 0 and cannot be told apart.
+ *
+ * itemsDone and itemsTotal are the sixth and seventh, and they only feed
+ * the bar. They are passed straight through, undefined included: a phone
+ * holding a stored list from before the backend sent them gets undefined
+ * here, and rollup() falls back to the unit pair. So an old copy draws the
+ * old bar rather than no bar, and the next successful fetch fixes it.
  */
 function projectRollup(project) {
   return rollup({
     total:      project.unitsTotal || 0,
     complete:   project.unitsDone  || 0,
-    notStarted: project.unitsNotStarted || 0
+    notStarted: project.unitsNotStarted || 0,
+    itemsDone:  project.itemsDone,
+    itemsTotal: project.itemsTotal
   }, {
     deficiency: project.deficiencies || 0,
     waiting:    project.waiting || 0
@@ -1506,7 +1571,11 @@ function dotHtml(roll) {
 
 /**
  * The hairline progress bar on the bottom edge of a unit chip, a floor
- * header or a Tracking row.
+ * header, a Tracking row, or under the pill on the Unit screen.
+ *
+ * IT FILLS BY ITEMS AT EVERY LEVEL, never by whole units. A floor of
+ * twelve units each half built has no unit finished, so filling by units
+ * drew nothing there and nothing on the building above it. See rollup().
  *
  * A GROUP WITH NOTHING DONE DRAWS NO BAR AT ALL, not an empty track. An
  * empty track and a missing bar say the same thing, and the missing one
@@ -1516,17 +1585,22 @@ function dotHtml(roll) {
  * target, and the exact number is on the Unit screen.
  */
 function barHtml(roll) {
-  if (!roll || !roll.total || roll.done === 0) return '';
-  var pct = Math.round((roll.done / roll.total) * 100);
+  if (!roll || !roll.itemsTotal || !roll.itemsDone) return '';
+  var pct = Math.round((roll.itemsDone / roll.itemsTotal) * 100);
   return '<span class="bar"><span class="bar-fill s-' + safeStatus(roll.status) + '" ' +
          'style="width:' + pct + '%"></span></span>';
 }
 
 
-/** "12 units · 5 done". Above the Unit screen the noun is always units. */
+/**
+ * "5/12 Units done". Above the Unit screen the noun is always units.
+ *
+ * The done number leads, because that is the one being read. "12 units ·
+ * 5 done" made a person read the whole line to find it.
+ */
 function countText(roll, one, many) {
-  if (!roll || !roll.total) return 'no ' + many;
-  return roll.total + ' ' + (roll.total === 1 ? one : many) + ' · ' + roll.done + ' done';
+  if (!roll || !roll.total) return 'No ' + many;
+  return roll.done + '/' + roll.total + ' ' + (roll.total === 1 ? one : many) + ' done';
 }
 
 
@@ -1734,21 +1808,13 @@ function errorHtml(reason, detail) {
          '</div>';
 }
 
-/**
- * The line a screen shows when a refresh failed but a stored copy drew.
- *
- * The app never warns that a copy might be old. IT WARNS ONLY WHEN A FETCH
- * FAILS, and then it says exactly how old the copy is, so the person on
- * site can judge it themselves. There is no staleness clock and no refresh
- * timer: a fetch that succeeds makes the copy fresh by definition.
- */
-function staleNoteHtml(fetchedAt) {
-  var when = whenText(fetchedAt);
-  return '<div class="banner banner--quiet"><div>Offline.' +
-         (when ? ' Last updated ' + escapeHtml(when) + '.' : '') +
-         '</div></div>';
-}
-
+/*
+   staleNoteHtml used to live here — a banner of its own saying "Offline.
+   Last updated Sun 1:22 AM." It was the third stacked bar on the screen,
+   and being an argument to render() it was painted over by the next
+   redraw. Both are fixed by markStale() down in the sync bar section,
+   which owns that line now.
+*/
 
 /**
  * The phone refused to store an edit.
@@ -1857,6 +1923,51 @@ function enablePullToRefresh(onRefresh) {
    edit that failed in unit 201 has no other way to reach you.
 */
 
+/*
+   THE AGE OF THE COPY RIDES ON THIS BAR TOO. IT IS NOT A BAR OF ITS OWN.
+
+   It used to be, and a screen ended up with three stacked bars: the page
+   header, the sync bar, and "Offline. Last updated Sun 1:22 AM." under
+   both. Merged, there are never more than two.
+
+   IT IS STATE, NOT AN ARGUMENT TO A DRAW. The old line was passed into
+   render(), so the next redraw — a queue change, a landed edit, anything —
+   painted over it and it vanished after a few seconds. That is the whole
+   "shows for 5 secs and then disappears" report. Held here instead, it
+   survives every redraw and leaves only when a fetch succeeds.
+*/
+var syncStale = { on: false, fetchedAt: 0 };
+
+/** Every mounted bar's own paint function. */
+var syncBarPainters = [];
+
+function repaintSyncBars() {
+  syncBarPainters.forEach(function (fn) {
+    try { fn(); } catch (e) {}    // one broken screen must not stop the rest
+  });
+}
+
+/**
+ * A fetch failed and a stored copy is on screen. Say how old it is.
+ *
+ * The app never warns that a copy MIGHT be old. It warns only when a fetch
+ * FAILS, and then it says exactly how old, so the person on site can judge
+ * it. There is no staleness clock and no refresh timer: a fetch that
+ * succeeds makes the copy fresh by definition.
+ */
+function markStale(fetchedAt) {
+  syncStale = { on: true, fetchedAt: fetchedAt || 0 };
+  repaintSyncBars();
+}
+
+/** A fetch landed. The copy is fresh, so the line goes. */
+function markFresh() {
+  if (!syncStale.on) return;
+  syncStale = { on: false, fetchedAt: 0 };
+  repaintSyncBars();
+}
+
+
 /**
  * Puts the bar under the page header and keeps it in step with the shelf.
  *
@@ -1876,24 +1987,44 @@ function mountSyncBar(href) {
   function paint() { slot.innerHTML = syncBarHtml(to); }
 
   Queue.onChange(paint);
+  syncBarPainters.push(paint);
   paint();
   return slot;
 }
 
 
 /**
- * Three facts, in one line, in this order: what is going out, what is
- * waiting, and what did not make it.
+ * Everything the app has to say about saving and about signal, in one bar.
+ *
+ * Four facts share it: what is going out, what is waiting, what did not
+ * make it, and how old the copy on screen is.
  *
  *   Saving 3 edits…            a call is in the air
  *   Offline · 3 edits queued   nothing can go out yet
  *   2 edits did not save       the app gave up and a person must look
+ *   updated 1:22 AM            the last fetch failed; this is the copy's age
  *
- * Two of them together read "Saving 3 edits… · 2 did not save".
+ * The first three share the top line, joined by a dot. The fourth takes a
+ * second line UNDER them, because it is a fact about the screen rather than
+ * about the edits, and because three facts and a timestamp on one line
+ * wrap on a phone.
+ *
+ * The three shapes Miguel settled on:
+ *
+ *   offline, nothing queued    ■ Offline · updated 1:22 AM
+ *   offline, three queued      ■ Offline · 3 edits queued
+ *                                updated 1:22 AM      Queue ›
+ *   online, nothing queued     no bar at all
+ *
+ * With nothing queued the age joins the top line rather than starting a
+ * second one, because a bar holding one short line and one shorter line is
+ * two lines of screen buying one line of news.
  */
 function syncBarHtml(href) {
   var counts = Queue.counts();
-  if (!counts.waiting && !counts.held) return '';
+  var stale  = syncStale.on;
+
+  if (!counts.waiting && !counts.held && !stale) return '';
 
   var parts = [];
   var kind  = 'quiet';
@@ -1902,7 +2033,7 @@ function syncBarHtml(href) {
     if (Queue.sending()) {
       kind = 'accent';
       parts.push('<span class="sync-ring"></span>Saving ' + editsText(counts.waiting) + '…');
-    } else if (navigator.onLine === false) {
+    } else if (navigator.onLine === false || stale) {
       parts.push('<span class="sync-slab"></span>Offline · ' + editsText(counts.waiting) + ' queued');
     } else {
       // Online, between retries. Saying "Offline" here would be a lie.
@@ -1917,9 +2048,33 @@ function syncBarHtml(href) {
                                : editsText(counts.held) + ' did not save'));
   }
 
+  var when = stale ? whenText(syncStale.fetchedAt) : '';
+
+  // Offline with an empty queue. One line, and the age sits on the end of
+  // it. There is nothing on the shelf, so there is no door to the Queue.
+  if (!parts.length) {
+    return '<div class="syncbar syncbar--quiet">' +
+             '<div class="sync-row">' +
+               '<span class="sync-text"><span class="sync-slab"></span>Offline' +
+                 (when ? '<span class="sync-sep">·</span>updated ' + escapeHtml(when) : '') +
+               '</span>' +
+             '</div>' +
+           '</div>';
+  }
+
+  var link = href ? '<a class="sync-link press" href="' + href + '">Queue ›</a>' : '';
+
   return '<div class="syncbar syncbar--' + kind + '">' +
-           '<span class="sync-text">' + parts.join('<span class="sync-sep">·</span>') + '</span>' +
-           (href ? '<a class="sync-link press" href="' + href + '">Queue ›</a>' : '') +
+           '<div class="sync-row">' +
+             '<span class="sync-text">' + parts.join('<span class="sync-sep">·</span>') + '</span>' +
+             (stale ? '' : link) +
+           '</div>' +
+           (stale
+             ? '<div class="sync-row sync-row--sub">' +
+                 '<span class="sync-when">' + (when ? 'updated ' + escapeHtml(when) : 'no signal') + '</span>' +
+                 link +
+               '</div>'
+             : '') +
          '</div>';
 }
 

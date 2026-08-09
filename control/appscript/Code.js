@@ -288,6 +288,7 @@ function handleListProjects(fresh) {
       var units    = allUnits(config);
       var layout   = computeLayout(config);
       var statuses = readOverallColumn(ss, layout, units.length);
+      var items    = countItemCells(ss, layout, units.length);
       var flags    = countOpenFlags(ss);
 
       projects.push({
@@ -298,10 +299,9 @@ function handleListProjects(fresh) {
         unitCount:  units.length,
         groupCount: config.groups.length,
 
-        // Four numbers, no verdict. unitsDone counts units the Sheet's own
+        // Numbers, never a verdict. unitsDone counts units the Sheet's own
         // rollup column already calls Complete, so this is a free read of a
-        // column that is open anyway. Counting items instead would mean
-        // reading the whole Tracker grid for every building on the list.
+        // column that is open anyway.
         unitsDone:    statuses.filter(function (key) { return key === 'complete'; }).length,
 
         // The fifth number, added in step 2. The rollup rule needs to know
@@ -312,6 +312,17 @@ function handleListProjects(fresh) {
         unitsNotStarted: statuses.filter(function (key) { return key === 'not_started'; }).length,
 
         unitsTotal:   units.length,
+
+        // The sixth and seventh, added in the step 3 fix round. THEY FEED
+        // THE BAR AND NOTHING ELSE. The bar fills by items at every level,
+        // because a building whose units are all half built has unitsDone 0
+        // and drew no bar at all — which is what Miguel reported.
+        //
+        // The text beside the bar still reads in units, so unitsDone is not
+        // replaced by these. Both pairs go out, and the phone picks.
+        itemsDone:    items.done,
+        itemsTotal:   items.total,
+
         deficiencies: flags.deficiencies,
         waiting:      flags.waiting
       });
@@ -1860,6 +1871,44 @@ function readOverallColumn(ss, layout, unitCount) {
 
 
 /**
+ * Counts every item cell in the Unit Tracker grid: how many read Complete,
+ * and how many there are. It feeds the progress bar on a Buildings row.
+ *
+ * ONE RANGE READ, AND NO EXTRA SHEET OPEN. The item status columns are laid
+ * out side by side by computeLayout, so the whole grid comes back in a
+ * single call on a Spreadsheet the caller already has open. Opening every
+ * project Sheet is the expensive part of the Buildings list; this adds none
+ * of that.
+ *
+ * It reads the STORED value of each cell, so an item held at In Progress by
+ * an open issue still counts Complete here. That is the same approximation
+ * unitsDone already makes by reading the Sheet's own rollup column, and it
+ * only ever moves a hairline bar by one item's width. The Unit screen,
+ * where the difference matters, computes its own.
+ */
+function countItemCells(ss, layout, unitCount) {
+  var out = { done: 0, total: 0 };
+  if (unitCount === 0 || layout.itemCount === 0) return out;
+
+  // Taken from the layout rather than hardcoded, so this follows if the
+  // first item column ever moves.
+  var firstCol = layout.statusCol[layout.order[0]];
+
+  var sheet  = ss.getSheetByName(TRACKER_SHEET_NAME);
+  var values = sheet.getRange(FIRST_DATA_ROW, firstCol, unitCount, layout.itemCount).getValues();
+
+  values.forEach(function (row) {
+    row.forEach(function (cell) {
+      out.total += 1;
+      if (statusKey(cell) === 'complete') out.done += 1;
+    });
+  });
+
+  return out;
+}
+
+
+/**
  * Counts open records in the Deficiencies tab, by type.
  *
  * These are raw row counts, not unit counts. The Buildings screen shows
@@ -2089,7 +2138,7 @@ function formatCell(value) {
 }
 
 
-/** Turns a label into a safe key. "Exterior Door(s)" becomes "exterior_door_s". */
+/** Turns a label into a safe key. "Ball Catch (Rare)" becomes "ball_catch_rare". */
 function slug(text) {
   var out = String(text).toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')

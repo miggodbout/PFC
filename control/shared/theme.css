@@ -533,6 +533,20 @@ button {
   width: auto;
 }
 
+/* THE UNIT SCREEN'S OWN CORNER: the pill, and the bar under it.
+   A column, so the two stack rather than sit side by side in a header that
+   is already carrying a title and a subtitle. stretch makes the bar take
+   the pill's width instead of its own fixed 60px, so the pair reads as one
+   block whatever the status word is. */
+#unit-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  flex-shrink: 0;
+}
+#unit-pill .bar { width: auto; }
+
 
 /* ── THE SYNC BAR ────────────────────────────────────────────────────
 
@@ -542,14 +556,29 @@ button {
 .syncbar-slot:empty { display: none; }
 
 .syncbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   padding: 8px 20px;
   border-bottom: 1px solid var(--line-soft);
   font-size: 12.5px;
   font-weight: 600;
 }
+
+/* One line inside the bar. There are two only when a fetch has failed AND
+   something is on the queue: what is happening on top, how old the copy on
+   screen is underneath. */
+.sync-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The second line is quieter than the first. It is a fact about the copy,
+   not about the edits, and it must not compete with a red "did not save"
+   sitting directly above it. */
+.sync-row--sub {
+  margin-top: 2px;
+  opacity: 0.70;
+}
+.sync-when { flex: 1; min-width: 0; }
 
 .sync-text { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; }
 .sync-sep  { color: var(--fg-7); margin: 0 1px; }
@@ -1040,9 +1069,10 @@ select.input {
 }
 .banner b { color: var(--accent); font-weight: 700; }
 
-/* A statement of fact, not a warning. The screen already drew from its
-   stored copy — this only says how old that copy is. */
-/* The one banner that is a warning rather than a statement of fact. */
+/* The one banner that is a warning rather than a statement of fact. The
+   only banner left, in fact: banner--quiet carried the old stale-copy line,
+   which moved onto the sync bar in the step 3 fix round and took its rule
+   with it. */
 .banner--bad {
   background: rgba(224,82,82,0.12);
   border-color: rgba(224,82,82,0.30);
@@ -1050,11 +1080,6 @@ select.input {
 }
 .banner--bad b { color: #F08080; }
 
-.banner--quiet {
-  background: rgba(255,255,255,0.05);
-  border-color: var(--line-soft);
-  color: var(--fg-6);
-}
 .banner button {
   flex-shrink: 0;
   padding: 6px 12px;
