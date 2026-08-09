@@ -1469,3 +1469,135 @@ are deliberately still open and belong to step 4 and step 5.
 
 **Next:** step 4 — records, Logging, chips — plus fresh unsaturated test Sheets,
 and point 6 folded in.
+
+## Session 13 — 2026-08-09
+
+**Step:** 4 — records, Logging and the chips. Built whole, **not tested in a
+browser.**
+**Branch:** `0.2` at `2db3401`, pushed.
+**Merged to main:** **no, on purpose.** See "Why main was left alone".
+**Deployed:** nothing. **`Code.js` was not touched, so no clasp push is
+needed** — step 3 already shipped `save-batch` with its record branch, and
+`get-project` already sends the whole Deficiencies tab. Step 4 is entirely
+phone-side. Backend stays at Apps Script version 9.
+**CACHE_NAME:** raised to `pfc-control-0.2-step4`.
+
+Miguel started the session at bedtime: build it, do not test, no questions
+to answer. So every judgement call below was made and written down rather
+than asked.
+
+### Landed
+
+**`common.js` — records.** `newRecordId` (`d-YYYYMMDD-HHMM-xxxx`),
+`makeRecord` (all thirteen columns, nothing left undefined), `queueRecord`,
+`recordById`, `openRecords`. Every change to a record — new, Fixed,
+Cancelled, reopened — sends the whole record again under the same id,
+because a job carries the final value.
+
+**`paintedRecords`, and the memo under it.** It merges waiting record jobs
+over the stored copy, so a record logged in a basement flags its item
+before it lands. A held record does not paint, same rule as an item edit.
+`countFlags` now reads the painted list, which is called about 900 times on
+a floor draw — so the answer is memoised against `jobsRev`, a counter
+`Store.write` moves whenever the shelf changes. The bump sits inside
+`write`, not in its four callers, because one missed bump paints a stale
+flag.
+
+**`foldLanded` now folds a landed record** into `copy.records` by id. The
+build note left in step 3 said the bug would be identical to the item one,
+and it was.
+
+**The chip engine.** `normaliseNeeded` (strip space, quote, slash;
+lowercase — never an edit distance), `chipGroupKey` / `chipScope` /
+`chipSubtype`, `chipRows`, `chipsFor` (three, filtered as you type),
+`nearMatch` (on Save only), `chipIndex`, `foldNeededLinesIntoChips` and
+`pruneChipIndex`. Live buildings are counted from scratch every call;
+dropped ones are read from the index; where both hold a line the larger
+count wins and they are never added. The fold hangs off `Store.dropProject`,
+which is the only place a copy is deleted.
+
+**`unit.html`.** Flag chips under the item name and on the phase header,
+each one a button that opens the records under it — shut until tapped, one
+open at a time. A row reads `Bypass · 32 6 RH  x1  [ Fixed ]`. `Fix all N`
+above more than one open record. A record fixed here stays struck through
+with `Undo` for this visit and is gone when you leave the unit; nothing
+moves in the Sheet. The green card asks about Complete after the last
+record on an item is fixed, and never sets it.
+
+**Test point 1, the greyed Complete row, is rebuilt as Miguel asked.**
+Complete keeps its normal colour and carries a small red dot. The line
+`Fix the open issue first. Then Complete comes back.` appears only after
+somebody taps it.
+
+**`control/logging/index.html` — the new window.** The place bar in two
+fixed lines, `[change]` opening a bottom sheet with Building, Unit and
+Phase together, and the seven controls in plan order: Type, Item, Subtype,
+Needed, Count, Reason, Save. Type holds for the visit. Subtype is drawn
+only on an item that defines types. The Needed box carries the item's hint
+as its placeholder and the three chips under it. The unit box matches typed
+text against the unit labels and prints the floor it found — it never
+assumes the first digit is the floor. The phone remembers the building and
+the phase in a new key, `pfc.control.v1.log.place`, and never the unit.
+
+**Save is pinned**, PLAN CALL 3, sized off `window.visualViewport` on its
+`resize` and `scroll` events. **This is the one thing in step 4 that a
+browser cannot prove.** It wants a real phone with the Needed box focused.
+
+**`Logged here`** carries Cancel on every row plus the row's send state.
+**Cancel writes a Cancelled record rather than dropping the queued job** —
+a job that timed out may already have reached the Sheet, and sending the
+word Cancelled is the only way to be sure the Sheet ends up right. It also
+takes the line back out of the chip pool, exactly, with no bookkeeping.
+
+**Test point 6, the Queue padding, is fixed** — `.card .item` gets 12px of
+side padding. Scoped to the card on purpose: the Unit screen runs the same
+rows under the page padding with no card around them, where 2px is right.
+
+**Also:** the `Logging` Hub card with a flag glyph, `logging/index.html` in
+the Service Worker `SHELL`, `CACHE_NAME` to `pfc-control-0.2-step4`, and a
+Logging section in `docs/crew-words.md` listing every string the screen
+draws.
+
+### Tested
+
+**No browser.** Fourteen checks over the new pure functions run green in
+node against a fake building copy: flag counting and the Complete
+downgrade, phase-level Waiting reaching the phase and not the item,
+normalising, chips from Open and Fixed records with two spellings counted
+as one line, near-match hit and miss, a queued record painting, a held one
+not painting, the fold surviving a dropped copy, a Cancelled line never
+entering the pool, and the id shape. Every file parses.
+
+### Why main was left alone
+
+The protocol says a step ends with a merge to `main`, and `main` is what
+GitHub Pages serves to his phone. Step 4 has not been opened in a browser
+once. Merging it would put an untested Unit screen and an untested new
+window on the tool he uses daily, overnight, with nobody awake to back it
+out. The branch is pushed, so nothing lives only on this machine.
+
+**The merge is the first thing the next session does, after a smoke
+check.** It is three commands and one `CACHE_NAME` that is already raised.
+
+### Open
+
+- **Two OPEN words in `crew-words.md`:** `Subtype` and `Needed`, both plan
+  words the crew does not say out loud. Neither blocks the screen; both
+  block shipping 0.2.
+- **The green card's rule for "asks once"** is per visit, not stored. Leave
+  the unit and fix another record and it asks again. Nothing in the plan
+  settles this; it costs a key to store and buys little.
+- **A queued row's ring still spins for ever while offline** — carried over
+  from session 12's four extras, untouched.
+- **A held row can still print a raw item key** (`exterior_doors`). Also
+  carried over. It is a `Code.js` string, so it costs a deploy.
+
+### Next
+
+1. Smoke check step 4 in Chrome: open Logging, save a record with the
+   network off, confirm the flag appears on the item in Tracker, fix it,
+   watch Complete come back. Then merge `0.2` to `main` and push.
+2. Then step 5 — Admin. `rename-item`, the three list branches that skip
+   the rebuild, `cancel-item-records`, the removal refusal panel, and test
+   points 14 and 15, which are the two false offline messages on the
+   Set Up Building screen.
