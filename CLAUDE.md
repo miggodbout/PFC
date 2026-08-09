@@ -94,10 +94,15 @@ My Drive/PFC/
   Control/          ← PFC Control owns everything in here    1SwrhzsObgZpaLsjJtP5ErsEZtt53ton9
     Project Sheets/     generated project Sheets             1_J7pwpy3NFYIpBSAD8rg6O7L7jGLhnWE
     Master Template/                                         1It8gHaSGjsSGgVx2gucnhsBHkibaPwvY
+    Apps Scripts/       holds the PFC Control script only    1icyZGjIM6TTCy1VFuxZR4Q6Jo1ynyCuT
   Project Logs/     ← the camera app writes here             1-eJRDVcj7CrGM02XE-gXs_EU4YdazdYg
-  Apps Scripts/     ← both script projects                   1icyZGjIM6TTCy1VFuxZR4Q6Jo1ynyCuT
-  Personal/         ← Miguel's own files, no code touches it
+  Personal/         ← Miguel's own files, no code touches it 1UoQj3eCBdgrNw_F0MoNbKelZQx8HPFYK
 ```
+
+`Apps Scripts` sits **inside** `Control`, so despite the plural name it holds the
+PFC Control script alone. The camera app's script project has no home folder yet.
+Do not put it in there — that would nest a camera app file under Control. Give it
+one beside `Project Logs` when it matters.
 
 **Drive tracks a file by ID, never by path**, so dragging a folder in the Drive UI
 does not break an ID reference. Both scripts pin their root by ID:

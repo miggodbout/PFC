@@ -476,9 +476,12 @@ for that, do not budget for a two-line CSS change.
 **existing** deployment id `AKfycbzo9lC…4vj8_YCrtnGjv5e` — version 5 for the
 folder fix, version 6 for the move under `Control/`. Never `clasp deploy` with no
 id here: that mints a new deployment with a new URL, and `API_URL` in
-`control/shared/common.js` names this one. Note `clasp deployments` keeps printing
-the old `@4 - 0.2 step 2` line after a redeploy. It is a stale description, not a
-failed deploy — verify against the live URL instead.
+`control/shared/common.js` names this one.
+
+`clasp deployments` printed the **old** `@4` line for minutes after the version 5
+deploy, which looked like a failed deploy and is not one — it caught up to `@6`
+later on its own. It lags. Verify a deploy against the live URL, never against
+that list.
 
 Verified live both times: `list-projects` answered `{"success":true,"projects":[]}`,
 and Drive showed the target folder created at the moment of the call. Only the new
@@ -512,11 +515,13 @@ updated, per sessions 1 to 4. Everything from step 3 onward.
 **Open:**
 
 - **The `.floor-body` expand animation**, with the re-render trap above. Step 3.
-- **Drive tidying, all Miguel's, none of it blocking:** trash `My Drive/Projects/`
-  and the test projects in it (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`), trash the now
-  orphaned empty `PFC/Project Sheets` (`1frOgI3ppHd8RjiEsYEAezuaNBWXcf4wT`), drag
-  `Master Template` into `Control/`, and move the loose
-  `PFC - Highland View Tracker` Sheet and its shortcut into `Personal/`.
+- **Drive tidying: Miguel did all of it the same evening.** `Master Template` and
+  `Apps Scripts` are in `Control/`, the orphaned empty `PFC/Project Sheets` is
+  gone, and `PFC - Highland View Tracker` moved to `Personal/`. Verified against
+  Drive, and `clasp deployments` plus a live `list-projects` both still answer, so
+  moving the script project did not disturb anything. The layout is drawn in
+  `CLAUDE.md`. **Still there: `My Drive/Projects/`
+  (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`) with the old test projects.**
 - Everything still open from session 4: nothing may move a control on `:active`
   again, the dead `.caret` transition for the step 6 sweep, the
   `ZZ 0.2 Step 2 Test` Sheet to trash, the greyed Complete not reachable until
