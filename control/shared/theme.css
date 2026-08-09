@@ -389,7 +389,10 @@ button {
 
 /* The chip carries at most four marks: the Progress dot, a red flag, a
    blue flag, and the corner badge. That is the ceiling, not a target.
-   position:relative anchors the bar and the badge. */
+   position:relative anchors the badge.
+
+   NO BAR ON A CHIP any more, so no padding-bottom reserving room for one
+   — the marks sit centred. See chipsHtml() in tracker/building.html. */
 .unit-chip {
   position: relative;
   min-height: 52px;
@@ -401,7 +404,6 @@ button {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding-bottom: 5px;
 }
 .unit-chip .num {
   font-size: 14px; font-weight: 700;
@@ -545,10 +547,8 @@ button {
   flex-shrink: 0;
 }
 
-/* NO RADIUS ON A RUN. Rounding each run's ends puts a notch at every
-   join, and the joins are exactly what must not be visible — two amber
-   phases in a row have to read as one bar. The rounded outer end comes
-   from .bar clipping it. */
+/* NO RADIUS ON A RUN. Rounding each run's ends notches every join. The
+   rounded outer end comes from .bar clipping it instead. */
 .bar-fill {
   display: block;
   height: 100%;
@@ -556,12 +556,24 @@ button {
   background: var(--dot);
 }
 
-/* On a chip the bar sits on the bottom edge, full width. */
-.unit-chip .bar {
-  position: absolute;
-  left: 6px; right: 6px; bottom: 4px;
-  width: auto;
+/* THE SEAM AT A PHASE BOUNDARY.
+   Every run but the last carries one. Without it three part-way phases are
+   three amber runs butted together, which reads as one plain amber bar and
+   hides the split at building level. See phaseRunsHtml() in common.js.
+
+   AN INSET SHADOW, NOT A BORDER OR A SPACER. Both of those add a pixel to
+   the run, and the runs adding up to exactly "items done" is the whole
+   point of the bar. This is drawn inside the width the run already has.
+
+   Dark rather than the track colour, so the cut reads on green and on
+   amber alike, whatever card sits behind the bar. */
+.bar-fill--seam {
+  box-shadow: inset -1px 0 0 rgba(0,0,0,0.55);
 }
+
+/* A unit chip used to carry a bar on its bottom edge. It does not any
+   more — twelve of them under a floor header that has one too read as
+   noise. The rule is gone with the markup. */
 
 /* THE UNIT SCREEN'S OWN CORNER: the pill, and the bar under it.
    A column, so the two stack rather than sit side by side in a header that

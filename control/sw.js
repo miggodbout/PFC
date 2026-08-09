@@ -12,7 +12,7 @@
    The phone keeps serving the old copy until the number changes.
    ===================================================================== */
 
-var CACHE_NAME = 'pfc-control-0.2-step4-fix2';
+var CACHE_NAME = 'pfc-control-0.2-step4-fix3';
 
 /** The app's own files. Everything needed to open with no signal. */
 var SHELL = [
