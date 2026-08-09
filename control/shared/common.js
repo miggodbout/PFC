@@ -236,21 +236,34 @@ function displayStatus(stored, openFlagCount) {
  * not. Progress got coarser so that logging could get finer. That was the
  * choice, not an oversight.
  */
+/*
+ * A PHASE IS NAMED BY ITS NUMBER ALONE. NO TAG AFTER THE DASH.
+ *
+ * Each label carried a summary of what was in it — `Phase 1 — Doors &
+ * Windows`. Phase 1 also holds Handrail and Bathtub, so the tag was
+ * already wrong, and every item added to a phase from here on can make it
+ * wrong again. A label that has to be maintained to stay true is a label
+ * that will not be.
+ *
+ * Miguel removed all three on 2026-08-09 rather than correct one. The
+ * phase number is what the crew says out loud, and the item list under
+ * the header is the real answer to what is in it.
+ */
 var DEFAULT_PHASES = [
   {
     key: 'phase1',
-    label: 'Phase 1 — Doors & Windows',
+    label: 'Phase 1',
     items: ['Interior Doors', 'Exterior Doors', 'Windows', 'Attic Hatch',
             'Handrail', 'Bathtub']
   },
   {
     key: 'phase2',
-    label: 'Phase 2 — Baseboards',
+    label: 'Phase 2',
     items: ['Cut', 'Nailed']
   },
   {
     key: 'phase3',
-    label: 'Phase 3 — Hardware & Accessories',
+    label: 'Phase 3',
     items: ['Handles', 'Ball Catch', 'Deadbolts', 'Stops', 'Mirrors',
             'Bathroom Accessories']
   }
@@ -2621,7 +2634,22 @@ function stopRefreshRing() {
 
 function enablePullToRefresh(onRefresh) {
   var TRIGGER = 70;      // how far down to pull, in pixels
-  var MAX     = 110;     // how far the screen follows the finger
+  var MAX     = 110;     // how far the finger is followed
+
+  /*
+     THE FINGER GOES 110px. THE RING GOES 30px.
+
+     They used to be the same number, so the ring sat wherever the finger
+     was — and it only becomes visible at TRIGGER, which is already 70px
+     down. It appeared across the header title and kept going, over
+     whatever the screen draws under it.
+
+     30px is where the ring parks while it spins, level with the top of
+     the header. The pull now slides it down to that spot and no further,
+     so it lands where it will rest and never covers anything below the
+     header. KEEP THIS IN STEP WITH `.ptr.spin` in theme.css.
+  */
+  var RING_MAX = 30;
 
   var indicator = refreshIndicator();
 
@@ -2643,7 +2671,12 @@ function enablePullToRefresh(onRefresh) {
     if (!pulling) return;
     pulled = Math.min(event.touches[0].clientY - startY, MAX);
     if (pulled <= 0) { indicator.style.transform = ''; indicator.classList.remove('on'); return; }
-    indicator.style.transform = 'translateY(' + pulled + 'px)';
+
+    // The ring covers its own 30px over the finger's whole 110px, so it is
+    // still creeping down as you pull past the trigger, and it arrives
+    // exactly where the spin parks it.
+    var travel = Math.round(pulled / MAX * RING_MAX);
+    indicator.style.transform = 'translateY(' + travel + 'px)';
     indicator.classList.toggle('on', pulled >= TRIGGER);
   }, { passive: true });
 

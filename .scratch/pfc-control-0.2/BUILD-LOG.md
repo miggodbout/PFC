@@ -2529,3 +2529,64 @@ confirm it.
 
 - The phone check session 16 left open, **"the pinned Save with the keyboard
   up"**, is closed by deletion. There is no keyboard behaviour left to check.
+
+### Two more, same session
+
+**1 — The refresh ring stops halfway down the screen.**
+
+The ring followed the finger for the full 110px of the pull, and it only
+becomes visible at the 70px trigger, so it appeared already across the
+header title and kept going over whatever was under it.
+
+The finger still goes 110px. The ring now covers 30px over that whole
+distance — `RING_MAX` in `enablePullToRefresh()` — so it slides in, stops
+level with the top of the header, and lands exactly where `.ptr.spin`
+parks it when you let go. Nothing below the header can be covered.
+
+The two numbers live in two files and must stay in step. Both carry a
+comment naming the other.
+
+**2 — Phase labels lost their tags.**
+
+`Phase 1 — Doors & Windows` is now `Phase 1`, and the same for 2 and 3.
+Phase 1 also holds Handrail and Bathtub, so the tag was already wrong, and
+every item added to a phase can make it wrong again. Miguel chose to
+delete all three rather than correct one.
+
+**The seed was the easy half.** `DEFAULT_PHASES` in `common.js` only
+decides what the NEXT building starts with. Elsliger 36-B and 36-C already
+held the tagged labels in their own `_Config`, and those are the two
+buildings Miguel actually looks at, so a seed change alone would have
+shown him nothing.
+
+**So `update-structure` gained a `rename-phase` op.** It mirrors
+`rename-unit` and `rename-item`: the label moves, the key never does.
+
+**It does not rebuild the Tracker tab**, which is what `rename-item` does.
+A phase label reaches exactly two cells on that grid — the merged band over
+its item columns, and the short form above its rollup column — and
+`writePhaseBand` writes both in place. Clearing 468 status cells and
+putting them back to change one string is not a trade worth making on a
+building with real work logged in it. It does redraw the **Dashboard**,
+where a phase names a summary row: that tab is formulas over the Tracker
+with no typed value anywhere on it.
+
+The first deploy missed the Dashboard and left it reading the old names.
+Caught by reading the Sheet back, fixed, redeployed, and the rename re-run.
+
+### Deployed and proved
+
+**Apps Script version 15**, on the existing deployment.
+
+All three buildings renamed by `curl`, then read back:
+
+- `_Config` holds `Phase 1`, `Phase 2`, `Phase 3` on all three.
+- The Tracker band row reads `PHASE 1 / PHASE 2 / PHASE 3`.
+- The Dashboard summary rows read the same.
+- **Every count is unchanged.** Elsliger 36-B before and after: 171/468
+  items, phases 115/144, 8/72, 48/252, one open flag. 36-C: 1/468. Every
+  status cell, every item label and all four records are still on the
+  grid.
+
+The ring is **not tested on a phone**. It is a arithmetic change to one
+transform, and the resting position it now aims at was already correct.

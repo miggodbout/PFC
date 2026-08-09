@@ -762,7 +762,12 @@ button {
 /* Where the ring rests while it turns. It starts 26px ABOVE the safe area,
    so 30px puts it just inside the top of the screen, level with the top of
    the header. It used to be 60px, which parked it across the middle of the
-   header title — Miguel's "too low". */
+   header title — Miguel's "too low".
+
+   30px IS ALSO THE WHOLE TRAVEL OF THE PULL. The finger goes 110px and the
+   ring goes 30, so it can never reach past the header on the way in
+   either. That cap is RING_MAX in enablePullToRefresh(). Change one and
+   change the other. */
 .ptr.spin {
   transform: translateY(30px) !important;
 }
