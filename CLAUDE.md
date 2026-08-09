@@ -389,12 +389,29 @@ This is the small build tool the Technical Constraints section named as a
 known candidate. It is one PowerShell script, it edits one line, and the app
 still runs from a plain file if it is deleted.
 
-### Shipped releases are git tags
+### Shipped releases are git tags, and a GitHub Release on top
 
 Release history belongs in tags, not in a Service Worker string. Backfilled
 2026-08-09: `0.1.0` at the first PFC Control commit, `0.1.1` and `0.1.2` at
 the two patch commits. Tag every release from here on, at the commit stamped
 by `-Release`.
+
+**Every MINOR and every PATCH gets a GitHub Release.** Asked by Miguel on
+2026-08-09 and agreed. A tag is a pointer with no room to explain itself. The
+Release is where the notes live — what changed, and why it was worth shipping.
+That is the only reason this repo has them: PFC Control is served from Pages,
+so there is never a file to download.
+
+```
+gh release create 0.2.0 --verify-tag --title "0.2.0 — <what it is>" --notes-file <path>
+```
+
+**A dev counter bump never gets a Release, and never gets a tag.** `dev.8` is
+not a version, it is a tally. A milestone runs to forty of them. Releasing each
+one would bury the three that matter.
+
+Notes follow the repo writing standard: plain, no filler, and they say what
+broke as well as what landed.
 
 **When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
 releases in one evening. Ship a `0.1.x` only when the defect **costs someone
