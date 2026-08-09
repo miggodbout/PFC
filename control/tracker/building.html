@@ -167,11 +167,12 @@ function floorHtml(group, index) {
   var roll = groupRollup(group, rolls);
 
   var notSaved = heldEditsIn(group);
-  var marks    = marksHtml(roll, notSaved);
+  var queued   = queuedEditsIn(group);
+  var marks    = marksHtml(roll, notSaved, queued);
 
   return '<section class="card floor' + (open ? ' open' : '') + '">' +
            '<button type="button" class="floor-head press" aria-expanded="' + open + '" ' +
-                   'aria-label="' + escapeHtml(marksLabel(group.label, roll, notSaved)) + '" ' +
+                   'aria-label="' + escapeHtml(marksLabel(group.label, roll, notSaved, queued)) + '" ' +
                    'onclick="toggleFloor(' + index + ')">' +
              '<span style="flex:1;min-width:0">' +
                '<span class="floor-label" style="display:block">' + escapeHtml(group.label) + '</span>' +
@@ -198,11 +199,12 @@ function chipsHtml(group) {
   return group.units.map(function (unit) {
     var roll     = rolls[unit.key] || rollup({}, {});
     var notSaved = heldEditsFor(unit.key);
+    var queued   = queuedEditsFor(unit.key);
 
     return '<a class="unit-chip press" ' +
               'href="unit.html?p=' + encodeURIComponent(projectId) +
                    '&u=' + encodeURIComponent(unit.key) + '" ' +
-              'aria-label="' + escapeHtml(marksLabel('Unit ' + unit.label, roll, notSaved)) + '">' +
+              'aria-label="' + escapeHtml(marksLabel('Unit ' + unit.label, roll, notSaved, queued)) + '">' +
              '<span class="num">' + escapeHtml(unit.chip || unit.label) + '</span>' +
              '<span class="chip-marks">' +
                dotHtml(roll) +
@@ -211,18 +213,17 @@ function chipsHtml(group) {
              '</span>' +
              barHtml(roll) +
              notSavedChipHtml(notSaved) +
+             queuedChipHtml(queued) +
            '</a>';
   }).join('');
 }
 
 
 /*
-   Only a HELD edit marks anything above the Unit screen. A waiting edit
-   paints the value it set and says nothing else — otherwise every tap
-   would light up the whole tree on the way down.
-
-   Nothing is ever held until 0.2 step 3 builds the retry and the hold
-   rules, so these both read 0 today.
+   A HELD edit and a QUEUED edit both mark the tree above the Unit screen,
+   in their own colour and their own corner — held is the red "!", queued
+   is the blue offline glyph. A held edit is not counted as queued: it has
+   stopped trying, so it is not on its way to anywhere.
 */
 
 function heldEditsFor(unitKey) {
@@ -238,6 +239,22 @@ function heldEditsFor(unitKey) {
 function heldEditsIn(group) {
   return group.units.reduce(function (total, unit) {
     return total + heldEditsFor(unit.key);
+  }, 0);
+}
+
+function queuedEditsFor(unitKey) {
+  var jobs  = Store.jobs();
+  var count = 0;
+  Object.keys(jobs).forEach(function (key) {
+    var job = jobs[key];
+    if (!job.held && job.projectId === projectId && job.unitKey === unitKey) count += 1;
+  });
+  return count;
+}
+
+function queuedEditsIn(group) {
+  return group.units.reduce(function (total, unit) {
+    return total + queuedEditsFor(unit.key);
   }, 0);
 }
 

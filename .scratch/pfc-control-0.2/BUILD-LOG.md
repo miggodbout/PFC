@@ -1015,3 +1015,74 @@ from `exterior_door_s` to `exterior_doors` with no data to migrate. **Do it befo
 a real building exists.**
 
 **Next:** `.scratch/pfc-control-0.2/HANDOFF.md` holds the work order.
+
+---
+
+## Session 10 — 2026-08-09
+
+**Step:** 3 fix round, block 2 of 5 (Marks and spinners). **Block 2 is done.**
+Block 1 (words and renames) landed earlier tonight in `e4eaf62`, before this
+session started — confirmed by reading that commit, since no BUILD-LOG entry
+covers it.
+**Branch:** `0.2`.
+**Deployed:** no clasp deploy — this block touches no `Code.js`. **Merged to
+main:** yes, straight after the `0.2` commit. Both branches pushed.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix4`.
+
+**Landed, both bullets of HANDOFF.md block 2:**
+
+- **The phase-level and unit-level spinner rings are gone.** `unit.html`
+  no longer draws `.ring`/`.ring--sm` beside the unit pill or a phase header —
+  those two calls into `waitingIn()` are deleted, and `waitingIn()` itself is
+  deleted since nothing else called it. This is the `#unit-pill` fix session 9
+  diagnosed: `.ring` never set `display`, and `#unit-pill` is a plain `div`
+  rather than a flex row, so the ring collapsed onto the text baseline. Deleting
+  the element needed no CSS repair, exactly as the session 9 note said. The
+  per-item ring (beside each item's own status control) and the sync bar's ring
+  are untouched — those are the two HANDOFF said to keep. `.ring--sm` in
+  `theme.css` is deleted too, since removing both draws left it with no caller.
+- **A queued edit now gets its own mark**, wherever a held (refused) edit
+  already got the red `!` badge: the Tracking row, a closed floor header, and a
+  unit chip. New `queuedChipHtml()` in `common.js` draws a blue corner badge
+  (`#6C9CFF`, matching the existing Waiting-flag blue) holding a small
+  signal-bars-with-a-slash glyph (`ICON.offline`), never red and never a plain
+  dot, so it cannot be mistaken for the not-saved badge. On a unit chip it
+  hangs off the top-left corner while not-saved keeps the top-right, so a chip
+  with one edit held and another still queued can show both marks at once
+  without them overlapping. `marksHtml()` and `marksLabel()` both take a new
+  `queued` argument alongside the existing `notSaved` one; every call site
+  (`tracker/index.html`, both spots in `tracker/building.html`) was updated to
+  pass `jobs.waiting` / a new `queuedEditsFor()` / `queuedEditsIn()` pair that
+  mirrors the existing `heldEditsFor()` / `heldEditsIn()` but counts `!job.held`
+  instead of `job.held`. The stale comment in `building.html` claiming "only a
+  HELD edit marks anything above the Unit screen" is rewritten to say what the
+  code now does.
+
+**Not landed:** everything from block 3 onward (progress bars, the
+`Exterior Door(s)` rename, the header stack) — this firing is scoped to block 2
+only, per the pacing rule. Everything still open from session 9 that block 2
+was not asked to touch: `reference/PFC_Master_Template.xlsx`, the two ZZ test
+Sheets, the unfolded landed RECORD (step 4's job), and session 6/7's remaining
+cosmetic list.
+
+**Tested:** not on a real screen — no browser or phone available tonight.
+Reasoned through instead: every edited `.html` file's inline `<script>` block
+parses (`node -e "new Function(...)"` against each), `common.js` parses on its
+own (`node -c`), and `theme.css`'s brace count is balanced. Traced the two new
+call paths by hand — a project with only queued jobs (`jobs.held === 0`,
+`jobs.waiting > 0`) now reaches `queuedChipHtml` and draws the blue badge; a
+project with only held jobs is unchanged from before, since `queuedEditsFor`
+excludes anything with `job.held` true. The exact rendered look of the new
+offline glyph at 8-9px, and whether the two corner badges read cleanly side by
+side on a real 77px chip, has not been seen and should get one look on a phone.
+
+**Open:** the offline-glyph shape (signal bars with a slash) and its exact blue
+are a reasoned pick within the latitude HANDOFF left open ("signal bars ... or
+a wifi glyph", "Miguel chose the symbol over a plain dot") — not a guess at
+something HANDOFF specified, but still worth Miguel's eye on a phone before
+calling the visual settled. Everything else session 9 left open is unchanged.
+
+**Next:** block 3, Progress bars — `barHtml` and `countText` in `common.js`
+around line 1518, fixing the bar to fill by items while the count text stays in
+units (`12 units · 5 done` → `5/12 Units done`), and adding a bar to the Unit
+screen top right where the pill sits now.

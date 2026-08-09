@@ -45,9 +45,8 @@
    at once, and the drain in common.js sends it. Nothing here calls the
    backend to save.
 
-   WHILE IT IS ON ITS WAY the item carries a small turning ring, and so do
-   its phase header and the unit pill above it. When it lands, everything
-   stops and says nothing — a landed edit is not news.
+   WHILE IT IS ON ITS WAY the item carries a small turning ring. When it
+   lands, the ring stops and says nothing — a landed edit is not news.
 
    EVERY ITEM IS ALWAYS DRAWN, whatever its Progress. Complete is a mark on
    a row, never a reason to remove the row — the row is the control you set
@@ -140,10 +139,7 @@ function render(note) {
   document.getElementById('subtitle').textContent =
     copy.name + (place.group.label ? ' · ' + place.group.label : '');
 
-  // The unit pill carries the ring too, so an edit anywhere in this unit
-  // is visible from the header without scrolling to find it.
   document.getElementById('unit-pill').innerHTML =
-    (waitingIn(null) ? '<span class="ring ring--sm"></span>' : '') +
     pillHtml(unitRollup(copy, unitKey), 'md');
 
   screen.innerHTML =
@@ -154,25 +150,6 @@ function render(note) {
     '</div>';
 
   placeOpenMenu();
-}
-
-
-/**
- * How many items are waiting to send, in one phase or in the whole unit.
- *
- * A HELD edit is not counted. It has stopped painting the screen, it shows
- * what the Sheet holds, and its own red card says so where it happened.
- */
-function waitingIn(phase) {
-  var count = 0;
-  (copy.phases || []).forEach(function (one) {
-    if (phase && one.key !== phase.key) return;
-    one.items.forEach(function (item) {
-      var job = jobFor(item.key);
-      if (job && !job.held) count += 1;
-    });
-  });
-  return count;
 }
 
 
@@ -193,7 +170,6 @@ function phaseHtml(phase) {
   return '<section class="phase">' +
            '<div class="phase-head">' +
              '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
-             (waitingIn(phase) ? '<span class="ring ring--sm"></span>' : '') +
              pillHtml(rollupOf(statuses, flags), 'xs') +
            '</div>' +
            phase.items.map(itemHtml).join('') +

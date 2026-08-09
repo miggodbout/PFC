@@ -177,13 +177,11 @@ function rowHtml(project, wasFinished) {
   var grey = finished && unsent === 0;                      // test 3
   var tag  = grey ? '<span class="tag">FINISHED</span>' : '';
 
-  // Only a HELD edit is a mark above the Unit screen. A waiting edit
-  // paints the value and says nothing else.
-  var marks = marksHtml(roll, jobs.held);
+  var marks = marksHtml(roll, jobs.held, jobs.waiting);
 
   return '<a class="card row press' + (grey ? ' row--finished' : '') + '" ' +
             'href="building.html?p=' + encodeURIComponent(project.id) + '" ' +
-            'aria-label="' + escapeHtml(marksLabel(project.name, roll, jobs.held)) + '">' +
+            'aria-label="' + escapeHtml(marksLabel(project.name, roll, jobs.held, jobs.waiting)) + '">' +
            '<span class="row-main">' +
              '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
              '<span class="row-sub">' + escapeHtml(shapeOf(project)) + '</span>' +
