@@ -1020,14 +1020,39 @@ a real building exists.**
 
 ## Session 10 — 2026-08-09
 
-**Step:** 3 fix round, block 2 of 5 (Marks and spinners). **Block 2 is done.**
+**Step:** 3 fix round, block 2 of 5 (Marks and spinners). **The code is
+written and committed, but this entry is not reaching you the normal way —
+read the warning below before anything else.**
+
 Block 1 (words and renames) landed earlier tonight in `e4eaf62`, before this
 session started — confirmed by reading that commit, since no BUILD-LOG entry
 covers it.
-**Branch:** `0.2`.
-**Deployed:** no clasp deploy — this block touches no `Code.js`. **Merged to
-main:** yes, straight after the `0.2` commit. Both branches pushed.
-**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix4`.
+
+**⚠ NOTHING IN THIS SESSION REACHED GITHUB. THIS FILE, AS YOU ARE READING IT
+ON `origin/0.2`, DOES NOT YET HAVE THIS ENTRY IN IT.**
+
+This session ran in a cloud container with no push access. `git push` failed
+with `403` from the git proxy, and both GitHub write paths the MCP server
+offers — `push_files` (git trees/blobs) and `create_or_update_file`
+(Contents API) — failed the same way: `403 Resource not accessible by
+integration`. Read access worked the whole time (fetch, pull, and
+`get_file_contents` all succeeded); only writes were refused. That is a
+GitHub App permission gap for this session's installation, not something
+retriable from in here — session instructions are explicit that a 403 like
+this gets reported, not worked around. **If you are reading this file with
+this entry in it, someone with push access (you, or a session running with
+your own git credentials, the way block 1 did) copied it in by hand — check
+the note at the bottom of this entry for exactly what that means for what to
+do next.**
+
+**Branch:** `0.2`, in this container only — commits `9e4745d` (the code) and
+`5345fa8` (one follow-up comment fix), both on top of `e4eaf62`. **Not on
+`origin/0.2`.**
+**Deployed:** no clasp deploy — this block touches no `Code.js` anyway.
+**Merged to main:** no — nothing to merge until `0.2` itself has this on it.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix4` **in this container's
+copy of `control/sw.js` only.** The version on GitHub still reads
+`pfc-control-0.2-step3-fix3` as of this session.
 
 **Landed, both bullets of HANDOFF.md block 2:**
 
@@ -1081,8 +1106,26 @@ are a reasoned pick within the latitude HANDOFF left open ("signal bars ... or
 a wifi glyph", "Miguel chose the symbol over a plain dot") — not a guess at
 something HANDOFF specified, but still worth Miguel's eye on a phone before
 calling the visual settled. Everything else session 9 left open is unchanged.
+**Plus the push failure above — that is the bigger open item tonight.**
 
-**Next:** block 3, Progress bars — `barHtml` and `countText` in `common.js`
-around line 1518, fixing the bar to fill by items while the count text stays in
-units (`12 units · 5 done` → `5/12 Units done`), and adding a bar to the Unit
-screen top right where the pill sits now.
+**Next — for a human, not for the next scheduled firing:** the GitHub App
+this environment uses needs `Contents: write` (or equivalent) restored for
+`miggodbout/pfc` before any session running in this kind of cloud container
+can land a commit. Until that is fixed, every later firing tonight most
+likely hits the identical wall doing block 3, then block 4, then block 5 —
+each one probably re-diagnoses this same 403 from scratch, wasting its run,
+unless this note is on `origin/0.2` before it starts. **If you are reading
+this on GitHub, block 2's actual code is sitting in `.scratch` nowhere —
+it only exists in that one ephemeral container, which is reclaimed after
+the session ends.** The fastest recovery is likely to re-run block 2 from
+`HANDOFF.md` section 2 in a session that has real push access (the way
+block 1 was built), rather than trying to recover the dead container.
+
+**Next — if a later firing tonight reads this file straight from
+`origin/0.2` and does NOT see this warning:** that confirms the entry never
+reached GitHub, exactly as predicted above. Do not assume block 2 is
+untouched — check the open PRs / branches for a stray `0.2`-based branch
+from this session first (there should not be one, since branch creation is
+also a write and would have failed the same way), then just re-run block 2
+following `HANDOFF.md` section 2 as if this session had not happened, and
+say so plainly in your own entry.
