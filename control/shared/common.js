@@ -1120,8 +1120,17 @@ function applyOutcome(outcome, sent) {
 
     // A JOB LEAVES THE SHELF ON ok:true AND ON NOTHING ELSE.
     if (one && one.ok) {
+      // The value the server took is now what the Sheet holds, so it goes
+      // into the copy whatever has happened on the shelf since.
       (landed[job.projectId] = landed[job.projectId] || []).push(job);
-      Store.removeJob(job.key);
+
+      // A RETAP WHILE THE CALL WAS IN THE AIR WINS, HERE TOO. If the job
+      // under this key is not the one that was sent, the person has set a
+      // new value since, and removing by key alone would throw that tap
+      // away with nothing to show for it. settleJob guards the failure
+      // path the same way. It stays and goes out on the next drain.
+      var fresh = Store.job(job.key);
+      if (fresh && fresh.at === job.at) Store.removeJob(job.key);
       return;
     }
 
