@@ -70,8 +70,8 @@ if (lastList) {
 
 mountSyncBar();
 
-// A held edit is a mark on a Tracking row, so the list redraws when the
-// queue settles. A WAITING edit changes nothing up here.
+// A held or a queued edit is a mark on a Tracking row, so the list
+// redraws whenever the queue changes.
 Queue.onChange(function () { if (lastList) draw(lastList, null); });
 
 refresh();
