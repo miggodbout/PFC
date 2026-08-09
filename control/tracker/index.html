@@ -68,9 +68,18 @@ if (lastList) {
   screen.innerHTML = loadingHtml('Loading projects…');
 }
 
+mountSyncBar();
+
+// A held edit is a mark on a Tracking row, so the list redraws when the
+// outbox settles. A WAITING edit changes nothing up here.
+Outbox.onChange(function () { if (lastList) draw(lastList, null); });
+
 refresh();
 
-enablePullToRefresh(refresh);
+enablePullToRefresh(function () {
+  // Send first, then ask. A pull is the one gesture that means "catch up".
+  return Outbox.wake().then(refresh, refresh);
+});
 
 
 function refresh() {

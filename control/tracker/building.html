@@ -64,8 +64,14 @@ if (!projectId) {
     screen.innerHTML = loadingHtml('Loading building…');
   }
 
+  mountSyncBar();
+  Outbox.onChange(function () { if (copy) render(); });
+
   refresh();
-  enablePullToRefresh(refresh);
+  enablePullToRefresh(function () {
+    // Send first, then ask. A pull is the one gesture that means "catch up".
+    return Outbox.wake().then(refresh, refresh);
+  });
 }
 
 
@@ -106,6 +112,8 @@ function render(note) {
         chipsHtml(copy.groups[0]) + '</div></div>'
     : copy.groups.map(floorHtml).join('');
 
+  // A flat project has no header to open, so it has no drawer either.
+
   screen.innerHTML = '<div class="body">' + (note || '') + body + '</div>';
 }
 
@@ -137,15 +145,22 @@ function nameFromList() {
  *
  * The count, the bar and the pill stay either way. You cannot work those
  * out by eye from twelve chips.
+ *
+ * EVERY FLOOR'S CHIPS ARE ALWAYS IN THE PAGE, closed ones included, and
+ * the drawer hides them by growing its row from 0fr to 1fr. That is what
+ * lets the open animate. Drawing the chips only when the floor is open
+ * meant a brand new element arrived already open, with nothing to move
+ * from, and no CSS transition ever played. The marks come off the header
+ * the same way, by a CSS rule rather than by leaving them out.
  */
 function floorHtml(group, index) {
   var open = (index === openFloor);
   var roll = groupRollup(group, rolls);
 
   var notSaved = heldEditsIn(group);
-  var marks    = open ? '' : marksHtml(roll, notSaved);
+  var marks    = marksHtml(roll, notSaved);
 
-  return '<section class="card floor">' +
+  return '<section class="card floor' + (open ? ' open' : '') + '">' +
            '<button type="button" class="floor-head press" aria-expanded="' + open + '" ' +
                    'aria-label="' + escapeHtml(marksLabel(group.label, roll, notSaved)) + '" ' +
                    'onclick="toggleFloor(' + index + ')">' +
@@ -157,9 +172,11 @@ function floorHtml(group, index) {
                marks +
              '</span>' +
              pillHtml(roll, 'sm') +
-             '<span class="caret' + (open ? ' open' : '') + '">' + ICON.caret + '</span>' +
+             '<span class="caret">' + ICON.caret + '</span>' +
            '</button>' +
-           (open ? '<div class="floor-body">' + chipsHtml(group) + '</div>' : '') +
+           '<div class="floor-drawer">' +
+             '<div class="floor-body">' + chipsHtml(group) + '</div>' +
+           '</div>' +
          '</section>';
 }
 
@@ -216,10 +233,25 @@ function heldEditsIn(group) {
 }
 
 
-/** Only one floor stays open. Tapping the open floor closes every floor. */
+/**
+ * Only one floor stays open. Tapping the open floor closes every floor.
+ *
+ * IT MOVES A CLASS AND DRAWS NOTHING. Redrawing here would replace the
+ * floor element, and a brand new element arrives already in its final
+ * state, so no CSS transition would ever play. Every rule that changes
+ * with the open state — the drawer height, the caret, the marks line —
+ * hangs off .floor.open in theme.css for exactly this reason.
+ */
 function toggleFloor(index) {
   openFloor = (openFloor === index) ? -1 : index;
-  render();
+
+  var floors = screen.querySelectorAll('.floor');
+  for (var i = 0; i < floors.length; i++) {
+    var open = (i === openFloor);
+    floors[i].classList.toggle('open', open);
+    var head = floors[i].querySelector('.floor-head');
+    if (head) head.setAttribute('aria-expanded', open);
+  }
 }
 
 

@@ -10,9 +10,12 @@
  *   - Reads that Sheet back for the Tracker screens.
  *   - Changes a project's structure (items and units) on request.
  *
+ *   - Writes status values and deficiency records, a whole outbox at a
+ *     time, through 'save-batch'.
+ *
  * What this script does NOT do yet:
- *   - It never writes a status value. That arrives with 'save-batch' in
- *     0.2 step 3. See the note at the end of this file.
+ *   - 'cancel-item-records', which the Admin refusal panel needs. That
+ *     arrives in 0.2 step 5. See the note at the end of this file.
  *
  * Config version 2 (0.2) against version 1 (0.1):
  *   - Three status values, not five. Deficiency and On Hold were never
@@ -88,6 +91,28 @@ var STATUS_KEYS = {
   'In Progress': 'in_progress',
   'Complete':    'complete'
 };
+
+/**
+ * Short key -> Sheet label. The phone works in short keys everywhere, and
+ * save-batch turns one into the label the dropdown holds on the way in.
+ * A key that is not in here is refused, so a typo can never write a value
+ * the dropdown does not offer.
+ */
+var STATUS_LABELS = {
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  complete:    'Complete'
+};
+
+/**
+ * How many jobs one save-batch call writes. The rest wait for the next
+ * drain. An Apps Script call has six minutes, and waiting for the lock
+ * eats into that before a single cell is written.
+ */
+var MAX_JOBS_PER_BATCH = 100;
+
+/** The three states a record can be in. Nothing else is accepted. */
+var RECORD_STATES = ['Open', 'Fixed', 'Cancelled'];
 
 /**
  * Fill for the Dashboard's open-flag count.
@@ -199,6 +224,7 @@ function route(action, data) {
     case 'get-unit':         return handleGetUnit(data.id, data.unit);
     case 'create-project':   return handleCreateProject(data);
     case 'update-structure': return handleUpdateStructure(data);
+    case 'save-batch':       return handleSaveBatch(data.jobs);
     default:                 return { success: false, error: 'Unknown action: ' + action };
   }
 }
@@ -530,6 +556,265 @@ function handleGetUnit(id, unitKey) {
 
 
 // ── WRITE ACTIONS ─────────────────────────────────────────────────────
+
+/**
+ * SAVE THE WHOLE OUTBOX IN ONE CALL.
+ *
+ * The phone holds unsent edits on a keyed shelf and sends every one of
+ * them here together. Two kinds of job arrive in the same list:
+ *
+ *   { key, kind:'item',   projectId, unitKey, itemKey, progress }
+ *   { key, kind:'record', projectId, record:{ the thirteen columns } }
+ *
+ * THE ANSWER IS ONE RESULT PER JOB, NEVER ONE VERDICT FOR THE BATCH.
+ *
+ *   { success:true, results:[ { key, ok:true },
+ *                             { key, ok:false, retry:true, error:'...' } ] }
+ *
+ * A bad job must not poison the good ones beside it. The phone deletes a
+ * job from its shelf when, and only when, that job answers ok:true.
+ *
+ * EVERY FAILED RESULT CARRIES retry:true OR retry:false. Without it a busy
+ * server and a permanently broken job look identical on the phone, so it
+ * either gives up on work that would have landed, or retries forever
+ * against a unit Admin deleted. retry:false means do not try this again —
+ * hold it and show it to a person.
+ *
+ * Every job carries the FINAL VALUE, not a change to apply, so writing it
+ * twice is the same as writing it once. That is what makes a retry after a
+ * timeout safe: the write may already have landed, and doing it again
+ * costs nothing.
+ *
+ * THE LOCK IS TAKEN ONCE for the whole batch, not once per job.
+ */
+function handleSaveBatch(jobs) {
+  var list = jobs || [];
+  if (!list.length) return { success: true, results: [] };
+
+  // Oldest first is free: the phone sends them in order. The rest of the
+  // shelf goes on the next drain.
+  var batch   = list.slice(0, MAX_JOBS_PER_BATCH);
+  var results = [];
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    // Another write is running. It will end, so every job retries.
+    return {
+      success: true,
+      results: batch.map(function (job) {
+        return jobFailed(job, true, 'The server is busy. Try again.');
+      })
+    };
+  }
+
+  try {
+    // Jobs may span buildings. Group them so each Sheet opens once.
+    var order  = [];
+    var byId   = {};
+    batch.forEach(function (job) {
+      var id = job && job.projectId;
+      if (!id) { results.push(jobFailed(job, false, 'This edit names no project.')); return; }
+      if (!byId[id]) { byId[id] = []; order.push(id); }
+      byId[id].push(job);
+    });
+
+    order.forEach(function (id) {
+      writeProjectJobs(id, byId[id], results);
+    });
+
+    // ONE LINE, EASY TO LOSE, AND THE WHOLE BUILDINGS SCREEN DEPENDS ON
+    // IT. Without it the list answer stays cached for up to a minute and
+    // Tracking shows a pill that disagrees with the unit you just set.
+    CacheService.getScriptCache().remove('list-projects');
+
+  } catch (err) {
+    // Nothing above should throw — writeProjectJobs catches its own. If
+    // something does, every job that has no result yet retries.
+    batch.forEach(function (job) {
+      if (!resultFor(results, job)) results.push(jobFailed(job, true, err.toString()));
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { success: true, results: results };
+}
+
+
+/** Writes every job belonging to one building. Appends one result each. */
+function writeProjectJobs(id, jobs, results) {
+  var ss, config;
+
+  try {
+    ss     = SpreadsheetApp.openById(id);
+    config = readConfig(ss);
+  } catch (err) {
+    // The Sheet would not open. That can be a permission or a network
+    // fault at Google's end, so it is worth trying again.
+    jobs.forEach(function (job) { results.push(jobFailed(job, true, err.toString())); });
+    return;
+  }
+
+  // Both of these are permanent for this Sheet. Retrying cannot fix them.
+  if (!config) {
+    jobs.forEach(function (job) {
+      results.push(jobFailed(job, false, 'This Sheet is not a PFC Control project.'));
+    });
+    return;
+  }
+
+  var stale = configVersionError(config);
+  if (stale) {
+    jobs.forEach(function (job) { results.push(jobFailed(job, false, stale)); });
+    return;
+  }
+
+  var layout  = computeLayout(config);
+  var tracker = ss.getSheetByName(TRACKER_SHEET_NAME);
+  var touched = {};    // unit row -> true, for the Last Updated stamp
+
+  jobs.forEach(function (job) {
+    try {
+      if (job.kind === 'record') {
+        results.push(writeRecordJob(ss, job));
+      } else if (job.kind === 'item') {
+        results.push(writeItemJob(tracker, config, layout, job, touched));
+      } else {
+        results.push(jobFailed(job, false, 'This edit has an unknown kind: ' + job.kind));
+      }
+    } catch (err) {
+      results.push(jobFailed(job, true, err.toString()));
+    }
+  });
+
+  // One date stamp per unit that changed, not one per item.
+  var today = new Date();
+  Object.keys(touched).forEach(function (row) {
+    tracker.getRange(parseInt(row, 10), layout.lastUpdatedCol).setValue(today);
+  });
+}
+
+
+/**
+ * Writes one item's Progress into its cell.
+ *
+ * ONE CELL AT A TIME, ON PURPOSE. Reading a whole row and writing it back
+ * would be fewer calls, but it would also write back every OTHER item in
+ * that row, and anything a person changed in the Sheet between the read
+ * and the write would be silently undone. A batch is a handful of taps in
+ * practice, and the cap of 100 keeps the worst case inside the six minute
+ * budget.
+ *
+ * It never touches the rollup columns. Those are formulas and they answer
+ * by themselves.
+ */
+function writeItemJob(tracker, config, layout, job, touched) {
+  var label = STATUS_LABELS[job.progress];
+  if (!label) {
+    return jobFailed(job, false, 'Not a Progress value: ' + job.progress);
+  }
+
+  var index = indexOfUnit(config, job.unitKey);
+  if (index < 0) {
+    // Admin removed the unit. Retrying writes it back nowhere.
+    return jobFailed(job, false, 'Unit ' + job.unitKey + ' is not in this building any more.');
+  }
+
+  var col = layout.statusCol[job.itemKey];
+  if (!col) {
+    return jobFailed(job, false, 'Item ' + job.itemKey + ' is not in this building any more.');
+  }
+
+  var row = FIRST_DATA_ROW + index;
+  tracker.getRange(row, col).setValue(label);
+  touched[row] = true;
+
+  return { key: job.key, ok: true };
+}
+
+
+/**
+ * Writes one deficiency record.
+ *
+ * THE RECORD ID IS MADE ON THE PHONE, before anything is sent. Id found,
+ * overwrite that row. Id new, append to the bottom. That is what makes a
+ * retry safe after a timeout: the write may already have landed, and the
+ * second attempt lands on the same row instead of making a twin.
+ *
+ * A record is never deleted and never moved. Fixed and Cancelled both stay
+ * in place with a closed date.
+ *
+ * Nothing calls this yet. Logger arrives in 0.2 step 4 and puts record
+ * jobs on the same shelf, which this call already drains.
+ */
+function writeRecordJob(ss, job) {
+  var record = job.record || {};
+  var id     = String(record.record_id || '').trim();
+
+  if (!id) return jobFailed(job, false, 'This record has no id.');
+
+  if (RECORD_STATES.indexOf(record.state) < 0) {
+    return jobFailed(job, false, 'Not a record state: ' + record.state);
+  }
+
+  var sheet = ss.getSheetByName(DEFICIENCIES_SHEET_NAME);
+  if (!sheet) {
+    // A version 2 project always has this tab. If it is missing the Sheet
+    // was hand-edited, and no retry repairs that.
+    return jobFailed(job, false, 'This project has no Deficiencies tab.');
+  }
+
+  var row = rowOfRecord(sheet, id);
+  if (row < 0) row = Math.max(sheet.getLastRow(), 1) + 1;
+
+  var cells = DEFICIENCY_COLUMNS.map(function (name) {
+    var value = record[name];
+    if (name === 'quantity') return parseInt(value, 10) || 1;
+    // created and closed go in as real dates so the tab sorts by them.
+    if ((name === 'created' || name === 'closed') && value) return new Date(value);
+    return (value === undefined || value === null) ? '' : value;
+  });
+
+  // The tab is built 1000 rows deep and grows past that only here.
+  if (row > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
+
+  sheet.getRange(row, 1, 1, DEFICIENCY_COLUMNS.length).setValues([cells]);
+  return { key: job.key, ok: true };
+}
+
+
+/** The row one record id sits on, or -1. Reads column A only. */
+function rowOfRecord(sheet, id) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).trim() === id) return i + 2;
+  }
+  return -1;
+}
+
+
+/** One failed result. retry says whether trying again could ever work. */
+function jobFailed(job, retry, message) {
+  return {
+    key:   job ? job.key : '',
+    ok:    false,
+    retry: !!retry,
+    error: message
+  };
+}
+
+
+/** Whether this job already has a result in the list. */
+function resultFor(results, job) {
+  for (var i = 0; i < results.length; i++) {
+    if (results[i].key === job.key) return results[i];
+  }
+  return null;
+}
+
 
 /**
  * Creates a project Sheet.
@@ -1814,27 +2099,14 @@ function clampCount(value, min) {
 
 // ── STILL TO BUILD IN 0.2 ──────────────────────────────────────────────
 //
-// Two write actions and one read action are not here yet. Build them in
-// the order the build plan sets, not in the order they are listed.
-//
-//   'save-batch'  (step 3) — takes the whole outbox in one call, of both
-//                 job kinds, takes the script lock ONCE, and answers one
-//                 result per job. Never one verdict for the batch: a bad
-//                 job must not poison the others. Every result carries
-//                 retry:true or retry:false, so a busy server and a
-//                 permanent failure stop looking identical. It must end
-//                 with CacheService.getScriptCache().remove('list-projects'),
-//                 the same as the two write actions above.
-//
-//   'get-project' (step 2) — one whole building in one answer, config and
-//                 statuses and the WHOLE Deficiencies tab, every state.
-//                 Do not filter the records. Fixed records feed the
-//                 suggestion chips, and the 0.3 Archive is a filter over
-//                 records.
+// One action is not here yet.
 //
 //   'cancel-item-records' (step 5) — sets every Open record on one item to
 //                 Cancelled and returns the count. It backs the Admin
-//                 refusal panel on Remove an item.
+//                 refusal panel on Remove an item. It writes the
+//                 Deficiencies tab only: no config change and no rebuild.
+//
+// 'get-project' landed in step 2 and 'save-batch' in step 3.
 //
 // An earlier version of this note named an action called 'update-item',
 // writing one item at a time. It was deleted during 0.2 planning, before

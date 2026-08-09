@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Outbox — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+
+<header class="hdr">
+  <a class="hdr-back press" href="index.html" aria-label="Go back to the building list">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles">
+    <h1 class="hdr-title">Outbox</h1>
+    <div class="hdr-sub" id="subtitle"></div>
+  </div>
+</header>
+
+<main id="screen"></main>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   OUTBOX — every edit that has not reached its Sheet
+   =====================================================================
+   THIS WINDOW EXISTS BECAUSE ONLY A PERSON DROPS AN EDIT. The app holds a
+   failed edit forever and never deletes one, so there has to be a screen
+   with a Drop button on it. There is no version of 0.2 that obeys that
+   rule and has no Outbox.
+
+   Two kinds of row:
+
+     waiting — on its way, or between retries. It paints the tracker
+               screens, and there is nothing to do about it but wait.
+     held    — the app has stopped trying. It does NOT paint the tracker
+               screens, so those show what the Sheet holds. Retry or Drop.
+
+   PLAN CALL 2 — A ROW DOES NOT TAP THROUGH TO ITS UNIT. The row names the
+   building, the unit and the item, which is enough to walk there. A
+   tap-through has to decide what happens to this screen behind it, and
+   nobody has asked for one yet. Add it when somebody does.
+   ===================================================================== */
+
+var screen = document.getElementById('screen');
+
+// No Outbox link in the bar on the Outbox screen. It is already here.
+mountSyncBar('');
+
+Outbox.onChange(render);
+render();
+
+// A pull here means "try the failed ones now", which is what wake does.
+enablePullToRefresh(function () { return Outbox.wake(); });
+
+
+function render() {
+  var held    = Outbox.heldJobs();
+  var waiting = Outbox.waiting();
+
+  document.getElementById('subtitle').textContent = subtitleFor(held, waiting);
+
+  if (!held.length && !waiting.length) {
+    screen.innerHTML =
+      '<div class="state">' +
+        '<div class="state-title">Nothing waiting</div>' +
+        '<div class="state-text">Every edit on this phone has reached its project Sheet.</div>' +
+      '</div>';
+    return;
+  }
+
+  // Held first. It is the half that needs a person.
+  screen.innerHTML =
+    '<div class="body">' +
+      sectionHtml('Did not save', held, true) +
+      sectionHtml('Waiting to send', waiting, false) +
+    '</div>';
+}
+
+
+function subtitleFor(held, waiting) {
+  var parts = [];
+  if (waiting.length) parts.push(waiting.length + ' waiting');
+  if (held.length)    parts.push(held.length + ' failed');
+  return parts.join(' · ');
+}
+
+
+function sectionHtml(label, jobs, canAct) {
+  if (!jobs.length) return '';
+
+  return '<section class="card">' +
+           '<div class="phase-head" style="padding:12px 16px 4px">' +
+             '<h2 class="phase-label">' + escapeHtml(label) + '</h2>' +
+           '</div>' +
+           jobs.map(function (job) { return jobHtml(job, canAct); }).join('') +
+         '</section>';
+}
+
+
+/**
+ * One row. It says WHERE the edit belongs and WHAT it sets, in that order,
+ * because the point of the screen is to let you go and check.
+ */
+function jobHtml(job, canAct) {
+  var place = placeOf(job);
+
+  return '<div class="item">' +
+           '<div class="item-top">' +
+             '<span class="item-name">' + escapeHtml(place.what) + '</span>' +
+             (canAct ? '<span class="ring ring--bad"></span>'
+                     : '<span class="ring"></span>') +
+           '</div>' +
+           '<div class="item-details">' + escapeHtml(place.where) + '</div>' +
+           (job.error ? '<div class="fix-lost">' + escapeHtml(job.error) + '</div>' : '') +
+           (canAct
+             ? '<div class="fix-acts" style="margin-top:8px">' +
+                 '<button type="button" class="btn btn-small btn-ghost press" ' +
+                         'onclick="Outbox.retry(' + attr(job.key) + ')">Try again</button>' +
+                 '<button type="button" class="btn btn-small btn-ghost press" ' +
+                         'onclick="Outbox.drop(' + attr(job.key) + ')">Drop</button>' +
+               '</div>'
+             : '') +
+         '</div>';
+}
+
+
+/**
+ * Turns a job's keys into words, out of the local building copy.
+ *
+ * The copy is what holds the labels — a job carries keys only. If the copy
+ * was dropped, the keys themselves are still readable enough to walk to
+ * the unit, so the row never goes blank.
+ */
+function placeOf(job) {
+  var copy  = Store.project(job.projectId);
+  var name  = copy ? copy.name : projectNameFromList(job.projectId);
+  var found = copy ? findUnit(copy, job.unitKey) : null;
+
+  var unit = found ? ('Unit ' + found.unit.label) : ('Unit ' + (job.unitKey || '?'));
+
+  if (job.kind === 'record') {
+    var record = job.record || {};
+    return {
+      what:  (record.reason || 'Record') + (record.subtype ? ' · ' + record.subtype : ''),
+      where: [name, unit, record.item || ''].filter(Boolean).join(' · ')
+    };
+  }
+
+  return {
+    what:  itemLabel(copy, job.itemKey) + ' → ' + STATUS[safeStatus(job.progress)].label,
+    where: [name, unit].filter(Boolean).join(' · ')
+  };
+}
+
+
+function itemLabel(copy, itemKey) {
+  var label = itemKey || 'Item';
+  ((copy && copy.phases) || []).forEach(function (phase) {
+    phase.items.forEach(function (item) {
+      if (item.key === itemKey) label = item.label;
+    });
+  });
+  return label;
+}
+
+
+function projectNameFromList(id) {
+  var list  = Store.list();
+  var found = '';
+  ((list && list.projects) || []).forEach(function (project) {
+    if (project.id === id) found = project.name;
+  });
+  return found || 'This building';
+}
+
+
+/** A JavaScript string, made safe to sit inside an HTML attribute. */
+function attr(text) {
+  return escapeHtml(JSON.stringify(String(text)));
+}
+</script>
+</body>
+</html>

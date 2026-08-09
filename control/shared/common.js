@@ -316,8 +316,15 @@ function defaultItemLists(label) {
  *   server          the server answered with an error
  *
  * A job site has poor signal, so no screen may crash on a failed call.
+ *
+ * options.noFallback stops the JSONP fallback below and answers 'blocked'
+ * instead. Only the outbox drain passes it. The fallback puts the whole
+ * payload in the web address, and an address near 8,000 characters FAILS
+ * SILENTLY — which is fine for a small read and is the one thing in this
+ * app that could quietly lose a person's work. The drain takes the
+ * fallback over itself and sends in measured slices. See sendJobsAsJsonp.
  */
-function apiCall(action, data, method) {
+function apiCall(action, data, method, options) {
   if (!API_URL) {
     return Promise.resolve({ ok: false, reason: 'not-configured' });
   }
@@ -362,6 +369,11 @@ function apiCall(action, data, method) {
       clearTimeout(timer);
       if (timedOut) return { ok: false, reason: 'timeout' };
       if (navigator.onLine === false) return { ok: false, reason: 'offline' };
+
+      if (options && options.noFallback) {
+        return { ok: false, reason: 'blocked',
+                 detail: err && err.message ? err.message : '' };
+      }
 
       // fetch failed but the phone says it is online. Some networks block
       // the reply to a cross-site request. Try the script-tag path, which
@@ -594,10 +606,17 @@ var Store = {
      to apply. Writing it twice is the same as writing it once, which is
      also what makes a retry safe.
 
-     Step 2 builds the shelf. THE DRAIN, THE BACKOFF, THE HOLD RULES AND
-     THE OUTBOX WINDOW ARE STEP 3. Until then a job goes on the shelf and
-     waits there, and it paints the screen, because a waiting edit paints
-     and only a HELD edit does not.
+     A job carries:
+       key, kind, projectId, at, tries, held
+       kind 'item'   — unitKey, itemKey, progress (the SHORT key)
+       kind 'record' — record, the thirteen Deficiencies columns
+       error         — why the last attempt failed, once one has
+
+     A WAITING edit paints the screen. A HELD edit does not: it shows what
+     the Sheet holds and lives only in the Outbox window, because a floor
+     must never read 18/18 Complete off an edit that will never land.
+
+     Step 2 built the shelf. Step 3 added the drain below it.
   */
 
   /*
@@ -622,7 +641,9 @@ var Store = {
     var all = this.jobs();
     all[job.key] = job;
     this._jobs = all;
-    return this.write('outbox', all);
+    var written = this.write('outbox', all);
+    Outbox.changed();
+    return written;
   },
 
   removeJob: function (key) {
@@ -630,6 +651,7 @@ var Store = {
     delete all[key];
     this._jobs = all;
     this.write('outbox', all);
+    Outbox.changed();
   },
 
   /** True when this building holds any unsent edit, waiting or held. */
@@ -675,6 +697,385 @@ function itemJobKey(projectId, unitKey, itemKey) {
 function foldNeededLinesIntoChips(copy) {
   return copy;
 }
+
+
+/* ── THE DRAIN ────────────────────────────────────────────────────── */
+/*
+   THE OUTBOX SENDS ITSELF. Nothing on a screen calls the backend to save.
+   A tap puts a job on the shelf, and everything below gets it to the
+   Sheet, or holds it where a person can see it.
+
+   THE RETRY CLOCK RUNS ONLY WHILE JOBS WAIT, AND STOPS DEAD WHEN THE
+   SHELF EMPTIES. This is the one timer in the whole app, and it exists
+   because it finishes work already asked for. It is not a poll for news:
+   nothing here ever fetches.
+
+   A drain also runs on app open, on pull down, and when the phone says
+   signal is back. The browser's online event is not trustworthy on iOS,
+   so the timer is the safety net under it.
+*/
+
+/**
+ * At once, then 5s, 15s, 1m, then every 5 minutes.
+ *
+ * A FLAT RETRY WAS REJECTED. Every phone on a job site would come back on
+ * the same beat, which is the pattern most likely to keep losing the fight
+ * for the script lock.
+ */
+var OUTBOX_BACKOFF = [0, 5000, 15000, 60000, 300000];
+
+/**
+ * How many failed attempts hold a job. With the backoff above that is
+ * about thirty minutes.
+ *
+ * A JOB IS NEVER DROPPED BY THE APP. Held means it stops painting the
+ * screen and waits in the Outbox window, where only a person can Drop it.
+ */
+var OUTBOX_MAX_TRIES = 10;
+
+/** The server writes at most this many jobs in one call. The rest wait. */
+var OUTBOX_BATCH = 100;
+
+/** PLAN CALL 1 — the JSONP fallback sends five jobs at a time. */
+var JSONP_SLICE = 5;
+
+/**
+ * The address length one JSONP slice may build.
+ *
+ * A browser and Apps Script both stop accepting a web address near 8,000
+ * characters, and a long one FAILS SILENTLY. 6,000 leaves room for the
+ * script address itself and for the escaping to grow.
+ */
+var JSONP_MAX_URL = 6000;
+
+
+var Outbox = {
+
+  _timer:     null,
+  _sending:   false,
+  _pending:   null,   // the drain in flight, so two never overlap
+  _misses:    0,      // failed drains in a row, for the backoff
+  _listeners: [],
+
+  /** Every job that still paints the screen and still wants sending. */
+  waiting: function () {
+    var all = Store.jobs();
+    return Object.keys(all)
+      .map(function (key) { return all[key]; })
+      .filter(function (job) { return !job.held; })
+      .sort(function (a, b) { return (a.at || 0) - (b.at || 0); });   // oldest first
+  },
+
+  /** Every job the app has given up on. Only a person clears these. */
+  heldJobs: function () {
+    var all = Store.jobs();
+    return Object.keys(all)
+      .map(function (key) { return all[key]; })
+      .filter(function (job) { return job.held; })
+      .sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+  },
+
+  counts: function () {
+    var all = Store.jobs();
+    var out = { waiting: 0, held: 0 };
+    Object.keys(all).forEach(function (key) {
+      if (all[key].held) out.held += 1; else out.waiting += 1;
+    });
+    return out;
+  },
+
+  /** True while a call is in the air. The sync bar turns its ring on this. */
+  sending: function () { return this._sending; },
+
+  /* -- telling the screens ------------------------------------------- */
+
+  onChange: function (fn) { this._listeners.push(fn); },
+
+  changed: function () {
+    this._listeners.forEach(function (fn) {
+      try { fn(); } catch (e) {}      // one broken screen must not stop the rest
+    });
+  },
+
+  /* -- running ------------------------------------------------------- */
+
+  /**
+   * Sends what is waiting. Answers when the call comes back.
+   *
+   * Two drains never overlap: the second one gets the first one's promise.
+   * The keyed shelf already guarantees one job per target, so nothing can
+   * race for the same cells even if a screen calls this twice.
+   */
+  drain: function () {
+    var self = this;
+    if (self._sending) return self._pending;
+
+    var jobs = self.waiting();
+    if (!jobs.length) { self.stop(); return Promise.resolve({ sent: 0 }); }
+
+    var batch = jobs.slice(0, OUTBOX_BATCH);
+
+    self._sending = true;
+    self.clearTimer();
+    self.changed();
+
+    self._pending = sendJobs(batch).then(function (outcome) {
+      applyOutcome(outcome, batch);
+
+      self._sending = false;
+      self._pending = null;
+
+      var left = self.waiting().length;
+      if (left) {
+        // Something did not land. Wait longer before asking again.
+        self._misses += 1;
+        self.schedule();
+      } else {
+        self.stop();
+      }
+
+      self.changed();
+      return { sent: batch.length - left };
+    });
+
+    return self._pending;
+  },
+
+  /** Drains now and restarts the backoff from the top. */
+  wake: function () {
+    this._misses = 0;
+    return this.drain();
+  },
+
+  schedule: function () {
+    var self = this;
+    var wait = OUTBOX_BACKOFF[Math.min(self._misses, OUTBOX_BACKOFF.length - 1)];
+    self.clearTimer();
+    self._timer = setTimeout(function () {
+      self._timer = null;
+      self.drain();
+    }, wait);
+  },
+
+  clearTimer: function () {
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+  },
+
+  /** Nothing waits. Stop the clock. */
+  stop: function () {
+    this.clearTimer();
+    this._misses = 0;
+  },
+
+  /* -- what a person does in the Outbox window ----------------------- */
+
+  /** Puts a held job back in line, with its try count at zero. */
+  retry: function (key) {
+    var job = Store.job(key);
+    if (!job) return;
+    job.held  = false;
+    job.tries = 0;
+    job.error = '';
+    Store.putJob(job);
+    this.wake();
+  },
+
+  /** The only way a job leaves the shelf unsent. Miguel taps it. */
+  drop: function (key) {
+    Store.removeJob(key);
+    this.changed();
+  }
+};
+
+
+/**
+ * Sends one batch, and answers what happened to it.
+ *
+ *   { results: { key: { ok, retry, error } }, fail: null or a whole-call
+ *     failure that covers every job with no result }
+ */
+function sendJobs(list) {
+  return apiCall('save-batch', { jobs: list }, 'POST', { noFallback: true })
+    .then(function (result) {
+      if (result.ok) return { results: indexResults(result.data) };
+
+      // The POST reply never came back, and the phone says it is online.
+      // Some job-site networks block a cross-site reply. Take the script
+      // tag path, in measured slices.
+      if (result.reason === 'blocked') return sendJobsAsJsonp(list);
+
+      return { results: {}, fail: classifyCallFailure(result) };
+    });
+}
+
+
+/** The server's results list, keyed by job key. */
+function indexResults(data) {
+  var out = {};
+  ((data && data.results) || []).forEach(function (one) { out[one.key] = one; });
+  return out;
+}
+
+
+/**
+ * PLAN CALL 1 — SAVE DOWN THE FALLBACK PATH, IN MEASURED SLICES.
+ *
+ * The script tag path puts the whole payload in the web address, and an
+ * address that runs too long is not refused: it fails silently. This is
+ * the only place in the app that could lose a person's work without
+ * saying so, and it is used on exactly the networks a job site has.
+ *
+ * So: five jobs at a time, the address MEASURED before each slice is sent,
+ * and the slice halved until it fits. A single job that still will not fit
+ * is held at once with a reason of its own, and it sends normally the next
+ * time a POST works. It is never dropped.
+ */
+function sendJobsAsJsonp(list) {
+  var results = {};
+  var queue   = list.slice();
+  var fail    = null;
+
+  function next() {
+    if (fail || !queue.length) return Promise.resolve();
+
+    var size = Math.min(JSONP_SLICE, queue.length);
+    while (size > 1 && jsonpUrlLength(queue.slice(0, size)) > JSONP_MAX_URL) {
+      size = Math.floor(size / 2);
+    }
+
+    if (size === 1 && jsonpUrlLength(queue.slice(0, 1)) > JSONP_MAX_URL) {
+      var big = queue.shift();
+      results[big.key] = {
+        key: big.key, ok: false, retry: false,
+        error: 'This edit is too large to send on this network.'
+      };
+      return next();
+    }
+
+    var slice = queue.splice(0, size);
+    return jsonpCall('save-batch', { jobs: slice }).then(function (answer) {
+      if (!answer || !answer.ok) {
+        // Everything still in the queue keeps waiting. The next drain
+        // starts again from the front.
+        fail = classifyCallFailure(answer || { reason: 'blocked' });
+        return;
+      }
+      assign(results, indexResults(answer.data));
+      return next();
+    });
+  }
+
+  return next().then(function () { return { results: results, fail: fail }; });
+}
+
+
+/** How long the address for this slice would be. */
+function jsonpUrlLength(slice) {
+  // A real callback name is about this long. Close enough to measure with.
+  return apiUrlFor('save-batch', { jobs: slice }, '__pfcReply000').length;
+}
+
+
+/**
+ * Turns a whole-call failure into the two things a job needs: whether to
+ * try again, and whether this attempt counts toward the hold limit.
+ *
+ * THE RULE FOR BURNING A TRY: the phone reached the server and the job
+ * still did not land. Offline and timeout never burn one — nothing was
+ * attempted, or the answer simply never came back — because driving
+ * through a dead zone must not turn six taps of work into six taps of
+ * housekeeping.
+ */
+function classifyCallFailure(result) {
+  var reason = result.reason || 'blocked';
+  var detail = result.detail || '';
+
+  if (reason === 'not-configured') {
+    return { retry: false, burn: false, error: reasonText(reason) };
+  }
+
+  if (reason === 'offline' || reason === 'timeout') {
+    return { retry: true, burn: false, error: reasonText(reason) };
+  }
+
+  if (reason === 'server') {
+    // The backend is older than this app. Retrying cannot fix that.
+    if (/unknown action/i.test(detail)) {
+      return { retry: false, burn: false,
+               error: 'This app is newer than the backend. Deploy the script again.' };
+    }
+    return { retry: true, burn: true, error: detail || reasonText(reason) };
+  }
+
+  return { retry: true, burn: true, error: reasonText(reason, detail) };
+}
+
+
+/** Files every result against its job. */
+function applyOutcome(outcome, sent) {
+  var results = outcome.results || {};
+
+  sent.forEach(function (job) {
+    var one = results[job.key];
+
+    // A JOB LEAVES THE SHELF ON ok:true AND ON NOTHING ELSE.
+    if (one && one.ok) { Store.removeJob(job.key); return; }
+
+    if (one) { settleJob(job, one.retry, one.error, true); return; }
+
+    // No result of its own. A whole-call failure covers it. With neither,
+    // the server simply did not mention it — leave it waiting.
+    if (outcome.fail) {
+      settleJob(job, outcome.fail.retry, outcome.fail.error, outcome.fail.burn);
+    }
+  });
+}
+
+
+/**
+ * Writes one failure back onto the shelf.
+ *
+ * A RETAP WHILE THE CALL WAS IN THE AIR WINS. If the job under this key
+ * is not the one that was sent, the person has since set a new value, and
+ * that value must not inherit this failure.
+ */
+function settleJob(job, retry, error, burn) {
+  var fresh = Store.job(job.key);
+  if (!fresh || fresh.at !== job.at) return;
+
+  fresh.error = error;
+
+  if (!retry) {
+    fresh.held = true;
+  } else if (burn !== false) {
+    fresh.tries = (fresh.tries || 0) + 1;
+    if (fresh.tries >= OUTBOX_MAX_TRIES) fresh.held = true;
+  }
+
+  Store.putJob(fresh);
+}
+
+
+/**
+ * SEND FIRST, THEN ASK.
+ *
+ * This runs as the file loads, before any screen fetches, so an edit typed
+ * yesterday with no signal is on its way before the screen asks the server
+ * for anything.
+ */
+(function startOutbox() {
+  if (typeof window === 'undefined') return;
+
+  window.addEventListener('online', function () { Outbox.wake(); });
+
+  // iOS wakes a backgrounded web app without firing online. Coming back to
+  // the app is the moment worth trying again.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) Outbox.wake();
+  });
+
+  Outbox.wake();
+})();
 
 
 /* ── LOADERS ──────────────────────────────────────────────────────── */
@@ -1234,17 +1635,91 @@ function enablePullToRefresh(onRefresh) {
   });
 }
 
+/* ── THE SYNC BAR ─────────────────────────────────────────────────── */
+/*
+   ONE LINE UNDER THE HEADER, AND THE COUNT LIVES NOWHERE ELSE. No badge
+   on the Hub, no waiting count in the tree.
+
+   IT APPEARS ONLY WHEN THE OUTBOX HOLDS SOMETHING. A landed edit says
+   nothing at all: the ring stops and the bar goes. There is no "Saved"
+   flash and no permanent "All saved" strip, because a band of screen that
+   says nothing is happening is a band of screen wasted.
+
+   THE BAR RIDES ON EVERY TRACKER SCREEN, UNIT INCLUDED. On Unit a failure
+   is therefore said twice, once here and once in the fix card under the
+   item. That is the price of the thing it buys: standing in unit 204, an
+   edit that failed in unit 201 has no other way to reach you.
+*/
+
 /**
- * The note that says a change on this screen has not reached the Sheet.
+ * Puts the bar under the page header and keeps it in step with the shelf.
  *
- * BUILD NOTE — this is deleted in 0.2 step 3, when save-batch lands and
- * the sync bar replaces it. It is still true today: step 2 keeps a tap in
- * the outbox on this phone, and nothing sends it yet.
+ * href is the Outbox window, relative to the calling screen. Pass '' on
+ * the Outbox screen itself, so it does not offer a door to where you are.
  */
-function localOnlyNote() {
-  return '<div class="banner"><div><b>Not sent yet.</b> ' +
-         'A change here waits on this phone. It reaches the project Sheet in the next step.' +
-         '</div></div>';
+function mountSyncBar(href) {
+  var slot = document.createElement('div');
+  slot.className = 'syncbar-slot';
+
+  var header = document.querySelector('header.hdr');
+  if (header && header.parentNode) header.parentNode.insertBefore(slot, header.nextSibling);
+  else document.body.insertBefore(slot, document.body.firstChild);
+
+  var to = (href === undefined) ? 'outbox.html' : href;
+
+  function paint() { slot.innerHTML = syncBarHtml(to); }
+
+  Outbox.onChange(paint);
+  paint();
+  return slot;
+}
+
+
+/**
+ * Three facts, in one line, in this order: what is going out, what is
+ * waiting, and what did not make it.
+ *
+ *   Saving 3 edits…            a call is in the air
+ *   Offline · 3 edits wait     nothing can go out yet
+ *   2 edits did not save       the app gave up and a person must look
+ *
+ * Two of them together read "Saving 3 edits… · 2 failed".
+ */
+function syncBarHtml(href) {
+  var counts = Outbox.counts();
+  if (!counts.waiting && !counts.held) return '';
+
+  var parts = [];
+  var kind  = 'quiet';
+
+  if (counts.waiting) {
+    if (Outbox.sending()) {
+      kind = 'accent';
+      parts.push('<span class="sync-ring"></span>Saving ' + editsText(counts.waiting) + '…');
+    } else if (navigator.onLine === false) {
+      parts.push('<span class="sync-slab"></span>Offline · ' + editsText(counts.waiting) + ' wait');
+    } else {
+      // Online, between retries. Saying "Offline" here would be a lie.
+      parts.push('<span class="sync-slab"></span>' + editsText(counts.waiting) + ' wait');
+    }
+  }
+
+  if (counts.held) {
+    kind = 'bad';
+    parts.push('<span class="sync-bad"></span>' +
+               (counts.waiting ? counts.held + ' failed'
+                               : editsText(counts.held) + ' did not save'));
+  }
+
+  return '<div class="syncbar syncbar--' + kind + '">' +
+           '<span class="sync-text">' + parts.join('<span class="sync-sep">·</span>') + '</span>' +
+           (href ? '<a class="sync-link press" href="' + href + '">Outbox ›</a>' : '') +
+         '</div>';
+}
+
+
+function editsText(n) {
+  return n + (n === 1 ? ' edit' : ' edits');
 }
 
 
