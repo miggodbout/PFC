@@ -20,13 +20,51 @@ below is a place where building the thing showed the plan was short. **Every
 one is marked again where it lands in the file**, so nobody reads the old
 sentence on its own and "fixes" the code back.
 
-Nothing here re-opens a decision. Each one is arithmetic the plan could not
-have done on paper.
+A1 and A2 re-open nothing. Each is arithmetic the plan could not have done on
+paper. **A3 is a different animal** — Miguel changed his mind about words, on
+purpose, after seeing the built screens. It is marked so you do not read it as a
+correction.
 
 | # | Amendment | Sections | Date |
 |---|---|---|---|
 | A1 | `list-projects` sends **five** numbers, not four. `unitsNotStarted` was added | 2.4, 3.4, 5.2, 6 | 2026-08-08, step 2 |
 | A2 | The Details box was deleted in **step 2**, not step 3 | 5.4, 6 | 2026-08-08, step 2 |
+| A3 | **Every crew-facing word in this plan is superseded by `docs/crew-words.md`** | 5.6, 5.7, 5.8, and every screen | 2026-08-09, after step 3 |
+
+### A3 — the words moved, the design did not
+
+The 0.2 step 3 test round put built screens in front of Miguel, and fifteen
+findings came back. Point 2 of `notes/0.2-step-3-testing.md` asked for a
+vocabulary pass. It was run as a grilling session on 2026-08-09 and settled
+eleven decisions.
+
+**`docs/crew-words.md` is now the authority on any word a crew member reads.**
+Where this plan and that file disagree, that file wins. The ones that touch this
+plan by name:
+
+| This plan says | Now reads |
+|---|---|
+| the **Logger** window, `Log` card, section 5.7 | **Logging**, in all five places — card, header, folder `control/logging/`, file, and this plan |
+| the **Outbox** window, section 5.6 | **Queue**, at `control/tracker/queue.html` |
+| `Create Job` on the Hub, section 5.8 | **`Set Up Building`**, folder `control/setup/` |
+| `Drop` on a Queue row, section 5.6 | **`Delete`**, and it must not share a shape with `Try again` |
+| a **flag** anywhere on a screen | **issue**. `flag` stays in this plan and in the code, and never reaches a screen |
+| `Offline · 3 edits wait` | `Offline · 3 edits queued` |
+
+**None of this changes a mechanism.** The outbox still drains the same way, the
+marks still carry the same three facts, and section 4's shape rules are
+untouched. Only the words moved, plus two shapes: the `Delete` button and the
+greyed Complete row.
+
+Two decisions from that session are **not** wording, and they do change what gets
+built:
+
+- **One project is exactly one building, always.** A two-tower site is two
+  buildings, opened separately. Nothing nests. This closes the door on a level
+  above Building for 0.2 and 0.3.
+- **The three developer error strings get crew wording plus a code**, `E1` to
+  `E3`, with the technical half written to the browser console. Listed in
+  `crew-words.md`.
 
 ### A1 — the fifth number
 

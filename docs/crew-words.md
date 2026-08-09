@@ -8,8 +8,9 @@ This file governs **UI text only** — anything drawn on a screen. Code, comment
 commit messages and planning documents are not bound by it. Those follow
 `code-words.md` and plain writing.
 
-**Status of this file: draft.** Every row marked OPEN needs Miguel. Nothing marked
-OPEN gets built until he settles it.
+**Every row below was settled by Miguel on 2026-08-09**, in one session, against
+the app's real strings. Nothing here is a guess. A word this file does not cover
+gets a new row marked OPEN, never a guess made at build time.
 
 ---
 
@@ -24,108 +25,151 @@ From CLAUDE.md, ASD-STE100 Simplified Technical English:
 - No stacked helper verbs. No filler.
 - No marketing adjectives.
 
-Two more that this app needs, learned from the 0.2 step 3 test round:
+Three more this app learned the hard way, all from the 0.2 step 3 test round:
 
-- **Say it once per screen.** The 0.2 Outbox printed the same offline sentence on
+- **Say it once per screen.** The Outbox printed the same offline sentence on
   every row while the bar above already said it. Repetition reads as noise, and
   noise is skipped.
 - **A message earns its place by being actionable.** If the person cannot do
   anything about it, and it is not a warning, cut it.
+- **Never hardcode a person's name.** Say the role. A name is right until the
+  person changes, and 0.3 adds crew accounts.
 
 ---
 
 ## One thing, one word
 
-The worst vocabulary problem in the app is not a hard word. It is **three easy
-words for one thing**, which is harder to read than any single term.
+The worst vocabulary problem in the app was not a hard word. It was **three easy
+words for one thing** — the app called a building a Job, a Project and a Building
+on different screens.
 
-The app currently calls a building all of these:
+**Building wins on every screen.** Settled 2026-08-09, on the back of a prior
+decision: **one project is exactly one building, always.** A two-tower site is
+entered as two buildings and opened separately. Floors and unit numbers already
+restart per building, so the data agreed with this before the words did.
 
-| Word | Where it appears now |
-|---|---|
-| Job | Hub card `Create Job`, and the browser tab `Create Job — PFC Control` |
-| Project | `Project name`, `Create project`, `No project was given`, `Open the project Sheet`, `There are no saved projects yet` |
-| Building | Screen header `Buildings`, `Every building is finished`, `Create your first building` |
-
-**Recommendation: Building wins on every screen.** It is the plainest of the
-three, it is what the crew already says out loud, and the Tracking screen is
-already headed Buildings. `Project` becomes a code word only — it stays in
-`projectId` and in the Drive folder names, where no crew member reads it.
-
-`Job` is the harder loss, because `Create Job` is the Hub card you use most. But
-`Job` also already means something else in the code — one queued edit is called a
-job — and one word cannot mean both.
-
-**Status: OPEN.** Three ways to go:
-
-| Option | Hub card reads | Cost |
-|---|---|---|
-| A | `New Building` | Everything matches. You give up the word Job on screen |
-| B | `Create Job`, everything else Building | Card keeps the word you use. Two words survive on screen |
-| C | Job everywhere, Buildings header renamed | Reverses a decision you already made in 0.1.1 |
+- `Project` is now a **code word only**. It survives in `projectId` and in the
+  Drive folder names, where no crew member reads it. See `code-words.md`.
+- `Job` is now a **code word only**, and it means **one queued edit**. It never
+  appears on a screen. This is why it could not stay on the Hub: one word cannot
+  mean a building and a queued edit at the same time.
 
 ---
 
-## Words to replace
+## Screen names
 
-| Word | Where | The problem | Proposed | Status |
+| Screen | Hub card | Sub | Header | Folder |
 |---|---|---|---|---|
-| **Flag** | `Fix the open flag first. Then Complete comes back.` | Miguel's own example. Nothing on site is called a flag. It is an app invention for "an open problem of either kind" | **Name the actual kind instead.** The crew never needs the umbrella word — a real screen always knows whether it is a deficiency or a wait. `Fix the deficiency first.` / `This item is waiting.` The word Flag survives in the code and in these documents, and never on a screen | OPEN |
-| **Outbox** | Window title, sync bar link | Email word. Nobody outside email has an outbox | **Queue** | DECIDED 2026-08-09 |
-| **wait** | `Offline · 3 edits wait` | Reads as a verb given to the reader | **`Offline · 3 edits queued`**. Singular `1 edit queued` | DECIDED 2026-08-09 |
-| **Drop** | Queue row button `Drop`, and `Drop the edit` | Vague. Drop it where | **`Delete`**, or `Throw away`. Whatever it says, it must not look like `Try again` | OPEN |
-| **Sheet** | `Open the project Sheet`, `Every project gets its own Google Sheet`, `…has reached its project Sheet` | It is a Google Sheet, and half the crew has never opened one | Where it is a link, **`Open in Google Sheets`** is clear. Where it is only explaining where data went, **cut the sentence** — the crew does not need to know | OPEN |
-| **Deficiency** | Status vocabulary, the record type, the Hub card | The industry word, and a GC punch list uses it. But it is four syllables and Latin | Probably **keep**. It is the word on the paperwork the crew already signs. Flagged only so the decision is on the record | OPEN |
-| **placeholder** | Admin: `Units get placeholder names. Rename them below once you know the addresses.` | Software word | `Units are numbered for now. Rename them when you know the addresses.` | OPEN |
-| **Status** | Admin: `The item loses its Status column.` | 0.2 renamed this field **Progress**. The app now uses both words for one field | Use **Progress** everywhere on screen. `Status` is fine in code | OPEN |
-| **Flat List** | Admin, building shape | Software word for a shape | `No floors` or `One list, no floors` | OPEN |
+| Tracking | `Tracking` | `Buildings & units` | `Buildings` | `control/tracker/` |
+| Logging | `Logging` | `Record an issue` | `Logging` | `control/logging/` |
+| Set up | `Set Up Building` | `Create or change a building` | — | `control/setup/` |
+| Queue | *(none — reached from the sync bar)* | — | `Queue` | `control/tracker/queue.html` |
+
+**Tracking is the section; Buildings is the screen inside it.** That split is
+older than this file and deliberate — see CLAUDE.md. A header names what is on
+the screen; a card names the activity. They are allowed to differ.
+
+**`Set Up Building` covers create and change**, which is why it is not
+`New Building`. Editing an existing building lives behind the same card.
+
+**The word `Admin` is not a screen name.** It was one during 0.1, and the screen
+is now an ordinary crew window. `Admin` survives only as the name of a **role** —
+see the error codes below — and 0.3 will give that role a real meaning.
+
+---
+
+## Issue, Deficiency, Waiting
+
+Three words, three levels. Settled 2026-08-09.
+
+```
+issue          the umbrella. An open Deficiency OR an open Waiting.
+ ├─ Deficiency   the kind: wrong, missing or damaged
+ └─ Waiting      the kind: cannot continue yet
+```
+
+**`flag` never appears on a screen.** It stays in the code, in the build plan and
+in CLAUDE.md, where it means the same thing `issue` means on screen. This was
+Miguel's own example of a word the crew does not use.
+
+**`Deficiency` stays, and that is a decision, not an oversight.** It is four
+syllables and Latin, which the writing standard pushes against. It is also the
+word on the GC's punch list, on the paperwork the same defect gets written on.
+The plain-word rule applies *where a plain word exists*, and none carries the
+same meaning to a GC. Do not revisit this without a reason that beats "shorter".
+
+---
+
+## Settled replacements
+
+| Word | Where | Now reads |
+|---|---|---|
+| `flag` | `Fix the open flag first.` | `Fix the open issue first. Then Complete comes back.` |
+| `Outbox` | Window title, sync bar link | `Queue` |
+| `wait` | `Offline · 3 edits wait` | `Offline · 3 edits queued`. Singular: `1 edit queued` |
+| `Drop` | Queue row button | `Delete` — **and it must not share a shape with `Try again`**. It is the only button in the app that loses work on purpose |
+| `Sheet` (link) | `Open the project Sheet` | `Open in Google Sheets` — it names an app the phone can open |
+| `Sheet` (explaining) | `Every project gets its own Google Sheet` | **Cut.** The app describing its own plumbing. The link is right there |
+| `Status` | Set-up screen | `Progress`. 0.2 renamed the field; the screen had not caught up |
+| `placeholder` | `Units get placeholder names.` | `Units are numbered for now. Rename them when you know the addresses.` |
+| `Flat List` | Building shape | `Units only`, opposite `Floors and units` |
+| `Create Job` | Hub card | `Set Up Building` |
+| `Log` / `Logger` | Hub card, window | `Logging`, in all five places — card, header, folder, file, build plan |
 
 ---
 
 ## Words that stay
 
-Checked against the inventory and passed. Do not "improve" these.
+Checked against the real strings and passed. Do not "improve" these.
 
-- **Not Started · In Progress · Complete** — the three Progress values. Plain, and
-  already familiar from 0.1.
+- **Not Started · In Progress · Complete** — the three Progress values.
 - **Waiting** — replaced On Hold in 0.2 for exactly this reason.
-- **Unit**, **Floor**, **Item**, **Phase** — all four are what the crew says out loud.
+- **Unit**, **Floor**, **Item**, **Phase**, **Building** — what the crew says out loud.
 - **Try again** — chosen over Retry. Two plain words beat one borrowed one.
 - **did not save** — chosen over failed. Says what happened, not a verdict.
-- **queued** — Miguel's own pick, 2026-08-09.
+- **edit** — as in `3 edits queued`. Plain, and Miguel confirmed the phrasing.
+- **queued** — Miguel's own pick.
 - Every trade term in the dropdown lists: `Bi-fold`, `Ball Catch`, `Dwarf`,
   `Backordered`, `Wrong Swing`, and the rest. **The crew knows these better than
-  the app does.** They come from data, not from code, so they are Miguel's to set
-  in Admin.
+  the app does.** They come from data, not code, so they are Miguel's to set.
 
 ---
 
-## Messages the crew must never see
+## Error codes
 
-These are real strings in the app today. Every one of them is written for Miguel
-or for a developer, and each one appears on a crew screen when things go wrong.
+Three failures can reach a crew phone that **no crew member can act on**. Each one
+gets one plain sentence and a short code, so a worker can read the code down the
+phone without opening anything.
 
-| String | Why it is wrong for the crew |
-|---|---|
-| `The backend is not connected yet. Open control/shared/common.js and paste the web app address into API_URL.` | Names a file and a variable |
-| `This app is newer than the backend. Deploy the script again.` | Two dev words, and an instruction only Miguel can carry out |
-| `The browser could not read the reply. Check that the web app is deployed with access set to Anyone.` | Same |
+| Code | Failure | On screen |
+|---|---|---|
+| E1 | The app is not set up — `API_URL` is empty | `This app is not set up yet. Tell the Admin. (E1)` |
+| E2 | Cannot reach the server, or the reply could not be read | `This app cannot reach the server. Tell the Admin. (E2)` |
+| E3 | The app is newer than the backend | `This app needs an update. Tell the Admin. (E3)` |
 
-**Recommendation:** each keeps one plain sentence for the crew, and the technical
-half moves to the browser console where Miguel can read it. Something like
-`This app cannot reach the server. Tell Miguel.` **Status: OPEN.**
+The full technical reason still goes to the **browser console**, which is the
+hidden log every browser has. It costs nothing and no crew member will open it.
 
-The console is a hidden log built into every browser. Writing there costs nothing
-and no crew member will ever see it.
+**Nothing else gets a code.** `Offline · 3 edits queued`, `no room on this phone`,
+`This edit did not save`, and the server timeout all tell the crew what to do
+already. A code on those reads as though something is wrong when nothing is.
+
+**`Tell the Admin` names a role, never a person.** Miguel is the Admin today.
+Writing his name into the app would break the first time that is not true.
 
 ---
 
 ## How to add to this file
 
-When a new screen is written, every new string gets checked here first. When a
-word is not covered, add a row and mark it OPEN rather than guessing. An OPEN row
-is not a blocker for building the screen — it is a blocker for shipping it.
+When a screen is written, every new string gets checked here first. A word this
+file does not cover gets a row marked OPEN rather than a guess. An OPEN row is
+not a blocker for building a screen — it is a blocker for shipping one.
 
-**Logger is the next test of this file.** It adds more new words than any screen
+**Logging is the next test of this file.** It adds more new words than any screen
 in the app: Type, Subtype, Needed, Reason, Count, and every dropdown behind them.
 Those get checked here before they are written, not after.
+
+**One row is deliberately left OPEN.** The greyed `Deficiencies` Hub card is a
+0.3 placeholder for a window that does not exist. Whether it stays
+`Deficiencies` or becomes `Issues` is decided when that window is designed, not
+before.
