@@ -472,25 +472,51 @@ plays. A `max-height` or `grid-template-rows` transition on `.floor-body` will d
 nothing at all unless the open state stops going through a full re-render. Budget
 for that, do not budget for a two-line CSS change.
 
+**Redeployed twice, same session.** `clasp push`, then `clasp deploy` against the
+**existing** deployment id `AKfycbzo9lC…4vj8_YCrtnGjv5e` — version 5 for the
+folder fix, version 6 for the move under `Control/`. Never `clasp deploy` with no
+id here: that mints a new deployment with a new URL, and `API_URL` in
+`control/shared/common.js` names this one. Note `clasp deployments` keeps printing
+the old `@4 - 0.2 step 2` line after a redeploy. It is a stale description, not a
+failed deploy — verify against the live URL instead.
+
+Verified live both times: `list-projects` answered `{"success":true,"projects":[]}`,
+and Drive showed the target folder created at the moment of the call. Only the new
+code creates that folder, so the new version is serving.
+
+### The Drive layout, settled the same evening
+
+Miguel moved the Apps Script project into `PFC/Apps Scripts/` by hand and asked
+whether it broke a path. It did not, and the general rule is now in `CLAUDE.md`:
+**Drive tracks a file by ID, never by path.** Both scripts pin their root by ID,
+and clasp finds a script project by `scriptId`. Dragging any of it is safe.
+
+**One exception, and it is the only one in either codebase.**
+`PROJECTS_FOLDER_NAME` is found by NAME inside whatever `PFC_ROOT_FOLDER_ID`
+points at. Drag `Project Sheets` out of `Control` on its own and the lookup
+silently creates a new empty folder — every project disappears from the app with
+no error. The comment on that constant now says so.
+
+He then asked for `PFC/Control/` so the camera app, PFC Control and his own files
+each get a branch. Done: `PFC_ROOT_FOLDER_ID` is now the `Control` folder,
+`1SwrhzsObgZpaLsjJtP5ErsEZtt53ton9`. Free to do because `Project Sheets` was
+still empty — with projects in it, they would have had to move first.
+
+**`Project Logs` stays at `PFC/` level.** Offered `PFC/Camera/` and `PFC/Log/` for
+symmetry; Miguel chose to leave it. The separation reads clearly already, and the
+camera app may be scrapped or rebuilt anyway.
+
 **Not landed:** nothing new. `reference/PFC_Master_Template.xlsx` still not
 updated, per sessions 1 to 4. Everything from step 3 onward.
 
 **Open:**
 
 - **The `.floor-body` expand animation**, with the re-render trap above. Step 3.
-- **`My Drive/Projects/`** — Miguel deletes the folder and the test projects in it.
-  Still there, ID `14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`.
-
-**Redeployed, same session.** `clasp push`, then `clasp deploy` against the
-**existing** deployment id `AKfycbzo9lC…4vj8_YCrtnGjv5e`, now at version 5. Never
-`clasp deploy` with no id here: that mints a new deployment with a new URL, and
-`API_URL` in `control/shared/common.js` names this one. Note `clasp deployments`
-keeps printing the old `@4 - 0.2 step 2` line after a redeploy. It is a stale
-description, not a failed deploy — verify against the live URL instead.
-
-Verified live: `list-projects` answered `{"success":true,"projects":[]}`, and
-Drive shows `PFC/Project Sheets` created at the moment of that call. Only the new
-code creates that folder, so version 5 is serving.
+- **Drive tidying, all Miguel's, none of it blocking:** trash `My Drive/Projects/`
+  and the test projects in it (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`), trash the now
+  orphaned empty `PFC/Project Sheets` (`1frOgI3ppHd8RjiEsYEAezuaNBWXcf4wT`), drag
+  `Master Template` into `Control/`, and move the loose
+  `PFC - Highland View Tracker` Sheet and its shortcut into `Personal/`.
 - Everything still open from session 4: nothing may move a control on `:active`
   again, the dead `.caret` transition for the step 6 sweep, the
   `ZZ 0.2 Step 2 Test` Sheet to trash, the greyed Complete not reachable until
