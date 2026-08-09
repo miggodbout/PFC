@@ -207,14 +207,19 @@ function phaseHtml(phase) {
   var onPhase = openRecords(copy, { unit: unitKey, phase: phase.key, item: '' });
   var shown   = withFixedHere(onPhase, { unit: unitKey, phase: phase.key, item: '' });
 
+  // THE FLAG SITS AGAINST THE PHASE NAME, not against the pill. It used to
+  // ride the same flex gap as the pill, which put it where a status mark
+  // goes and made it read as one. The spacer after it is what keeps the
+  // pill on the right edge.
   var marks = shown.length
-    ? '<div class="flag-row">' + flagButton(scope, 'waiting', onPhase.length) + '</div>'
+    ? flagButton(scope, 'waiting', onPhase.length)
     : '';
 
   return '<section class="phase">' +
            '<div class="phase-head">' +
              '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
              marks +
+             '<span class="head-gap"></span>' +
              pillHtml(rollupOf(statuses, flags), 'xs') +
            '</div>' +
            (openRecs === scope ? recordsHtml(shown, onPhase, scope) : '') +
@@ -233,8 +238,13 @@ function phaseHtml(phase) {
 function flagButton(scope, kind, count) {
   var open = (openRecs === scope);
 
-  return '<button type="button" class="flag-btn press" ' +
+  // The kind rides on the button as well as on the chip inside it, so the
+  // round background can be tinted in the flag's own colour. Without it
+  // the button is a plain grey disc and the red or blue is only in the
+  // 9px glyph.
+  return '<button type="button" class="flag-btn flag-btn--' + kind + ' press" ' +
                  'aria-expanded="' + open + '" ' +
+                 'aria-label="' + count + ' open, tap to see them" ' +
                  'onclick="toggleRecs(event,' + attr(scope) + ')">' +
            flagChipHtml(kind, count) +
          '</button>';
@@ -355,6 +365,11 @@ function itemHtml(item) {
   return '<div class="item' + (held ? ' item--held' : '') + '">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(item.label) + '</span>' +
+             // The flags go ON the row, right of the name. They sat on a
+             // line of their own underneath, which read as a label about
+             // the item rather than as something to tap.
+             chips +
+             '<span class="head-gap"></span>' +
              mark +
              '<span class="status-wrap">' +
                '<button type="button" class="status-trigger press s-' + key + '" ' +
@@ -367,7 +382,6 @@ function itemHtml(item) {
                menu +
              '</span>' +
            '</div>' +
-           (chips ? '<div class="flag-row">' + chips + '</div>' : '') +
            recs +
            (greenFor === item.key ? greenCardHtml(item) : '') +
            (held ? fixCardHtml(item, job, key) : '') +

@@ -110,6 +110,19 @@ document.getElementById('grid').innerHTML = CARDS.map(function (card) {
   }
   return '<a class="hub-card press" href="' + card.href + '">' + inner + '</a>';
 }).join('');
+
+
+/*
+   A PULL ON THE HUB SENDS AND FETCHES, AND CHANGES NOTHING ON THIS SCREEN.
+   The Hub draws no data, so there is nothing here to go stale — but it is
+   the screen the app opens on, and a pull here means the Buildings list is
+   already fresh by the time you tap into Tracking. The turning ring is the
+   only answer it gives, which is the right amount: the Hub carries no
+   queue count by design.
+*/
+enablePullToRefresh(function () {
+  return Queue.wake().then(fetchProjects, fetchProjects);
+});
 </script>
 </body>
 </html>

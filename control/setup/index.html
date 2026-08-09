@@ -565,6 +565,24 @@ function valueOf(id) {
 /* ── START ────────────────────────────────────────────────────────── */
 
 render();
+
+/*
+   A pull re-reads the building list and, if one is open for editing, its
+   structure. This screen deliberately never draws a stored copy, so a pull
+   here is the only way to pick up a building somebody created a minute ago
+   without leaving the page.
+*/
+enablePullToRefresh(function () {
+  return loadProjects().then(function (result) {
+    edit.projects = result.projects || edit.projects;
+    if (!edit.projectId) { render(); return; }
+
+    return loadStructure(edit.projectId).then(function (fresh) {
+      if (fresh.source !== 'error') edit.structure = fresh.data;
+      render();
+    });
+  }, function () { render(); });
+});
 </script>
 </body>
 </html>

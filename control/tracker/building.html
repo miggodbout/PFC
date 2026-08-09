@@ -45,9 +45,41 @@ var screen    = document.getElementById('screen');
 var copy      = null;   // the whole building
 var rolls     = {};     // every unit's rollup, worked out once per draw
 
-/* Which floor is open. Floor 1 opens by default on every project, so a
-   new project never opens fully closed. Tap the open floor to close it. */
+/*
+   Which floor is open, as an index into copy.groups.
+
+   IT REMEMBERS THE LAST FLOOR YOU OPENED, per building. It always opened
+   floor 1, and working a shift on floor 3 meant reopening floor 3 on every
+   walk back from a unit — Miguel's report. -1 means every floor closed,
+   which is a real state: tapping the open floor closes it.
+
+   IT IS STORED BY GROUP KEY, NOT BY INDEX. Add a floor in Admin and the
+   indexes all move; the key does not. A key the building no longer holds
+   falls back to floor 1, so a new building still never opens fully closed.
+*/
 var openFloor = 0;
+
+function readOpenFloor() {
+  var held = Store.read('floor.open', {}) || {};
+  var key  = held[projectId];
+  if (!key) return 0;
+
+  var found = -1;
+  (copy.groups || []).forEach(function (group, index) {
+    if (group.key === key) found = index;
+  });
+  return (found >= 0) ? found : 0;
+}
+
+function rememberOpenFloor() {
+  var held  = Store.read('floor.open', {}) || {};
+  var group = (copy.groups || [])[openFloor];
+
+  if (group) held[projectId] = group.key;
+  else       delete held[projectId];     // every floor closed
+
+  Store.write('floor.open', held);
+}
 
 
 if (!projectId) {
@@ -109,7 +141,14 @@ function refresh() {
 
 /* ── DRAW ─────────────────────────────────────────────────────────── */
 
+/* The stored floor is read ONCE, on the first draw that has a copy to read
+   it against. Reading it on every draw would undo a tap the moment the
+   fetch behind the screen came back. */
+var floorRestored = false;
+
 function render() {
+  if (!floorRestored) { openFloor = readOpenFloor(); floorRestored = true; }
+
   setTitle(copy.name);
   document.getElementById('subtitle').textContent = shapeOf(copy);
 
@@ -274,6 +313,7 @@ function queuedEditsIn(group) {
  */
 function toggleFloor(index) {
   openFloor = (openFloor === index) ? -1 : index;
+  rememberOpenFloor();
 
   var floors = screen.querySelectorAll('.floor');
   for (var i = 0; i < floors.length; i++) {
