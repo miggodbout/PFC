@@ -65,20 +65,20 @@ if (lastList) {
   rememberFinished(lastList);
   draw(lastList, null);
 } else {
-  screen.innerHTML = loadingHtml('Loading projects…');
+  screen.innerHTML = loadingHtml('Loading buildings…');
 }
 
 mountSyncBar();
 
 // A held edit is a mark on a Tracking row, so the list redraws when the
-// outbox settles. A WAITING edit changes nothing up here.
-Outbox.onChange(function () { if (lastList) draw(lastList, null); });
+// queue settles. A WAITING edit changes nothing up here.
+Queue.onChange(function () { if (lastList) draw(lastList, null); });
 
 refresh();
 
 enablePullToRefresh(function () {
   // Send first, then ask. A pull is the one gesture that means "catch up".
-  return Outbox.wake().then(refresh, refresh);
+  return Queue.wake().then(refresh, refresh);
 });
 
 
@@ -211,7 +211,7 @@ function shapeOf(project) {
 /**
  * TWO EMPTY MESSAGES, not one.
  *
- * "No projects yet" is wrong once buildings exist and every one of them
+ * "No buildings yet" is wrong once buildings exist and every one of them
  * has finished — it reads as data loss. The list answer tells the two
  * cases apart by itself: it either came back empty, or came back holding
  * buildings that all read Complete.
@@ -219,15 +219,15 @@ function shapeOf(project) {
 function emptyHtml(projects) {
   var allDone = projects.length > 0;
 
-  var title = allDone ? 'Nothing to track' : 'No projects yet';
+  var title = allDone ? 'Nothing to track' : 'No buildings yet';
   var text  = allDone
-    ? 'Every building is finished. Open the project Sheet to read one.'
-    : 'Create your first building. Every project gets its own Google Sheet.';
+    ? 'Every building is finished. Open it in Google Sheets to read one.'
+    : 'Create your first building.';
 
   return '<div class="state">' +
            '<div class="state-title">' + title + '</div>' +
            '<div class="state-text">' + text + '</div>' +
-           '<a class="btn btn-primary press" style="max-width:240px" href="../admin/index.html">Create Job</a>' +
+           '<a class="btn btn-primary press" style="max-width:240px" href="../setup/index.html">Set Up Building</a>' +
          '</div>';
 }
 </script>

@@ -41,7 +41,7 @@
    Drawn from the whole-building copy get-project stored, so a unit opens
    with no signal and with no wait.
 
-   A tap on the status control goes on the outbox shelf, paints the screen
+   A tap on the status control goes on the queue shelf, paints the screen
    at once, and the drain in common.js sends it. Nothing here calls the
    backend to save.
 
@@ -90,7 +90,7 @@ if (!projectId || !unitKey) {
   // This screen is holding its own object from before that, so redrawing it
   // alone would lose the paint and snap the row back to the value the tap
   // replaced — which is the whole defect the fold exists to fix.
-  Outbox.onChange(function () {
+  Queue.onChange(function () {
     if (!copy) return;
     copy = Store.project(projectId) || copy;
     render();
@@ -101,7 +101,7 @@ if (!projectId || !unitKey) {
 }
 
 
-/** The outbox job for one item on this unit, or null. */
+/** The queue job for one item on this unit, or null. */
 function jobFor(itemKey) {
   return Store.job(itemJobKey(projectId, unitKey, itemKey));
 }
@@ -259,8 +259,10 @@ function menuHtml(item, key, blocked) {
            '</button>';
   }).join('');
 
+  // "issue", never "flag". A flag is what the code calls it. The crew
+  // calls an open Deficiency or an open Waiting an issue.
   var note = blocked
-    ? '<div class="status-note">Fix the open flag first. Then Complete comes back.</div>'
+    ? '<div class="status-note">Fix the open issue first. Then Complete comes back.</div>'
     : '';
 
   return '<div class="status-menu" id="menu-' + escapeHtml(item.key) + '">' +
@@ -288,8 +290,8 @@ function fixCardHtml(item, job, showing) {
            '<div class="fix-acts">' +
              '<button type="button" class="btn btn-small btn-ghost press" ' +
                      'onclick="retryEdit(event,' + attr(job.key) + ')">Try again</button>' +
-             '<button type="button" class="btn btn-small btn-ghost press" ' +
-                     'onclick="dropEdit(event,' + attr(job.key) + ')">Drop the edit</button>' +
+             '<button type="button" class="btn btn-small btn-delete press" ' +
+                     'onclick="deleteEdit(event,' + attr(job.key) + ')">Delete</button>' +
            '</div>' +
          '</div>';
 }
@@ -297,13 +299,13 @@ function fixCardHtml(item, job, showing) {
 
 function retryEdit(event, key) {
   event.stopPropagation();
-  Outbox.retry(key);
+  Queue.retry(key);
 }
 
 /** The only way an edit leaves this phone unsent. A person has to say so. */
-function dropEdit(event, key) {
+function deleteEdit(event, key) {
   event.stopPropagation();
-  Outbox.drop(key);
+  Queue.drop(key);
 }
 
 
@@ -323,7 +325,7 @@ function toggleMenu(event, itemKey) {
 
 
 /**
- * Puts the tap on the outbox shelf and redraws.
+ * Puts the tap on the queue shelf and redraws.
  *
  * The job carries the FINAL VALUE, not a change to apply, and it is keyed
  * by the thing it changes. Tap the same item twice before it sends and the
@@ -364,7 +366,7 @@ function chooseStatus(event, itemKey, status) {
   });
 
   render();
-  if (!storageRefused) Outbox.wake();
+  if (!storageRefused) Queue.wake();
 }
 
 

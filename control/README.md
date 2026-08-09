@@ -28,12 +28,13 @@ control/
     logo.png          App icon.
 
   tracker/
-    index.html        Every project.
-    building.html     One project. Floors open one at a time.
+    index.html        Every building.
+    building.html     One building. Floors open one at a time.
     unit.html         One unit. Every item, grouped by phase.
+    queue.html        Every edit that has not reached its Sheet.
 
-  admin/
-    index.html        Create a project. Change an existing project's
+  setup/
+    index.html        Create a building. Change an existing building's
                       structure.
 
   appscript/
@@ -138,7 +139,8 @@ Each Sheet has three tabs.
 **You may type a status or a note straight into the Sheet.** The app shows it
 the next time the page loads.
 
-**Do not add or delete columns or rows in the Sheet.** Use the Admin screen. It
+**Do not add or delete columns or rows in the Sheet.** Use the Set Up Building
+screen. It
 keeps the columns, the formulas and `_Config` in step. A hand edit to the
 structure breaks the rollups.
 

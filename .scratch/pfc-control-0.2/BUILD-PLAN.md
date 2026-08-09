@@ -20,13 +20,51 @@ below is a place where building the thing showed the plan was short. **Every
 one is marked again where it lands in the file**, so nobody reads the old
 sentence on its own and "fixes" the code back.
 
-Nothing here re-opens a decision. Each one is arithmetic the plan could not
-have done on paper.
+A1 and A2 re-open nothing. Each is arithmetic the plan could not have done on
+paper. **A3 is a different animal** — Miguel changed his mind about words, on
+purpose, after seeing the built screens. It is marked so you do not read it as a
+correction.
 
 | # | Amendment | Sections | Date |
 |---|---|---|---|
 | A1 | `list-projects` sends **five** numbers, not four. `unitsNotStarted` was added | 2.4, 3.4, 5.2, 6 | 2026-08-08, step 2 |
 | A2 | The Details box was deleted in **step 2**, not step 3 | 5.4, 6 | 2026-08-08, step 2 |
+| A3 | **Every crew-facing word in this plan is superseded by `docs/crew-words.md`** | 5.6, 5.7, 5.8, and every screen | 2026-08-09, after step 3 |
+
+### A3 — the words moved, the design did not
+
+The 0.2 step 3 test round put built screens in front of Miguel, and fifteen
+findings came back. Point 2 of `notes/0.2-step-3-testing.md` asked for a
+vocabulary pass. It was run as a grilling session on 2026-08-09 and settled
+eleven decisions.
+
+**`docs/crew-words.md` is now the authority on any word a crew member reads.**
+Where this plan and that file disagree, that file wins. The ones that touch this
+plan by name:
+
+| This plan says | Now reads |
+|---|---|
+| the **Logger** window, `Log` card, section 5.7 | **Logging**, in all five places — card, header, folder `control/logging/`, file, and this plan |
+| the **Outbox** window, section 5.6 | **Queue**, at `control/tracker/queue.html` |
+| `Create Job` on the Hub, section 5.8 | **`Set Up Building`**, folder `control/setup/` |
+| `Drop` on a Queue row, section 5.6 | **`Delete`**, and it must not share a shape with `Try again` |
+| a **flag** anywhere on a screen | **issue**. `flag` stays in this plan and in the code, and never reaches a screen |
+| `Offline · 3 edits wait` | `Offline · 3 edits queued` |
+
+**None of this changes a mechanism.** The outbox still drains the same way, the
+marks still carry the same three facts, and section 4's shape rules are
+untouched. Only the words moved, plus two shapes: the `Delete` button and the
+greyed Complete row.
+
+Two decisions from that session are **not** wording, and they do change what gets
+built:
+
+- **One project is exactly one building, always.** A two-tower site is two
+  buildings, opened separately. Nothing nests. This closes the door on a level
+  above Building for 0.2 and 0.3.
+- **The three developer error strings get crew wording plus a code**, `E1` to
+  `E3`, with the technical half written to the browser console. Listed in
+  `crew-words.md`.
 
 ### A1 — the fifth number
 
@@ -1030,15 +1068,28 @@ one Fixed.** Cancel undoes a typo made ten seconds ago. Fixing is a repair and
 belongs to Tracker. The list is also where a typo is caught before the person
 leaves the room.
 
-**PLAN CALL 3 — pin Save to the bottom of the screen.** `06` measured six
-controls as the budget before Save falls under the keyboard. `17` took the form to
-seven, and `13` made the worst case **nine** — Type, Item, Subtype,
-Subtype-Other, Needed, Count, Reason, Reason-Other, Save — when both `Other` boxes
-are open at once. Pinning Save frees the form to grow. **Ask Miguel to confirm on
-a phone before the screen is finished. It is one line and it is the only thing on
-this screen that needs him.** Second option, if he does not like it: put the
-Subtype dropdown and Count on one row, and collapse the place bar once a place is
-set.
+**PLAN CALL 3 — pin Save to the bottom of the screen. ANSWERED by Miguel on
+2026-08-09: pin it.** `06` measured six controls as the budget before Save falls
+under the keyboard. `17` took the form to seven, and `13` made the worst case
+**nine** — Type, Item, Subtype, Subtype-Other, Needed, Count, Reason,
+Reason-Other, Save — when both `Other` boxes are open at once. Pinning Save frees
+the form to grow.
+
+Save sits in a bar fixed to the bottom of the screen. The form scrolls behind it.
+Save is reachable at every scroll position and at every form length.
+
+**The second option was offered and not taken.** Putting Subtype and Count on one
+row and collapsing the place bar was the fallback if Miguel disliked the pinned
+bar. He chose the pinned bar with the form left as section 5.7 lists it, one
+control per row. **Do not compress the form to save height.** If height is short
+later, the pinned bar is the thing that pays for it, not the row spacing.
+
+**The pinned bar must survive the iOS keyboard.** `position: fixed` on iOS Safari
+does not track the software keyboard — the bar can end up under the keyboard or
+floating in the middle of the screen. Size the bar off `window.visualViewport`
+(its `resize` and `scroll` events give the height the keyboard leaves behind)
+rather than off `100vh` or `position: fixed` alone. **Look at it on a phone with
+the Needed box focused before the screen is called done.**
 
 ### 5.8 `control/index.html` — the Hub
 
@@ -1394,8 +1445,11 @@ the plan by name.
 |---|---|---|
 | 1 | `save-batch` drains in slices of 5 down the JSONP fallback, halving on a 6,000 character address, and a single oversized job holds with `retry:false` | 3.2 |
 | 2 | An Outbox row does not tap through to its unit in 0.2 | 5.6 |
-| 3 | Save is pinned to the bottom of the Logger form. **Confirm with Miguel on a phone.** | 5.7 |
+| 3 | Save is pinned to the bottom of the Logger form. **ANSWERED 2026-08-09 — pin it.** | 5.7 |
 | 4 | The build order in section 6 | 6 |
 
-**PLAN CALL 3 is the only one that needs Miguel.** It needs one line from him at
-build time and it gates nothing before that.
+**PLAN CALL 3 was the only one that needed Miguel. It is closed.** He was shown
+the pinned bar against the compressed form and chose the pinned bar, with the
+form left one control per row. The fallback is dead — see 5.7. What is left is
+mechanical: the bar has to be sized off `visualViewport` so the iOS keyboard does
+not bury it, and it wants one look on a phone.

@@ -735,3 +735,283 @@ was stored alone. The 42 drain assertions still pass.
 stays at 8. **Merged to main** at `a674e39`. `CACHE_NAME` is already
 `pfc-control-0.2-step3` from this session's earlier merge, so the phone picks
 this up with it.
+
+---
+
+## Session 7 — 2026-08-09
+
+**Step:** 3, test round run. **Step 3 is done.**
+**Branch:** `0.2` at `99a3352`.
+**Deployed:** no clasp deploy. No `Code.js` change this session, so the script
+stays at version 8.
+**Merged to main:** yes, three times — `942be37`, the retap fix, then the
+screen re-read. Both branches pushed.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix2`. Front-end files changed
+twice, so it was bumped twice: `-step3-fix1`, then `-step3-fix2`.
+
+**Landed:** the full step 3 test round from plan section 6, plus the browser
+smoke check session 6 never got to. Everything on the step 3 list has now been
+looked at on a real screen. **Three real defects were found, all three fixed,
+redeployed and retested end to end.**
+
+### Defect 1 — a save that worked read as a save that failed
+
+**The worst kind of defect this app can have, and it was on every tap.**
+
+Tap Complete with signal. The ring turns, the bar says `Saving 1 edit…`, the
+server takes it, and the row **snaps back to Not Started**. Confirmed against
+the live backend: the Sheet held `complete` and the phone showed `not_started`
+until a refetch. On site that reads as a lost edit, and the crew taps it again.
+
+The screen paints a waiting edit out of the OUTBOX, not out of the building
+copy — that is `paintedStatus`, and it is what stops a fresh fetch from
+overwriting an unsent edit. The job leaves the outbox the moment the server
+answers `ok:true`. Nothing ever wrote the value into the copy, and nothing
+refetched after a drain. So the paint vanished and the copy underneath still
+held the old value.
+
+**It took two fixes, and the first one alone was not enough.**
+
+1. `Store.foldLanded` writes every landed value into its building copy, and
+   `applyOutcome` calls it grouped by building, so one copy is read and written
+   once however many items landed on it. `fetchedAt` is deliberately not moved
+   — it records when the server last spoke, and a fold is not a fetch.
+2. **The open screen still showed the old value after that**, because
+   `unit.html` and `building.html` hold their own copy object from when the
+   screen opened. The drain writes to storage; the screen redrew from the
+   object it already had. Both now re-read the copy on an outbox change.
+   `tracker/index.html` is left alone — its rows come from the `list-projects`
+   numbers, which no single edit touches.
+
+### Defect 2 — a retap during a successful call was thrown away
+
+Found by reading the success path after fixing defect 1. Not on any test list.
+
+`settleJob` has always guarded the failure path: if the job under this key is
+not the one that was sent, somebody has set a new value since, and it must not
+inherit the old call's outcome. **The success path had no such guard** — it
+removed by key alone.
+
+So: tap Complete by mistake, correct it to In Progress while the first call is
+still in the air, and the correction is deleted the instant the first call
+answers ok. Silently, with the Sheet keeping the value the person had just
+fixed. Over the JSONP path a call takes two to three seconds, so the window is
+wide open.
+
+The `ok` branch now checks `at` the same way `settleJob` does. The landed value
+still goes into the copy — that is genuinely what the Sheet holds — and the
+newer job stays on the shelf, paints over it, and goes out on the next drain.
+
+### Defect 3 — a closed floor showed a 14px strip of its unit chips
+
+Visible on every building screen, on both floors.
+
+**`overflow: hidden` clips at the padding box, not the content box.** The `0fr`
+row track collapsed `.floor-body`'s CONTENT to nothing, but its own
+`2px 12px 14px` padding survived, and the chips drew straight through the 14px
+of it. Measured: the drawer was 16px tall when closed, with 14px of chip
+visible.
+
+The padding now comes off while the floor is closed and grows back with the
+row, on the same 220ms. Verified by sampling mid-animation: the drawer grows
+4 to 68px while the padding grows 3 to 14px in step, and the chips stay clipped
+the whole way.
+
+**What each test showed:**
+
+| # | Test (plan section 6, step 3) | Result |
+|---|---|---|
+| 1 | Tap a status with signal. Watch the ring and the bar go | **failed — defect 1**, fixed, retested |
+| 2 | Four taps in airplane mode, close the app, open it, drain | pass — all four survived a reload and landed, spanning two units |
+| 3 | Force `retry:false`. The item snaps back, greys, red card | pass |
+| 4 | That job is in the Outbox with Retry and Drop | pass — both work |
+| 5 | A held edit is not counted in any rollup | pass — unit pill, phase and floor all ignored it |
+| 6 | PLAN CALL 1 — the JSONP slicing rule with 40 queued jobs | pass — 8 slices of 5, longest address 3,294 chars, **all 40 landed** |
+
+**Six more checks, none of them on the list:**
+
+- **The halving branch and the oversized job.** Padded jobs forced the slice
+  from 5 down to 1, each measured and sent under the 6,000 cap. A single job
+  over the cap held at once with `retry: false` and the plan's exact reason,
+  `This edit is too large to send on this network.` It was never dropped, and
+  the four padded jobs all got per-job results — nothing was silently lost.
+- **The greyed Complete.** Dimmed to 0.45, `aria-disabled`, its onclick is
+  `stopPropagation` and nothing else, with the plan's line under the panel.
+- **All four sync bar wordings**, including session 6's fourth one. `Saving 3
+  edits…` accent, `Offline · 3 edits wait` grey, `3 edits wait` online between
+  retries, `2 edits did not save` red, `Saving 3 edits… · 2 failed` for both,
+  and `1 edit` singular.
+- **The storage-refused banner** of the session 6 addendum, which had also
+  never been drawn. With every write refused it reads `Not stored. This phone
+  has no room to save the change…`, the shelf stays empty, and **the row does
+  not paint the tapped value**.
+- **The floor header marks rule.** A closed header carries its third line; an
+  open one drops it by CSS. The corner badge hangs outside the chip's top right
+  corner, in red, and never shares a shape with a Deficiency flag.
+- **The rollups against real data**, on both test buildings. A unit whose
+  `interior_doors` is `complete` with an open Deficiency draws no bar and does
+  not count as done — the downgrade in `displayStatus` reaching the floor count.
+
+**Tested:** by me, in Chrome against the live Pages build and the live backend,
+on both ZZ test projects. 79 node assertions all pass: the 42 drain and 12
+storage suites from session 6, unchanged, plus **25 new ones in
+`fold-test.js`** covering the fold, `fetchedAt` staying put, a failure folding
+nothing, one write for many items, jobs spanning buildings, no copy on the
+phone, a unit key the copy has never seen, a record job not corrupting the
+status grid, and the retap surviving a successful call. `fold-test.js` is in
+the scratchpad, not in the repo.
+
+**One test could not be run as written.** The plan says to force `retry:false`
+by removing an item in Admin. Driving a structure change through Admin was
+blocked in this session, so the same server-side `retry:false` was produced by
+putting the phone's copy one item ahead of the server — which is exactly the
+state an Admin removal leaves behind until the next refresh. The failure came
+back from the real server with the real classification. **Admin's own
+remove-item path was not exercised. Step 5 owns Admin and should cover it.**
+
+**Not landed:**
+
+- **`reference/PFC_Master_Template.xlsx` is still not updated**, and neither is
+  the live copy in Drive (`1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`). Plan
+  1.7. Unchanged since session 1. No code reads it.
+- Everything from step 4 onward.
+
+**Open:**
+
+- **A landed RECORD is not folded into the copy.** The same defect as 1, on the
+  other job kind. Nothing creates a record until Logger ships, so it is not
+  written yet — there is a BUILD NOTE on `Store.foldLanded` naming it. **Step 4
+  must fold a landed record into `copy.records` by `record_id`**, or a saved
+  record will vanish off the screen until the next fetch.
+- **The two ZZ test Sheets are full of test data now.** Both hold 18 items set
+  to `in_progress` across all six units, and `ZZ 0.2 Step 3 Test`
+  (`1-Fa_75qo-Eh4AyHsNerjdWluUgAN2m5pbNxxVFqp148`) holds four junk records on
+  unit 201 named `JSONP slice test 0-3`, beside session 6's real one on unit
+  101. Both Sheets were already on the trash list. Nothing was written to any
+  Sheet that is not a ZZ test project.
+- **Three cosmetic things, none worth a release on its own:**
+  - An offline job stores the long error `This phone has no connection. The app
+    opened from its saved copy…`, and an Outbox **waiting** row prints it. The
+    second half of that sentence is about opening a screen, not about a queued
+    edit.
+  - When the item is gone from the copy, the Outbox row and the red card print
+    the item KEY, not its label. After a real Admin removal it would read
+    `cut`, not `Cut`.
+  - The greyed Complete still carries `.press`, so it flashes when pressed even
+    though it does nothing.
+- Everything still open from session 6: the chip bar and the fix-card buttons
+  look long on a desktop window, `.details-btn` / `.details-edit` unused, the
+  Tracker row 5 wrap, `My Drive/Projects/`
+  (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`) with the old test projects, the
+  `ZZ 0.2 Step 2 Test` Sheet to trash, nothing may move a control on `:active`,
+  and the `.floor-body` animation wanting one look on iOS Safari 16.
+- PLAN CALL 3 still waits for step 4.
+
+**Next:** **the gate is passed — start step 4.** Records in the `get-project`
+payload, the Logger window, the flag chips, the record list and the green card.
+Fold a landed record into the copy while you are in there. **PLAN CALL 3 needs
+one line from Miguel on his phone before Save is pinned to the bottom of the
+Logger form.**
+
+---
+
+## Session 8 — 2026-08-09
+
+**Step:** 4, not started. This session answered a plan call and nothing else.
+**Branch:** `0.2`.
+**Deployed:** no. **Merged to main:** no code changed. **CACHE_NAME:** untouched.
+
+**PLAN CALL 3 is answered. Save is pinned to the bottom of the Logger form.**
+
+Miguel was shown the two options side by side on his phone: the pinned Save bar
+with the form left one control per row, against Save in the scroll flow with
+Subtype and Count sharing a row and the place bar collapsed. **He chose the
+pinned bar.** He did not take the compressed form, so section 5.7's field order
+stands as written, one control per row.
+
+Two things came out of it that the plan did not say:
+
+- **The fallback is dead, not deferred.** Compressing the form was the answer to
+  a question that has now been answered another way. Do not reach for it later
+  as a tidy-up. If the screen runs short of height, the pinned bar is what pays.
+- **The bar has to survive the iOS keyboard.** `position: fixed` on iOS Safari
+  does not track the software keyboard, so a naive bar lands under it or floats
+  mid-screen. Size it off `window.visualViewport`. This is written into 5.7 and
+  it wants one look on a phone with the Needed box focused.
+
+Both are marked in 5.7, and section 12's table row 3 now reads ANSWERED.
+
+**Also confirmed for Miguel:** Logger is not on his phone and that is correct.
+There is no `control/logger/`, and `CARDS` in `control/index.html` still holds
+the five 0.1 cards. The greyed `Deficiencies` card is the 0.1 placeholder, not
+Logger. The `Log` card arrives with step 4, per 5.8.
+
+**Not landed:** everything from step 4 onward. `reference/PFC_Master_Template.xlsx`
+is still not updated, plan 1.7, unchanged since session 1.
+
+**Open:** everything session 7 left open, unchanged — the unfolded landed RECORD
+that step 4 must fix, the two ZZ test Sheets to trash, the three cosmetic things,
+and session 6's list. **PLAN CALL 3 is off that list.** No plan call is open now.
+
+**Next:** step 4, with nothing waiting on Miguel. Records in the `get-project`
+payload, the Logger window with its pinned Save bar, the flag chips, the record
+list and the green card. Fold a landed record into `copy.records` by `record_id`
+while you are in there.
+
+---
+
+## Session 9 — 2026-08-09
+
+**Step:** 4, not started. **No app code changed this session.**
+**Branch:** `0.2` at `42b9be9`.
+**Deployed:** no. **Merged to main:** no. **CACHE_NAME:** untouched.
+
+**Landed: the 0.2 step 3 test round from Miguel's side**, in
+`notes/0.2-step-3-testing.md` — fifteen findings from his desktop and his phone.
+`notes/` is gitignored, so that file is on his machine only. Everything below is
+the durable half.
+
+**Four findings were not what they looked like**, and the code says so:
+
+- **The smooshed unit spinner.** `.ring` in `theme.css:579` sets width and height
+  but never sets `display`. Everywhere else its parent is a flex row, which
+  blockifies it. `#unit-pill` is a plain `div`, so there it is a raw inline span
+  and collapses onto the text baseline. Miguel's own fix — drop the unit-level
+  spinner — deletes the element, so this needs no CSS repair.
+- **The missing progress bars are all present in the code.** `barHtml` runs on the
+  Tracking row, the floor header and the unit chip. They draw nothing because
+  above the Unit screen `done` counts whole **units** complete (`common.js:139`),
+  and `barHtml` returns `''` when `done` is 0. **A floor of twelve half-built
+  units reads `12 units · 0 done` and draws no bar — the same lie worst-wins
+  told.**
+- **The `!` marker works as written.** It fires on `held`, a server refusal, never
+  on `waiting`. `index.html:180` states it in a comment. Miguel's model is that
+  unsaved includes queued, which is not what got built.
+- **The Offline/Last-updated line is not on a timer.** It is an argument to
+  `render()`, so the next redraw paints over it. The outbox ticks on a 5s backoff,
+  which is the "five seconds" he saw.
+
+**Decided this session — PLAN CALL 3, and eleven vocabulary calls.**
+
+`docs/crew-words.md` and `docs/code-words.md` are new, built from the app's real
+strings rather than from memory. CLAUDE.md points at both. **`crew-words.md` is
+now the authority on any word a crew member reads**, and plan amendment A3 says
+so. The two that are not wording and do change what gets built:
+
+- **One project is exactly one building, always.** Nothing nests. This closes the
+  door on a level above Building for 0.2 and 0.3.
+- **Three developer error strings get crew wording plus a code**, E1 to E3, with
+  the technical half written to the browser console.
+
+**Not landed:** every one of the fifteen findings. Nothing was fixed in code.
+
+**Open:** everything session 7 left open, minus PLAN CALL 3, which is closed. The
+two ZZ Sheets are still to trash. `reference/PFC_Master_Template.xlsx` is still
+not updated, plan 1.7, unchanged since session 1.
+
+**Confirmed by Miguel:** there is no real building yet, only ZZ tests. So
+`Exterior Door(s)` → `Exterior Doors` is a clean change — the derived key moves
+from `exterior_door_s` to `exterior_doors` with no data to migrate. **Do it before
+a real building exists.**
+
+**Next:** `.scratch/pfc-control-0.2/HANDOFF.md` holds the work order.
