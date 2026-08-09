@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PFC Control">
+<link rel="apple-touch-icon" href="../shared/logo.png">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" href="../shared/logo.png">
+<title>Logging — PFC Control</title>
+<link rel="stylesheet" href="../shared/theme.css">
+</head>
+<body>
+
+<header class="hdr hdr--tight">
+  <a class="hdr-back press" id="back" href="../index.html" aria-label="Go back to the home screen">
+    <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true">
+      <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+  <div class="hdr-titles">
+    <h1 class="hdr-title">Logging</h1>
+    <div class="hdr-sub">Record an issue</div>
+  </div>
+</header>
+
+<main id="screen"></main>
+<div id="sheet-slot"></div>
+
+<script src="../shared/common.js"></script>
+<script>
+/* =====================================================================
+   LOGGING — one problem, one thing needed, one save
+   =====================================================================
+   LOGGING IS A FORM, NOT A SECOND TREE. Walking Building -> Floor -> Unit
+   -> Phase -> Item to write down one broken door is seven screens for one
+   record. The place is set once at the top and it stays set; only the
+   record fields clear after a save.
+
+   LOGGING WRITES RECORDS ONLY. Progress stays in Tracker, and so does
+   marking a record Fixed. Eighteen items would otherwise mean eighteen
+   runs of this form.
+
+   IT NEVER CALLS THE BACKEND. A save puts a record on the queue shelf and
+   the drain in common.js sends it, so a basement with no signal costs
+   nothing but a ring on the row.
+
+   THE PHONE REMEMBERS THE BUILDING AND THE PHASE, AND NEVER THE UNIT. A
+   building lasts weeks and a phase lasts days; the unit changes every few
+   minutes, and a wrong unit writes a real door against the wrong door.
+   ===================================================================== */
+
+var screen = document.getElementById('screen');
+var slot   = document.getElementById('sheet-slot');
+
+/* Where we are. projectId and phaseKey survive the app closing. unitKey
+   never does — see the header comment. */
+var placeMemory = Store.read('log.place', {}) || {};
+var projectId   = placeMemory.projectId || '';
+var phaseKey    = placeMemory.phaseKey  || '';
+var unitKey     = '';
+
+var copy     = null;    // the building copy, out of localStorage
+var projects = [];      // every building this phone holds a copy of
+
+/* The record being written. Type holds for the visit; everything under it
+   clears after each save. */
+var type      = 'Deficiency';
+var itemKey   = '';
+var subtype   = '';
+var subOther  = '';
+var needed    = '';
+var quantity  = 1;
+var reason    = '';
+var reasonOther = '';
+
+/* What this visit has put on the queue, newest last. It is the place a
+   typo is caught before the person leaves the room. */
+var loggedHere = [];
+
+var placeSheet = false;   // the change-place sheet is open
+var unitTyped  = '';      // what is in the unit box, before it matches
+var askLine    = null;    // the near-match prompt: { typed, stored }
+var savedStrip = false;   // the strip that confirms one save
+var storageRefused = false;
+
+
+/* ── START ────────────────────────────────────────────────────────── */
+
+projects = (Store.list() || {}).projects || [];
+
+/* Every building the phone has a COPY of can be logged against. The list
+   answer alone is not enough: Logging draws its item, subtype and reason
+   lists out of the copy, and there is no fetch on this screen. */
+var withCopies = Store.projectIds();
+projects = projects.filter(function (project) {
+  return withCopies.indexOf(project.id) >= 0;
+});
+
+if (projectId && withCopies.indexOf(projectId) < 0) projectId = '';
+if (!projectId && projects.length === 1) projectId = projects[0].id;
+
+loadCopy();
+render();
+mountSyncBar('../tracker/queue.html');
+Queue.onChange(render);
+
+
+function loadCopy() {
+  copy = projectId ? Store.project(projectId) : null;
+  if (!copy) { phaseKey = ''; return; }
+
+  // A phase the building does not hold is not a phase. It can happen when
+  // the remembered building changes.
+  var found = false;
+  (copy.phases || []).forEach(function (phase) { if (phase.key === phaseKey) found = true; });
+  if (!found) phaseKey = (copy.phases && copy.phases[0]) ? copy.phases[0].key : '';
+}
+
+
+function rememberPlace() {
+  // The unit is deliberately not written. See the header comment.
+  Store.write('log.place', { projectId: projectId, phaseKey: phaseKey });
+}
+
+
+/* ── DRAW ─────────────────────────────────────────────────────────── */
+
+/**
+ * Redraws the screen, and puts the keyboard back where it was.
+ *
+ * A queue drain can finish at any moment, and it redraws this screen
+ * through Queue.onChange. Without this the Needed box loses focus
+ * mid-word and the keyboard drops on a phone — which, standing in a unit
+ * with gloves on, reads as the app throwing the line away.
+ */
+function render() {
+  var focused = document.activeElement;
+  var wasNeeded = !!(focused && focused.id === 'needed');
+  var caret = wasNeeded ? focused.selectionStart : 0;
+
+  draw();
+
+  if (wasNeeded) {
+    var box = document.getElementById('needed');
+    if (box) {
+      box.focus();
+      try { box.setSelectionRange(caret, caret); } catch (e) {}
+    }
+  }
+}
+
+
+function draw() {
+  if (!projects.length) {
+    screen.innerHTML =
+      '<div class="body">' +
+        '<div class="state">' +
+          '<div class="state-title">No building on this phone</div>' +
+          '<div class="state-text">Open a building in Tracking once. Then you can log against it here, with or without signal.</div>' +
+          '<a class="btn btn-primary press" href="../tracker/index.html">Go to Tracking</a>' +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  var ready = !!(copy && unitKey);
+
+  screen.innerHTML =
+    '<div class="body">' +
+      (savedStrip ? '<div class="saved-strip">Saved · waiting to send</div>' : '') +
+      (storageRefused ? storageFullHtml() : '') +
+      placeBarHtml() +
+      (askLine ? askCardHtml() : '') +
+      '<div class="log-form' + (ready ? '' : ' log-form--off') + '">' +
+        typeFieldHtml() +
+        itemFieldHtml() +
+        subtypeFieldHtml() +
+        neededFieldHtml() +
+        countFieldHtml() +
+        reasonFieldHtml() +
+      '</div>' +
+      loggedHtml() +
+      '<div class="save-space"></div>' +
+    '</div>' +
+    '<div class="save-bar" id="save-bar">' +
+      '<button type="button" class="btn btn-primary press" ' +
+              (ready ? '' : 'disabled ') + 'onclick="save()">Save</button>' +
+    '</div>';
+
+  slot.innerHTML = placeSheet ? placeSheetHtml() : '';
+  setSaveBarBottom();
+}
+
+
+/**
+ * THE PLACE BAR IS TWO LINES, always.
+ *
+ * One line wrapped on a phone, and the wrap pushed the whole form down a
+ * row. Two fixed lines cost the same height every time.
+ */
+function placeBarHtml() {
+  var name  = copy ? copy.name : 'No building';
+  var found = (copy && unitKey) ? findUnit(copy, unitKey) : null;
+
+  var line1 = escapeHtml(name) + ' · ' + (found ? escapeHtml(found.unit.label) : '____');
+  var line2 = copy
+    ? escapeHtml(phaseLabel()) + (found && found.group.label ? ' · ' + escapeHtml(found.group.label) : '')
+    : 'Choose a building';
+
+  return '<div class="place-bar">' +
+           '<div class="place-lines">' +
+             '<div class="place-1">' + line1 + '</div>' +
+             '<div class="place-2">' + line2 + '</div>' +
+           '</div>' +
+           '<button type="button" class="btn btn-small btn-ghost press place-set" onclick="openPlace()">' +
+             (unitKey ? 'change' : 'set unit') +
+           '</button>' +
+         '</div>';
+}
+
+
+function phaseLabel() {
+  var label = '';
+  (copy.phases || []).forEach(function (phase) {
+    if (phase.key === phaseKey) label = phase.label;
+  });
+  return label;
+}
+
+
+/**
+ * TYPE SITS ABOVE EVERYTHING because the two reason lists share no value.
+ * It holds for the visit: four backordered locksets in one room cost one
+ * tap, not four.
+ */
+function typeFieldHtml() {
+  return '<div class="field">' +
+           '<div class="field-label">Type</div>' +
+           '<div class="seg">' +
+             typeButton('Deficiency') +
+             typeButton('Waiting') +
+           '</div>' +
+         '</div>';
+}
+
+function typeButton(value) {
+  return '<button type="button" class="press" aria-pressed="' + (type === value) + '" ' +
+                 'onclick="setType(\'' + value + '\')">' + value + '</button>';
+}
+
+
+/**
+ * WHEN TYPE IS WAITING, THE FIRST ROW IS THE WHOLE PHASE.
+ *
+ * "Phase 2 is waiting on the painters" is not about any one item. There is
+ * no separate "attaches to" control — the item list carries the choice.
+ */
+function itemFieldHtml() {
+  var options = '';
+
+  if (type === 'Waiting') {
+    options += option('', 'Whole phase — ' + phaseLabel(), itemKey === '');
+  } else {
+    options += option('', 'Choose an item', itemKey === '');
+  }
+
+  items().forEach(function (item) {
+    options += option(item.key, item.label, itemKey === item.key);
+  });
+
+  return '<div class="field">' +
+           '<div class="field-label">Item</div>' +
+           '<select class="input input--sm" onchange="setItem(this.value)">' + options + '</select>' +
+         '</div>';
+}
+
+
+/** The items the chosen phase holds. Never a list written in code. */
+function items() {
+  var out = [];
+  if (!copy) return out;
+  (copy.phases || []).forEach(function (phase) {
+    if (phase.key === phaseKey) out = phase.items || [];
+  });
+  return out;
+}
+
+
+function currentItem() {
+  var found = null;
+  items().forEach(function (item) { if (item.key === itemKey) found = item; });
+  return found;
+}
+
+
+/**
+ * SUBTYPE IS DRAWN ONLY ON AN ITEM THAT DEFINES TYPES. Four do today:
+ * Interior Doors, Exterior Doors, Handles and Stops. Every list ends with
+ * Other, which opens a text box, and the typed word goes in this record's
+ * subtype cell alone. It never joins the list.
+ */
+function subtypeFieldHtml() {
+  var item = currentItem();
+  if (!item || !(item.types || []).length) return '';
+
+  var options = option('', 'Choose a type', subtype === '');
+  item.types.forEach(function (value) {
+    options += option(value, value, subtype === value);
+  });
+  options += option('Other', 'Other', subtype === 'Other');
+
+  var box = (subtype === 'Other')
+    ? '<input class="input input--sm" type="text" placeholder="Type it" ' +
+             'value="' + escapeHtml(subOther) + '" oninput="subOther = this.value">'
+    : '';
+
+  return '<div class="field">' +
+           '<div class="field-label">Subtype</div>' +
+           '<select class="input input--sm" onchange="setSubtype(this.value)">' + options + '</select>' +
+           box +
+         '</div>';
+}
+
+
+/**
+ * NEEDED IS THE HERO FIELD, and the only one at full height. Miguel's
+ * words: "the important part is what replacement is needed."
+ *
+ * Its placeholder is the item's own hint, inside the empty box. The three
+ * chips sit under it and filter as you type.
+ */
+function neededFieldHtml() {
+  var item = currentItem();
+  var hint = (item && item.hint) ? item.hint : 'What is needed';
+
+  var chips = chipsFor(currentGroup(), needed).map(function (line) {
+    return '<button type="button" class="suggest-chip press" ' +
+                   'onclick="useChip(' + escapeHtml(JSON.stringify(line)) + ')">' +
+             escapeHtml(line) +
+           '</button>';
+  }).join('');
+
+  return '<div class="field">' +
+           '<div class="field-label">Needed</div>' +
+           '<input class="input needed-box" id="needed" type="text" ' +
+                  'placeholder="' + escapeHtml(hint) + '" ' +
+                  'value="' + escapeHtml(needed) + '" oninput="typeNeeded(this.value)">' +
+           (chips ? '<div class="suggest">' + chips + '</div>' : '') +
+         '</div>';
+}
+
+
+/** The chip group this record belongs to: Type · item · subtype. */
+function currentGroup() {
+  var item  = currentItem();
+  var types = item ? (item.types || []) : [];
+  var value = (subtype === 'Other') ? 'Other' : subtype;
+
+  return chipGroupKey(type, chipScope(itemKey, phaseKey), chipSubtype(value, types));
+}
+
+
+/** Count sits above Reason: the count belongs beside the line it counts. */
+function countFieldHtml() {
+  return '<div class="field">' +
+           '<div class="field-label">Count</div>' +
+           '<div class="qty">' +
+             '<button type="button" class="qty-btn press" onclick="bump(-1)" aria-label="One fewer">−</button>' +
+             '<span class="qty-n">' + quantity + '</span>' +
+             '<button type="button" class="qty-btn press" onclick="bump(1)" aria-label="One more">+</button>' +
+           '</div>' +
+         '</div>';
+}
+
+
+/**
+ * THE REASON LIST COMES FROM THE BUILDING, minus this item's trim.
+ *
+ * The trim is about responsibility, not about the item: the framer hangs
+ * the patio door, so Wrong Swing comes off Exterior Doors even though the
+ * door plainly swings. A Waiting record uses the fixed list instead, which
+ * never varies and lives in common.js.
+ */
+function reasonFieldHtml() {
+  var list = reasonList();
+
+  var options = option('', 'Choose a reason', reason === '');
+  list.forEach(function (value) {
+    options += option(value, value, reason === value);
+  });
+
+  var box = (reason === 'Other')
+    ? '<input class="input input--sm" type="text" placeholder="Say what it is" ' +
+             'value="' + escapeHtml(reasonOther) + '" oninput="reasonOther = this.value">'
+    : '';
+
+  return '<div class="field">' +
+           '<div class="field-label">Reason</div>' +
+           '<select class="input input--sm" onchange="setReason(this.value)">' + options + '</select>' +
+           box +
+         '</div>';
+}
+
+
+function reasonList() {
+  if (type === 'Waiting') return WAITING_REASONS.slice();
+
+  var all  = (copy && copy.reasons) ? copy.reasons.slice() : DEFAULT_REASONS.slice();
+  var item = currentItem();
+  var trim = item ? (item.trim || []) : [];
+
+  return all.filter(function (value) { return trim.indexOf(value) < 0; });
+}
+
+
+function option(value, label, on) {
+  return '<option value="' + escapeHtml(value) + '"' + (on ? ' selected' : '') + '>' +
+           escapeHtml(label) +
+         '</option>';
+}
+
+
+/**
+ * "Logged here" — every record this visit saved, with its send state and a
+ * Cancel button that is always visible.
+ *
+ * THIS LIST CAN CANCEL A RECORD AND CAN NEVER MARK ONE FIXED. Cancel
+ * undoes a typo made ten seconds ago. Fixing is a repair, and a repair
+ * belongs to Tracker.
+ */
+function loggedHtml() {
+  if (!loggedHere.length) return '';
+
+  var rows = loggedHere.map(function (entry) {
+    var job  = Store.job(recordJobKey(entry.id));
+    var gone = entry.cancelled;
+
+    var mark;
+    if (gone)            mark = '<span class="rec-done">Cancelled</span>';
+    else if (!job)       mark = '<span class="rec-done">✓</span>';
+    else if (job.held)   mark = '<span class="ring ring--bad"></span>';
+    else if (!navigator.onLine) mark = '<span class="queued-mark">' + ICON.offline + '</span>';
+    else                 mark = '<span class="ring"></span>';
+
+    var act = gone ? '' :
+      '<button type="button" class="btn btn-small btn-ghost press" ' +
+              'onclick="cancelLogged(' + escapeHtml(JSON.stringify(entry.id)) + ')">Cancel</button>';
+
+    return '<div class="logged-row' + (gone ? ' logged-row--gone' : '') + '">' +
+             '<span class="logged-line">' + escapeHtml(entry.line) + '</span>' +
+             '<span class="rec-qty">x' + entry.quantity + '</span>' +
+             mark + act +
+           '</div>';
+  }).join('');
+
+  return '<div class="field">' +
+           '<div class="field-label">Logged here</div>' +
+           '<div class="logged">' + rows + '</div>' +
+         '</div>';
+}
+
+
+/* ── THE PLACE SHEET ──────────────────────────────────────────────── */
+/*
+   Building, Unit and Phase together, in one sheet from the bottom. They
+   change together far more often than one at a time.
+*/
+
+function placeSheetHtml() {
+  var buildings = projects.map(function (project) {
+    return option(project.id, project.name, project.id === projectId);
+  }).join('');
+
+  var phases = copy ? (copy.phases || []).map(function (phase) {
+    return option(phase.key, phase.label, phase.key === phaseKey);
+  }).join('') : '';
+
+  return '<div class="sheet-back" onclick="closePlace(event)">' +
+           '<div class="sheet" onclick="event.stopPropagation()">' +
+             '<div class="sheet-title">Where are you?</div>' +
+
+             '<div class="field">' +
+               '<div class="field-label">Building</div>' +
+               '<select class="input input--sm" onchange="setProject(this.value)">' + buildings + '</select>' +
+             '</div>' +
+
+             '<div class="field">' +
+               '<div class="field-label">Unit</div>' +
+               '<input class="input input--sm" id="unit-box" type="text" inputmode="text" ' +
+                      'placeholder="204" value="' + escapeHtml(unitTyped) + '" ' +
+                      'oninput="typeUnit(this.value)">' +
+               '<div class="field-note">' + unitNote() + '</div>' +
+             '</div>' +
+
+             '<div class="field">' +
+               '<div class="field-label">Phase</div>' +
+               '<select class="input input--sm" onchange="setPhase(this.value)">' + phases + '</select>' +
+             '</div>' +
+
+             '<button type="button" class="btn btn-primary press" onclick="closePlace()">Done</button>' +
+           '</div>' +
+         '</div>';
+}
+
+
+/**
+ * THE UNIT BOX NEVER ASSUMES THE FIRST DIGIT IS THE FLOOR.
+ *
+ * Harbour View numbers its units A1 and A2. The local copy already holds
+ * the true answer, so the box matches the typed text against the unit
+ * labels and prints the floor it found.
+ */
+function unitNote() {
+  if (!copy) return 'Choose a building first.';
+  if (!unitTyped) return 'Type the unit number.';
+
+  var found = matchUnit(unitTyped);
+  if (!found) return 'No unit ' + escapeHtml(unitTyped) + ' in this building.';
+
+  return found.group.label
+    ? escapeHtml(found.unit.label) + ' · ' + escapeHtml(found.group.label)
+    : escapeHtml(found.unit.label);
+}
+
+
+function matchUnit(text) {
+  var want  = String(text).trim().toLowerCase();
+  var found = null;
+
+  (copy.groups || []).forEach(function (group) {
+    group.units.forEach(function (unit) {
+      if (String(unit.label).toLowerCase() === want) found = { unit: unit, group: group };
+    });
+  });
+
+  return found;
+}
+
+
+/* ── HANDLERS ─────────────────────────────────────────────────────── */
+
+function openPlace() {
+  placeSheet = true;
+  var found = unitKey ? findUnit(copy, unitKey) : null;
+  unitTyped = found ? found.unit.label : '';
+  render();
+}
+
+function closePlace(event) {
+  if (event) event.stopPropagation();
+  placeSheet = false;
+  rememberPlace();
+  render();
+}
+
+function setProject(id) {
+  projectId = id;
+  unitKey   = '';
+  unitTyped = '';
+  itemKey   = '';
+  subtype   = '';
+  reason    = '';
+  loadCopy();
+  render();
+}
+
+function typeUnit(text) {
+  unitTyped = text;
+  var found = copy ? matchUnit(text) : null;
+  unitKey = found ? found.unit.key : '';
+
+  // Only the note and the place bar change, so the box keeps its focus and
+  // the keyboard stays up.
+  var note = document.querySelector('.sheet .field-note');
+  if (note) note.innerHTML = unitNote();
+}
+
+function setPhase(key) {
+  phaseKey = key;
+  itemKey  = '';
+  subtype  = '';
+  reason   = '';
+  render();
+}
+
+/** Type resets the fields under it: the two reason lists share no value. */
+function setType(value) {
+  type    = value;
+  itemKey = '';
+  subtype = '';
+  reason  = '';
+  render();
+}
+
+function setItem(key) {
+  itemKey = key;
+  subtype = '';
+  reason  = '';
+  render();
+}
+
+function setSubtype(value) {
+  subtype = value;
+  if (value !== 'Other') subOther = '';
+  render();
+}
+
+function setReason(value) {
+  reason = value;
+  if (value !== 'Other') reasonOther = '';
+  render();
+}
+
+function typeNeeded(text) {
+  needed = text;
+
+  // Redrawing the whole form here would take the keyboard down on every
+  // keystroke. Only the chip row moves.
+  var row = document.querySelector('.suggest');
+  var chips = chipsFor(currentGroup(), needed).map(function (line) {
+    return '<button type="button" class="suggest-chip press" ' +
+                   'onclick="useChip(' + escapeHtml(JSON.stringify(line)) + ')">' +
+             escapeHtml(line) +
+           '</button>';
+  }).join('');
+
+  if (row) { row.innerHTML = chips; return; }
+  if (chips) render();
+}
+
+/** Tap a chip and the STORED line is saved, punctuation and all. */
+function useChip(line) {
+  needed = line;
+  render();
+}
+
+function bump(by) {
+  quantity = Math.max(1, quantity + by);
+  render();
+}
+
+
+/* ── SAVE ─────────────────────────────────────────────────────────── */
+
+/**
+ * THE NEAR-MATCH PROMPT FIRES HERE, ON SAVE, and never while typing.
+ *
+ * It only ever offers a line the chip row would have offered, because it
+ * compares inside the current group. Either button then saves — the
+ * question is which spelling to store, not whether to store.
+ */
+function save() {
+  if (!copy || !unitKey) return;
+
+  var hit = askLine ? null : nearMatch(currentGroup(), needed);
+  if (hit) {
+    askLine = { typed: needed, stored: hit };
+    render();
+    return;
+  }
+
+  writeRecord(needed);
+}
+
+
+function askCardHtml() {
+  return '<div class="ask-card">' +
+           '<div class="ask-text">This phone already has ' +
+             '<b>' + escapeHtml(askLine.stored) + '</b>. You typed ' +
+             '<b>' + escapeHtml(askLine.typed) + '</b>.</div>' +
+           '<div class="ask-acts">' +
+             '<button type="button" class="btn btn-small btn-primary press" onclick="useStored()">Use it</button>' +
+             '<button type="button" class="btn btn-small btn-ghost press" onclick="keepMine()">Keep mine</button>' +
+           '</div>' +
+         '</div>';
+}
+
+function useStored() { var line = askLine.stored; askLine = null; writeRecord(line); }
+function keepMine()  { var line = askLine.typed;  askLine = null; writeRecord(line); }
+
+
+/**
+ * Puts one record on the queue and clears the record fields.
+ *
+ * AFTER A SAVE, LOGGING STAYS PUT. Building, Unit and Phase stay filled,
+ * because four problems in one room means four saves and no walk back
+ * through the place. Jumping to Tracker was rejected for the same reason:
+ * it confirms the save and puts the person in the wrong place for the
+ * next one.
+ */
+function writeRecord(line) {
+  var item = currentItem();
+
+  var record = makeRecord({
+    unit:       unitKey,
+    phase:      phaseKey,
+    item:       itemKey,
+    type:       type,
+    reason:     reason,
+    other_text: (reason === 'Other') ? reasonOther : '',
+    subtype:    (subtype === 'Other') ? subOther : subtype,
+    needed:     line,
+    quantity:   quantity,
+    state:      'Open'
+  });
+
+  storageRefused = !queueRecord(projectId, record);
+
+  if (!storageRefused) {
+    var name = item ? item.label : ('Whole phase — ' + phaseLabel());
+    loggedHere.push({
+      id:        record.record_id,
+      line:      (record.subtype ? record.subtype + ' · ' : '') + (line || name),
+      quantity:  record.quantity,
+      cancelled: false
+    });
+
+    // Only the record fields clear. Type holds for the visit.
+    itemKey = ''; subtype = ''; subOther = '';
+    needed  = ''; quantity = 1;
+    reason  = ''; reasonOther = '';
+
+    // The strip takes itself off the screen without a redraw. A redraw
+    // four seconds later would land in the middle of the next line being
+    // typed and take the keyboard down with it.
+    savedStrip = true;
+    setTimeout(function () {
+      savedStrip = false;
+      var strip = document.querySelector('.saved-strip');
+      if (strip) strip.parentNode.removeChild(strip);
+    }, 4000);
+
+    Queue.wake();
+  }
+
+  render();
+}
+
+
+/**
+ * Cancel, on a row in "Logged here".
+ *
+ * IT WRITES A CANCELLED RECORD. It does not delete the queued job. A job
+ * that timed out may already have reached the Sheet, and the only way to
+ * be sure the Sheet ends up Cancelled is to send that word. The record id
+ * is the same, so the server overwrites the one row.
+ *
+ * Cancelled is also how a chip is taken back: a typo enters the chip pool
+ * through a record, and cancelling that record takes it straight out.
+ */
+function cancelLogged(id) {
+  var record = null;
+  var found  = null;
+
+  loggedHere.forEach(function (entry) { if (entry.id === id) found = entry; });
+  if (copy) record = recordById(copy, id);
+
+  if (!record) {
+    var job = Store.job(recordJobKey(id));
+    record = job ? job.record : null;
+  }
+  if (!record) return;
+
+  var next = makeRecord(record);
+  next.state  = 'Cancelled';
+  next.closed = todayStamp();
+
+  storageRefused = !queueRecord(projectId, next);
+  if (!storageRefused && found) found.cancelled = true;
+  if (!storageRefused) Queue.wake();
+
+  render();
+}
+
+
+/* ── THE PINNED SAVE BAR ──────────────────────────────────────────── */
+/*
+   PLAN CALL 3: Save is pinned to the bottom of the screen and the form
+   scrolls behind it. The worst case is nine controls, when both Other
+   boxes are open, and Save falls under the keyboard at about six.
+
+   position: fixed alone does not track the iOS software keyboard. The bar
+   is sized off window.visualViewport instead, which reports the height
+   the keyboard leaves behind, on its resize and scroll events.
+
+   NEEDS ONE LOOK ON A REAL PHONE, with the Needed box focused.
+*/
+function setSaveBarBottom() {
+  var bar = document.getElementById('save-bar');
+  if (!bar) return;
+
+  var view = window.visualViewport;
+  if (!view) { bar.style.bottom = '0px'; return; }
+
+  // How much of the window the keyboard is covering.
+  var covered = window.innerHeight - view.height - view.offsetTop;
+  bar.style.bottom = Math.max(0, Math.round(covered)) + 'px';
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', setSaveBarBottom);
+  window.visualViewport.addEventListener('scroll', setSaveBarBottom);
+}
+</script>
+</body>
+</html>

@@ -496,6 +496,13 @@ function jsonpCall(action, data) {
 
 var STORE_PREFIX = 'pfc.control.v1.';
 
+/*
+   Goes up by one every time the queue shelf is written. Nothing reads it
+   but the painted-record memo, which cannot tell a stale answer from a
+   fresh one any other way.
+*/
+var jobsRev = 0;
+
 /** How many building copies the phone keeps. The eleventh drops the oldest. */
 var PROJECT_LIMIT = 10;
 
@@ -517,6 +524,10 @@ var Store = {
   write: function (name, value) {
     try {
       localStorage.setItem(STORE_PREFIX + name, JSON.stringify(value));
+      // Every change to the shelf moves the counter the painted-record memo
+      // in paintedRecords() watches. It sits here, and not in the four
+      // callers, because one missed bump paints a stale flag on a screen.
+      if (name === 'outbox') jobsRev += 1;
       return true;
     } catch (e) {
       return false;
@@ -590,16 +601,34 @@ var Store = {
     var copy    = held.data;
     var touched = false;
 
-    copy.status = copy.status || {};
+    copy.status  = copy.status  || {};
+    copy.records = copy.records || [];
+
     jobs.forEach(function (job) {
-      // BUILD NOTE, step 4: a landed RECORD needs the same fold, into
-      // copy.records by record_id. Nothing creates one until Logger ships,
-      // so it is not written here — but the bug is identical. A saved
-      // record would vanish off the screen until the next fetch.
-      if (job.kind !== 'item') return;
-      copy.status[job.unitKey] = copy.status[job.unitKey] || {};
-      copy.status[job.unitKey][job.itemKey] = job.progress;
-      touched = true;
+      if (job.kind === 'item') {
+        copy.status[job.unitKey] = copy.status[job.unitKey] || {};
+        copy.status[job.unitKey][job.itemKey] = job.progress;
+        touched = true;
+        return;
+      }
+
+      // A LANDED RECORD FOLDS THE SAME WAY, and for the same reason. The
+      // screen paints a waiting record out of the queue; the moment the
+      // server takes it the job leaves the shelf, so without this the
+      // record — and its flag — would vanish until the next fetch.
+      //
+      // Id found, replace. Id new, append. That is the same rule the
+      // server writes the Sheet with, so both sides agree after a retry.
+      if (job.kind === 'record' && job.record && job.record.record_id) {
+        var id    = job.record.record_id;
+        var found = -1;
+        copy.records.forEach(function (record, i) {
+          if (record.record_id === id) found = i;
+        });
+        if (found >= 0) copy.records[found] = job.record;
+        else            copy.records.push(job.record);
+        touched = true;
+      }
     });
 
     if (touched) this.write('project.' + id, { data: copy, fetchedAt: held.fetchedAt || 0 });
@@ -798,23 +827,445 @@ function itemJobKey(projectId, unitKey, itemKey) {
   return projectId + '|' + unitKey + '|' + itemKey;
 }
 
+/** The shelf key for one record. The record id already is unique. */
+function recordJobKey(recordId) {
+  return 'rec|' + recordId;
+}
+
+
+/* ── RECORDS ──────────────────────────────────────────────────────── */
+/*
+   A record is one problem and one thing needed. It lives in the
+   Deficiencies tab of the building's Sheet, thirteen columns wide, and it
+   travels inside the building copy under copy.records.
+
+   THE PHONE MAKES THE ID, before anything is sent. That is what makes a
+   retried save safe: the server matches on the id, so the same record
+   written twice overwrites one row instead of making two.
+*/
+
+/**
+ * A new record id: d-YYYYMMDD-HHMM-xxxx, four random hex at the end.
+ *
+ * The minute stamp is for a person reading the Sheet. The four hex are
+ * what make it unique — two people can log inside the same minute.
+ */
+function newRecordId() {
+  var now = new Date();
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+
+  var stamp = String(now.getFullYear()) + two(now.getMonth() + 1) + two(now.getDate()) +
+              '-' + two(now.getHours()) + two(now.getMinutes());
+
+  var tail = '';
+  for (var i = 0; i < 4; i++) tail += '0123456789abcdef'[Math.floor(Math.random() * 16)];
+
+  return 'd-' + stamp + '-' + tail;
+}
+
+
+/** Today, as the Sheet's date columns want it. */
+function todayStamp() {
+  var now = new Date();
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  return now.getFullYear() + '-' + two(now.getMonth() + 1) + '-' + two(now.getDate());
+}
+
+
+/**
+ * Builds one record, all thirteen columns, with nothing left undefined.
+ *
+ * The server writes the columns in its own fixed order and reads each one
+ * by name, so a missing key writes a blank cell rather than failing. Every
+ * key is set here so that never has to be guessed at.
+ */
+function makeRecord(fields) {
+  return {
+    record_id:  fields.record_id || newRecordId(),
+    unit:       fields.unit       || '',
+    phase:      fields.phase      || '',
+    item:       fields.item       || '',      // blank means the whole phase
+    type:       fields.type       || 'Deficiency',
+    reason:     fields.reason     || '',
+    other_text: fields.other_text || '',
+    subtype:    fields.subtype    || '',
+    needed:     fields.needed     || '',
+    quantity:   fields.quantity   || 1,
+    state:      fields.state      || 'Open',
+    created:    fields.created    || todayStamp(),
+    closed:     fields.closed     || ''
+  };
+}
+
+
+/**
+ * Puts one record on the queue shelf. Answers false when the phone would
+ * not store it — the caller must say so on the screen.
+ *
+ * EVERY CHANGE TO A RECORD GOES THROUGH HERE, not just a new one. Marking
+ * one Fixed and cancelling one both send the whole record again with a new
+ * state, because a job carries the final value and never a change to
+ * apply. The server matches the id and overwrites the row.
+ */
+function queueRecord(projectId, record) {
+  return Store.putJob({
+    key:       recordJobKey(record.record_id),
+    kind:      'record',
+    projectId: projectId,
+    record:    record,
+    at:        Date.now(),
+    tries:     0,
+    held:      false,
+    error:     ''
+  });
+}
+
+
+/*
+   THE PAINTED RECORD LIST.
+
+   A record that has not sent yet still has to show. Log a deficiency in a
+   basement and the flag must appear on the item at once, or the person
+   logs it twice.
+
+   A WAITING record paints. A HELD one does not — same rule as an item
+   edit, and for the same reason: a screen must never count something that
+   will never land.
+
+   The memo matters. countFlags runs once per item per unit, which is about
+   900 times on a floor draw, and each run would otherwise merge the whole
+   record list again. It is thrown away whenever the shelf changes.
+*/
+var paintedMemo = { id: null, rev: -1, records: null };
+
+function paintedRecords(copy) {
+  if (!copy) return [];
+  if (paintedMemo.id === copy.id && paintedMemo.rev === jobsRev && paintedMemo.records) {
+    return paintedMemo.records;
+  }
+
+  var out   = (copy.records || []).slice();
+  var index = {};
+  out.forEach(function (record, i) { index[record.record_id] = i; });
+
+  var jobs = Store.jobs();
+  Object.keys(jobs).forEach(function (key) {
+    var job = jobs[key];
+    if (job.kind !== 'record' || job.held) return;
+    if (job.projectId !== copy.id) return;
+    if (!job.record || !job.record.record_id) return;
+
+    var at = index[job.record.record_id];
+    if (at === undefined) { index[job.record.record_id] = out.length; out.push(job.record); }
+    else                  { out[at] = job.record; }
+  });
+
+  paintedMemo = { id: copy.id, rev: jobsRev, records: out };
+  return out;
+}
+
+
+/**
+ * The open records under one place, newest last.
+ *
+ * filter takes the same three keys countFlags does: unit, phase, item.
+ * Pass item '' to reach the records that hang on a WHOLE PHASE.
+ */
+function openRecords(copy, filter) {
+  var want = filter || {};
+
+  return paintedRecords(copy).filter(function (record) {
+    if (record.state !== 'Open') return false;
+    if (want.unit  !== undefined && record.unit  !== want.unit)  return false;
+    if (want.phase !== undefined && record.phase !== want.phase) return false;
+    if (want.item  !== undefined && record.item  !== want.item)  return false;
+    return true;
+  });
+}
+
+
+/** One record out of a copy by its id, painted, or null. */
+function recordById(copy, id) {
+  var found = null;
+  paintedRecords(copy).forEach(function (record) {
+    if (record.record_id === id) found = record;
+  });
+  return found;
+}
+
+
+/* ── THE NEEDED-LINE CHIPS ────────────────────────────────────────── */
+/*
+   Three chips under the Needed box, so the common line is one tap instead
+   of eleven characters typed with gloves on.
+
+   NO SEED LIST SHIPS ANYWHERE. Chips are built from the records already on
+   this phone, across every building it holds, so a new job inherits the
+   vocabulary of the last one on day one.
+
+   TWO SOURCES THAT NEVER OVERLAP:
+     - a building STILL on the phone is counted live, from scratch, every
+       time. That is what makes cancelling a record take its chip back out
+       exactly, with no bookkeeping.
+     - a building the phone has DROPPED is read from the history index,
+       which Store.dropProject folds it into on the way out.
+
+   On a re-download a building's lines sit in both places for a while. TAKE
+   THE LARGER OF THE TWO COUNTS, never the sum. It affects chip order only,
+   never chip content.
+*/
+
+/** Twenty lines per group, and no more. */
+var CHIP_LIMIT = 20;
+
+/** A line unused this long, AND used fewer than CHIP_MIN_USES times, goes. */
+var CHIP_MAX_AGE  = 365 * 24 * 60 * 60 * 1000;
+var CHIP_MIN_USES = 3;
+
+/** How many chips the row shows. Four wrap the row, and the wrapped row is
+    the row Save needs. */
+var CHIP_SHOWN = 3;
+
+
+/**
+ * ONE NORMALISING FUNCTION, WRITTEN ONCE AND USED TWICE — by the chip
+ * filter and by the near-match prompt.
+ *
+ * Strip every space, quote mark and slash, then lowercase. Nothing else.
+ *
+ *   typed   32 6 RH    ->  326rh
+ *   stored  32" 6" RH  ->  326rh      MATCH
+ *
+ * IT IS NOT AN EDIT DISTANCE, and it must never become one. `32 6 LH` and
+ * `32 6 RH` are one character apart and are two different doors.
+ */
+function normaliseNeeded(text) {
+  return String(text || '').replace(/[\s"'`\/\\-]/g, '').toLowerCase();
+}
+
+
+/**
+ * The group a record's needed line belongs to: Type · item · subtype.
+ *
+ * Type splits the pool because a Deficiency line is a door size and a
+ * Waiting line is a trade. An item that defines no subtypes groups on Type
+ * and item alone. A phase-level Waiting record has no item and groups on
+ * Type and phase.
+ *
+ * A TYPED `Other` SUBTYPE FALLS INTO ONE Other BUCKET per item, whatever
+ * was typed, so the group count stays bounded at about sixty.
+ */
+function chipGroupKey(type, scope, subtype) {
+  return String(type || '') + '|' + String(scope || '') + '|' + String(subtype || '');
+}
+
+
+/** The scope half of a group key: the item, or the phase when there is no item. */
+function chipScope(itemKey, phaseKey) {
+  return itemKey ? itemKey : ('phase:' + (phaseKey || ''));
+}
+
+
+/** The subtype half, bucketed. Anything the item does not define is Other. */
+function chipSubtype(subtype, types) {
+  if (!subtype) return '';
+  var known = types || [];
+  return (known.indexOf(subtype) >= 0) ? subtype : 'Other';
+}
+
+
+/** The group key one record's line belongs to, using the copy for its types. */
+function chipGroupOfRecord(copy, record) {
+  var types = itemTypes(copy, record.item);
+  return chipGroupKey(record.type,
+                      chipScope(record.item, record.phase),
+                      chipSubtype(record.subtype, types));
+}
+
+
+/** The subtype list one item defines, out of a building copy. */
+function itemTypes(copy, itemKey) {
+  var found = [];
+  if (!copy || !itemKey) return found;
+  (copy.phases || []).forEach(function (phase) {
+    phase.items.forEach(function (item) {
+      if (item.key === itemKey) found = item.types || [];
+    });
+  });
+  return found;
+}
+
+
+/** The stored history index: { groups: { groupKey: [ {n, c, t} ] } }. */
+function chipIndex() {
+  var held = Store.read('chips', null);
+  if (!held || !held.groups) return { groups: {} };
+  return held;
+}
+
 
 /**
  * Folds a building's needed lines into the chip history, in the same step
  * that deletes its copy.
  *
- * 0.2 STEP 4 FILLS THIS IN. It is called from Store.dropProject, which is
- * the only place a copy is deleted, so the fold can never be missed. Until
- * step 4 lands, a dropped building's needed lines are simply gone, and
- * they come back the next time the building is opened.
+ * It is called from Store.dropProject, which is the only place a copy is
+ * deleted, so the fold can never be missed — whichever rule dropped it.
  *
- * The rule step 4 implements: a building STILL on the phone is counted
- * live from scratch every time, and only a DROPPED building is read from
- * this index. A live building is never written into it — that is what
- * makes cancelling a record take its chip back out exactly.
+ * A LIVE BUILDING IS NEVER WRITTEN IN HERE. Only a copy on its way out.
+ * That is what keeps the two sources from double-counting, and it is why
+ * cancelling a record on a live building takes its chip straight back out.
  */
 function foldNeededLinesIntoChips(copy) {
+  if (!copy) return copy;
+
+  var index = chipIndex();
+  var now   = Date.now();
+
+  (copy.records || []).forEach(function (record) {
+    // Cancelled never feeds a chip. A typo enters the pool through a
+    // record, so cancelling that record is what takes it back out.
+    if (record.state === 'Cancelled') return;
+    if (!record.needed) return;
+
+    var group = chipGroupOfRecord(copy, record);
+    var rows  = index.groups[group] || [];
+    var norm  = normaliseNeeded(record.needed);
+    var found = null;
+
+    rows.forEach(function (row) { if (normaliseNeeded(row.n) === norm) found = row; });
+
+    if (found) {
+      found.c += 1;                                  // one record is one use
+      found.t = Math.max(found.t || 0, now);
+    } else {
+      rows.push({ n: record.needed, c: 1, t: now });
+    }
+
+    index.groups[group] = rows;
+  });
+
+  pruneChipIndex(index, now);
+  Store.write('chips', index);
   return copy;
+}
+
+
+/**
+ * Keeps every group inside CHIP_LIMIT, and drops lines that went stale.
+ *
+ * The expiry is BOTH tests, not either: unused for twelve months AND used
+ * fewer than three times. A line used forty times never decays, however
+ * long the job has been quiet.
+ *
+ * Over the cap, the least used go first, ties to the oldest last-used.
+ */
+function pruneChipIndex(index, now) {
+  Object.keys(index.groups).forEach(function (group) {
+    var rows = index.groups[group].filter(function (row) {
+      var old  = (now - (row.t || 0)) > CHIP_MAX_AGE;
+      var rare = (row.c || 0) < CHIP_MIN_USES;
+      return !(old && rare);
+    });
+
+    rows.sort(function (a, b) {
+      if (b.c !== a.c) return b.c - a.c;
+      return (b.t || 0) - (a.t || 0);
+    });
+
+    if (rows.length > CHIP_LIMIT) rows = rows.slice(0, CHIP_LIMIT);
+
+    if (rows.length) index.groups[group] = rows;
+    else             delete index.groups[group];
+  });
+}
+
+
+/**
+ * Every needed line the phone knows for one group, most used first.
+ *
+ * Live buildings are counted from scratch here, every call. That is not
+ * expensive — it is a filter over the records of the copies already in
+ * memory — and it is what keeps a cancelled record's chip from surviving.
+ */
+function chipRows(group) {
+  var rows = {};      // normalised line -> { n, c, t }
+  var now  = Date.now();
+
+  function add(into, text, at) {
+    var norm = normaliseNeeded(text);
+    if (!norm) return;
+    if (!into[norm]) into[norm] = { n: text, c: 0, t: 0 };
+    into[norm].c += 1;
+    into[norm].t = Math.max(into[norm].t, at || 0);
+  }
+
+  // 1 — every building still on the phone, counted live.
+  Store.projectIds().forEach(function (id) {
+    var copy = Store.project(id);
+    if (!copy) return;
+
+    paintedRecords(copy).forEach(function (record) {
+      if (record.state === 'Cancelled') return;
+      if (!record.needed) return;
+      if (chipGroupOfRecord(copy, record) !== group) return;
+      add(rows, record.needed, Date.parse(record.created) || now);
+    });
+  });
+
+  // 2 — the history index, for buildings the phone has dropped. TAKE THE
+  // LARGER COUNT, never the sum: a re-downloaded building sits in both.
+  (chipIndex().groups[group] || []).forEach(function (row) {
+    var norm = normaliseNeeded(row.n);
+    if (!norm) return;
+    if (!rows[norm]) {
+      rows[norm] = { n: row.n, c: row.c || 0, t: row.t || 0 };
+    } else {
+      rows[norm].c = Math.max(rows[norm].c, row.c || 0);
+      rows[norm].t = Math.max(rows[norm].t, row.t || 0);
+    }
+  });
+
+  return Object.keys(rows).map(function (key) { return rows[key]; })
+    .sort(function (a, b) {
+      if (b.c !== a.c) return b.c - a.c;      // most used first
+      return (b.t || 0) - (a.t || 0);          // ties to the newest
+    });
+}
+
+
+/** The three chips to show under the Needed box, filtered by what is typed. */
+function chipsFor(group, typed) {
+  var norm = normaliseNeeded(typed);
+
+  return chipRows(group).filter(function (row) {
+    if (!norm) return true;
+    var line = normaliseNeeded(row.n);
+    return line.indexOf(norm) >= 0 && line !== norm;   // an exact hit needs no chip
+  }).slice(0, CHIP_SHOWN).map(function (row) { return row.n; });
+}
+
+
+/**
+ * THE NEAR-MATCH PROMPT, which fires on Save and never while typing.
+ *
+ * It answers the stored line when the typed one normalises to the same
+ * thing but is written differently — `32 6 RH` against `32" 6" RH`. It
+ * compares inside the current group only, so it can never offer a line the
+ * chip row would not have offered. Two matches, the most used wins.
+ *
+ * Answers null when there is nothing to ask about.
+ */
+function nearMatch(group, typed) {
+  var norm = normaliseNeeded(typed);
+  if (!norm) return null;
+
+  var hit = null;
+  chipRows(group).forEach(function (row) {
+    if (hit) return;
+    if (normaliseNeeded(row.n) === norm && row.n !== typed) hit = row.n;
+  });
+
+  return hit;
 }
 
 
@@ -1364,12 +1815,16 @@ function paintedStatus(projectId, unitKey, itemKey, stored) {
  *
  * Fixed and Cancelled records never count. They still travel in the copy,
  * because they feed the suggestion chips and the 0.3 Archive window.
+ *
+ * IT COUNTS THE PAINTED LIST, not the stored one, so a record logged with
+ * no signal flags its item at once. A held record is not painted and does
+ * not count — the same rule an item edit follows.
  */
 function countFlags(copy, filter) {
   var out  = { deficiency: 0, waiting: 0 };
   var want = filter || {};
 
-  (copy.records || []).forEach(function (record) {
+  paintedRecords(copy).forEach(function (record) {
     if (record.state !== 'Open') return;
     if (want.unit  !== undefined && record.unit  !== want.unit)  return;
     if (want.phase !== undefined && record.phase !== want.phase) return;
@@ -1723,6 +2178,9 @@ var ICON = {
   /* The flag. currentColor, so one glyph serves both flag kinds and the
      chip's own class picks the red or the blue. */
   flag:    '<svg width="9" height="11" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
+
+  /* The same flag at Hub-card size, for the Logging card. */
+  flagBig: '<svg width="15" height="17" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
 
   /* Signal bars, slashed — the queued-edit mark. currentColor, so the
      badge's own background sets the colour. */
