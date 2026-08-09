@@ -957,3 +957,61 @@ and session 6's list. **PLAN CALL 3 is off that list.** No plan call is open now
 payload, the Logger window with its pinned Save bar, the flag chips, the record
 list and the green card. Fold a landed record into `copy.records` by `record_id`
 while you are in there.
+
+---
+
+## Session 9 — 2026-08-09
+
+**Step:** 4, not started. **No app code changed this session.**
+**Branch:** `0.2` at `42b9be9`.
+**Deployed:** no. **Merged to main:** no. **CACHE_NAME:** untouched.
+
+**Landed: the 0.2 step 3 test round from Miguel's side**, in
+`notes/0.2-step-3-testing.md` — fifteen findings from his desktop and his phone.
+`notes/` is gitignored, so that file is on his machine only. Everything below is
+the durable half.
+
+**Four findings were not what they looked like**, and the code says so:
+
+- **The smooshed unit spinner.** `.ring` in `theme.css:579` sets width and height
+  but never sets `display`. Everywhere else its parent is a flex row, which
+  blockifies it. `#unit-pill` is a plain `div`, so there it is a raw inline span
+  and collapses onto the text baseline. Miguel's own fix — drop the unit-level
+  spinner — deletes the element, so this needs no CSS repair.
+- **The missing progress bars are all present in the code.** `barHtml` runs on the
+  Tracking row, the floor header and the unit chip. They draw nothing because
+  above the Unit screen `done` counts whole **units** complete (`common.js:139`),
+  and `barHtml` returns `''` when `done` is 0. **A floor of twelve half-built
+  units reads `12 units · 0 done` and draws no bar — the same lie worst-wins
+  told.**
+- **The `!` marker works as written.** It fires on `held`, a server refusal, never
+  on `waiting`. `index.html:180` states it in a comment. Miguel's model is that
+  unsaved includes queued, which is not what got built.
+- **The Offline/Last-updated line is not on a timer.** It is an argument to
+  `render()`, so the next redraw paints over it. The outbox ticks on a 5s backoff,
+  which is the "five seconds" he saw.
+
+**Decided this session — PLAN CALL 3, and eleven vocabulary calls.**
+
+`docs/crew-words.md` and `docs/code-words.md` are new, built from the app's real
+strings rather than from memory. CLAUDE.md points at both. **`crew-words.md` is
+now the authority on any word a crew member reads**, and plan amendment A3 says
+so. The two that are not wording and do change what gets built:
+
+- **One project is exactly one building, always.** Nothing nests. This closes the
+  door on a level above Building for 0.2 and 0.3.
+- **Three developer error strings get crew wording plus a code**, E1 to E3, with
+  the technical half written to the browser console.
+
+**Not landed:** every one of the fifteen findings. Nothing was fixed in code.
+
+**Open:** everything session 7 left open, minus PLAN CALL 3, which is closed. The
+two ZZ Sheets are still to trash. `reference/PFC_Master_Template.xlsx` is still
+not updated, plan 1.7, unchanged since session 1.
+
+**Confirmed by Miguel:** there is no real building yet, only ZZ tests. So
+`Exterior Door(s)` → `Exterior Doors` is a clean change — the derived key moves
+from `exterior_door_s` to `exterior_doors` with no data to migrate. **Do it before
+a real building exists.**
+
+**Next:** `.scratch/pfc-control-0.2/HANDOFF.md` holds the work order.
