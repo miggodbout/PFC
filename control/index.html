@@ -89,13 +89,24 @@
    Add a card to this list to add a feature. Nothing else changes.
    ===================================================================== */
 
+/*
+   A card with no href is greyed and does not press. Those four name the
+   windows that are coming, and Archive is the one 0.3 lands on: a
+   finished building leaves Tracking in 0.2 and there is no door onto it
+   until that window exists. The card is the seam. Do not remove it to
+   tidy the grid.
+
+   Seven cards in a two-across grid leaves the last one alone on its row.
+   That is known and it is cosmetic.
+*/
 var CARDS = [
   { label: 'Tracking',        sub: 'Buildings & units',            href: 'tracker/index.html', icon: 'bars' },
   { label: 'Logging',         sub: 'Record an issue',              href: 'logging/index.html', icon: 'flagBig' },
   { label: 'Set Up Building', sub: 'Create or change a building',  href: 'setup/index.html',   icon: 'plus' },
   { label: 'Deficiencies', sub: 'Coming soon' },
   { label: 'Materials',    sub: 'Coming soon' },
-  { label: 'Reports',      sub: 'Coming soon' }
+  { label: 'Reports',      sub: 'Coming soon' },
+  { label: 'Archive',      sub: 'Coming soon' }
 ];
 
 document.getElementById('grid').innerHTML = CARDS.map(function (card) {
@@ -112,6 +123,11 @@ document.getElementById('grid').innerHTML = CARDS.map(function (card) {
   }
   return '<a class="hub-card press" href="' + card.href + '">' + inner + '</a>';
 }).join('');
+
+
+// The Hub is the screen the app opens on, so it is where the install note
+// usually lands. It draws nothing when the app is already installed.
+mountInstallNudge();
 
 
 /*

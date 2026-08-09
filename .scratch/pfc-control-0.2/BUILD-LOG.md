@@ -2590,3 +2590,166 @@ All three buildings renamed by `curl`, then read back:
 
 The ring is **not tested on a phone**. It is a arithmetic change to one
 transform, and the resting position it now aims at was already correct.
+
+---
+
+## Session 21 — 2026-08-09
+
+**Step:** 6 — the finish. **0.2.0 IS SHIPPED.**
+**Branch:** `0.2`, merged to `main`. Both pushed. Tagged `0.2.0`.
+**Deployed:** **yes — Apps Script @16.** Same deployment id.
+**Merged to main:** **yes.** `CACHE_NAME` is `pfc-control-0.2.0`, stamped with
+`tools/bump-version.ps1 -Release 0.2.0`.
+
+Everything plan section 6 lists for step 6 is built, and the full round ran.
+From here every change to 0.2 is a PATCH.
+
+### Two calls Miguel made before the build started
+
+| Question | Answer |
+|---|---|
+| Is Needed required on a Waiting record? | **Optional.** Back to what plan 1.4 always said |
+| Trash `ZZ 0.2 Step 5 Test` on Drive? | Yes — and it was **already gone**. `list-projects` returns the two Elsliger buildings only |
+
+**The Needed change is one test in `missingLine()`**, now
+`type === 'Deficiency' && !needed.trim()`. A deficiency is always a thing to
+replace; a Waiting record is often a fact about the schedule and names no
+material. Demanding a line there makes somebody invent one.
+
+**Nothing downstream had to change, and that is worth knowing.** Every path a
+blank needed line reaches was already written for it: `chipRows` and
+`foldNeededLinesIntoChips` both skip a record with no line, `unit.html:312`
+falls back to `record.needed || reason || 'No line'`, and Logging's "Logged
+here" row falls back to `(line || name)`.
+
+### What was built
+
+**The seventh Hub card.** `Archive`, greyed. It is the seam the 0.3 Archive
+window lands on, and the comment above `CARDS` says not to remove it for
+tidiness. Seven cards in a two-across grid leaves the last one alone on its
+row — checked at 390px, it is fine.
+
+**The install nudge, plan section 7.** New: `isInstalled()`,
+`mountInstallNudge()`, `nudgeHtml()` and a silent `keepStorage()` in
+`common.js`, and a `.nudge` block in `theme.css`. Called from the Hub and from
+Buildings.
+
+- **One signal, asked two ways.** `display-mode: standalone` plus
+  `navigator.standalone`. The test leans toward "installed" on purpose: a
+  wrong NO nudges somebody who already installed the app, and a wrong YES only
+  means a note goes unshown. Only the first one annoys.
+- **Once per visit, not once per screen.** `pfc.control.v1.session.nudged` in
+  sessionStorage — not one of the four data stores, nothing syncs it, and it
+  has to die with the tab, which is exactly what "once per tab-mode open"
+  means. **The key is stamped on mount, not on dismiss**, so walking
+  Hub to Buildings does not print it twice.
+- It sits **under** the sync bar, never above: the bar is news about right
+  now, the note is a one-off about setting the phone up.
+- `navigator.storage.persist()` runs on every screen and says nothing either
+  way. There is no action a carpenter can take about a refusal.
+
+**The words.** The note draws four new strings and they are written up in
+`crew-words.md`. `Share` and `Add to Home Screen` are drawn as two keys rather
+than written into a sentence, because they are the words iOS prints on those
+buttons — and because that means the note needs no verb. **This app has never
+settled `tap` or `press`, and it did not have to.** The note also never says
+`install`; what a person does is add an icon to the Home Screen.
+
+### The comment sweep found two crew-facing strings, not comments
+
+Both in `Code.js`, and neither was found by reading a row in `crew-words.md`.
+They were found by grepping the backend for words that file has already
+settled.
+
+| Was | Now |
+|---|---|
+| `This project Sheet was made by an older version of PFC Control` | `This building was made by an older version...` |
+| `Enter a project name.` | `Enter a building name.` — the screen already said this, the backend did not |
+
+`Use the Admin screen in PFC Control.`, written into every new Sheet's `_Config`
+tab, now says `Set Up Building`. Four `Logger` comments became `Logging`, and
+`// Status / Details row` lost the column that left in step 1.
+
+**`control/README.md` was the worst of it — nine wrong statements.** It still
+said saving arrives in version 2, listed five statuses with worst-wins, said
+the Sheets live in `My Drive/Projects`, described three tabs and two columns per
+item, told you to redeploy by hand in the editor, and pointed at a `.clasp.json`
+at the repo root that must never exist again. All rewritten.
+
+### The round — 52 checks, and every screen
+
+**52 assertions in the browser**, against the real `common.js` on the real
+`0.2` files. The outbox and the local copies were snapshotted and restored
+around every block, so Miguel's own phone state is untouched.
+
+| Block | Result |
+|---|---|
+| The rollup rule, plan 3.4, all five tests in order | 11/11 |
+| `displayStatus` — store what is set, display what is true | 4/4 |
+| The needed-line normaliser | 3/3 |
+| Three Progress values, `worst()` and `ROLLUP_ORDER` gone | 4/4 |
+| The keyed shelf: replace, paint, hold, retap, counts | 12/12 |
+| **PLAN CALL 1 — the JSONP slicing rule** | 5/5 |
+| Chips: order, Fixed feeds, Cancelled never, groups, near-match, fold | 5/5 |
+| The ten-copy limit and `04`'s exemption | 8/8 |
+
+**Three "failures" were the harness, not the app, and each one is worth
+writing down:**
+
+1. `displayStatus` takes a status **key**, not a Sheet label. Proved by
+   fetching Elsliger 36-B off the live backend: `copy.status` holds
+   `complete` / `not_started` / `in_progress` and nothing else.
+2. Chips are built from **every building on the phone**, so Miguel's real
+   Elsliger copy joined the test pool and crowded the top three. That is the
+   rule working. Re-run in isolation.
+3. **`setProject` calls `touch()`, which stamps `Date.now()`.** Eleven copies
+   written inside one millisecond all get the same stamp, so "least recently
+   opened" has nothing to sort on and the drop falls to localStorage key
+   order. **The tie-break is undefined.** Harmless in use — a person opens
+   buildings minutes apart — but do not write a test that ignores it.
+
+**All seven screens loaded for real, in 390px iframes, with an error listener
+on each: zero thrown errors.** Hub, Buildings, Building, Unit, Logging, Set Up
+Building, Queue. Unit 101 of Elsliger 36-B drew 13 items under `PHASE 1/2/3`.
+**The Building header drew `Elsliger 36-B` immediately** — no flash of the
+literal word `Building`, which is plan 5.3's fix holding.
+
+**One live proof after the deploy**, read back off the web app rather than
+trusting clasp's own output:
+
+```
+?action=create-project&name=   ->  {"success":false,"error":"Enter a building name."}
+```
+
+### Not tested
+
+- **Nothing on a real phone.** Everything below is still Miguel's to look at.
+- The nudge on an actual iPhone, in Safari and then installed. The rule is
+  proved in Chrome; what is unproved is that iOS reports `standalone` the way
+  the code expects on his phone.
+- A real unit walked end to end in airplane mode, which is plan section 6's
+  own step 6 test and needs a job site.
+
+### Open
+
+- **One OPEN row left in `crew-words.md`: `Deficiencies`**, the greyed Hub
+  card. Open on purpose until the 0.3 window is designed. It did not block
+  this release and it was not meant to.
+- `Can not` vs `cannot` still both appear. The refusal panel spelling comes
+  from plan 5.10 word for word. **Left alone deliberately** — Miguel has read
+  that panel through two test rounds without flagging it, and a one-word churn
+  on the ship commit buys nothing.
+- `Select at least one item to track.` uses `Select` where every dropdown uses
+  `Choose`. Same reasoning: he has read it and not flagged it. Noted, not
+  changed.
+- The phone checks session 16 left open, minus the pinned Save which session 20
+  closed by deletion: the overscroll fix, the chip x at thumb size, the grey
+  wifi mark at 15px, and his call on the wifi slash.
+
+### Next
+
+**0.3, or a 0.2.x patch if the phone finds something.** The patch rule stands:
+ship a `0.2.x` only when the defect costs someone time every day, or blocks
+releasing at all. Everything else waits.
+
+To open the next milestone: `powershell -File tools/bump-version.ps1 -Dev 0.3.0`.

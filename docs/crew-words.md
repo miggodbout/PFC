@@ -258,6 +258,42 @@ and the `Phase not found` and `Unit not found` beside it. They predate 0.2 and n
 tap can reach one — the dropdowns only offer values the same answer named. Left
 as they are.
 
+## The install note — checked 2026-08-09, in step 6
+
+Step 6 added one new thing a crew member reads: a small note, drawn only when
+the app is running in a browser tab, asking for it to be added to the Home
+Screen. It is dismissible and it draws once per visit.
+
+**It earns its place under the actionable rule twice over.** The person can act
+on it, and it is also a warning — a browser tab really does lose queued edits
+after seven days. This is not decoration.
+
+| String | Where | Status |
+|---|---|---|
+| `Add PFC Control to the Home Screen` | the note's title | The action, stated first. `Home Screen` is the phone's own name for the place |
+| `A browser can lose your queued edits.` | under it | One short active sentence, and it names the actor. `edits` and `queued` are both settled above. It says what is at stake, not how iOS works |
+| `Share` › `Add to Home Screen` | the two steps, drawn as keys | **These are the words iOS prints on those buttons**, so the note and the phone read the same. Drawing them as a path rather than writing them into a sentence also means the note needs no verb — this app has never settled on `tap` or `press`, and it did not have to here |
+| `Hide this note` | the x, for a screen reader only | Names the action. The x itself is the same glyph the suggestion chips use |
+
+**The note never says the word `install`.** It is the developer's word for it.
+What a person does is add an icon to the Home Screen, which is what the title
+says and what the phone's own buttons say.
+
+## Two strings the step 6 sweep corrected
+
+Neither was found by reading a row in this file. Both were found by grepping the
+code for words this file has already settled.
+
+| Was | Now | Why |
+|---|---|---|
+| `This project Sheet was made by an older version of PFC Control` | `This building was made by an older version of PFC Control` | **Building on every screen**, and `Sheet` explaining the plumbing was already settled as cut. The person has to make the building again, and naming the file does not help them do it. In the backend, `configVersionError` |
+| `Enter a project name.` | `Enter a building name.` | The screen already said `Enter a building name.` and the backend said `project`. Only one of the two can be reached by tapping, but two spellings of one refusal is how a screen drifts |
+
+**A crew-facing string can live in the backend.** Session 19 found two on the
+Set Up Building lists card. These are two more. Grep `Code.js` for a settled
+word before calling a vocabulary pass done — the front end is not the only place
+a sentence is written.
+
 ## Open rows
 
 A word this file does not cover gets a row here rather than a guess at build
