@@ -1284,3 +1284,188 @@ real answer.
 
 **Next:** merge to `main` when Miguel says so, then the step 3 test round — the
 gate. Step 4 does not start before that round reports back.
+
+---
+
+## Session 12 — 2026-08-09
+
+**Step:** the step 3 **test round** — the gate before step 4. No code was
+changed. This entry is the reply to Miguel's fifteen findings.
+
+**Branch:** `0.2` at `b6ec578`. **Merged to main:** yes, already — `7275731`
+carries blocks 3 to 5 onto `main`, so session 11's "the merge is not done" is
+now closed.
+**Deployed:** nothing new. Backend still Apps Script version 9.
+**CACHE_NAME:** unchanged at `pfc-control-0.2-step3-fix5`.
+
+### First: I was on the right build
+
+Unregistered the Service Worker and deleted every cache before starting, then
+reloaded from the network. `https://miggodbout.github.io/PFC/control/sw.js`
+serves `pfc-control-0.2-step3-fix5`, and the browser re-cached that same name.
+`origin/main` holds it too. Nothing below was read off `fix4`.
+
+Driven in Chrome at desktop width against the live backend and the first ZZ
+Sheet (`1-Fa_75qo…`). I set real items Complete to make the bars show, which
+that Sheet was cleared for.
+
+### The fifteen points
+
+**1 — greyed Complete. Confirmed as planned, wording only.** Interior Doors on
+unit 101 carries an open deficiency. Its dropdown draws `Complete` dimmed, it
+does not respond to a tap, and one line sits under the panel reading
+`Fix the open issue first. Then Complete comes back.` `flag` is gone. The
+redesign Miguel asked for — normal colour, red dot, message only on tap — is
+**not built**, which is what step 4 owns.
+
+**2 — two dictionaries. Confirmed.** `docs/code-words.md` and
+`docs/crew-words.md` both exist. Spot-checked Hub, Buildings, Building, Unit,
+Queue and Set Up Building against the crew file: no `flag`, no `Outbox`, no
+`Drop`, no `Create Job`, and no `Project` or `Job` on any screen except the
+known OPEN `Job site tracker` on the Hub. `Delete` carries its own red outline
+and does not take half the row. Both unit-numbering notes match the file — the
+`Floors and units` shape gets the site-convention sentence, `Units only` gets
+`Units are numbered for now. Rename them when you know the addresses.`
+
+**3 — progress bars. Confirmed, all four parts.**
+
+- **Buildings row.** Project 1 answers `itemsDone 1 / itemsTotal 18` and drew a
+  6% sliver where the old code drew nothing. After I set five more items it read
+  33% against `1/6 Units done`. Project 2 is genuinely 0 done and correctly
+  draws no bar at all.
+- **Floor header.** Floor 1 drew a bar at 5 of 9 items while its count read
+  `1/3 Units done` — the bar in items, the count in units, exactly as asked.
+  Floor 2 draws a 1/9 sliver at `0/3 Units done`.
+- **Unit chip.** No regression. 101 orange at two thirds, 102 full green, 103
+  nothing at zero.
+- **Unit screen.** The bar sits under the pill, stretched to the pill's width.
+  It grew 33% → 67% → full green as I set the three items, and the pill turned
+  `Complete` with it. No repeat of the `#unit-pill` smoosh.
+- **Count text.** The new shape everywhere: `0/6 Units done`, `1/6 Units done`,
+  `1/3 Units done`, `2/3 Units done`, `0/3 Units done`.
+- **The no-bar rule holds** at every level.
+
+**4 — `Exterior Doors`. Confirmed.** Reads `Exterior Doors` in the default item
+list on Set Up Building. The key really moved too: a save aimed at
+`exterior_doors` on an old ZZ Sheet came back refused, which is the old
+`exterior_door_s` column being gone.
+
+**5 — spinners. Confirmed.** Setting an item drew exactly two rings: one beside
+that item's own status control, one in the sync bar. The phase header drew none.
+The unit pill drew none.
+
+**6 — Queue text and spinner too close to the box edge. NOT FIXED.** This is the
+one outright miss of the round. `.item` in `theme.css:727` is still
+`padding: 12px 2px`, unchanged since step 3 — `git log -S` finds no later commit
+touching it. On the Queue screen those rows sit inside a bordered `.card`, so
+measured live: card border at x=16, row text starts at x=19, and the ring ends
+3px short of the right border. Block 1 gave `Delete` its own shape and dropped
+the per-row reason, but never touched the padding. It does not show on the Unit
+screen because there the rows run under the page's own padding with no card
+around them.
+
+**7 — queue wording. Confirmed.** Empty Queue reads `Nothing waiting` over
+`All edits reached the server.` And the repeated offline sentence is gone: the
+reason prints on a held row only, never on a queued one.
+
+**8 — offline as a symbol. Confirmed as expected, and still split.** With one
+edit queued, chip 103 carried a blue round badge in its **top-left** corner
+while chip 101 carried the red `!` in its **top-right** — different colour,
+different corner, no overlap. **The sync bar still draws the grey slab**, which
+is the box Miguel named. Known, deliberate, and a one-line change.
+*Worth his eye:* at real chip size the blue glyph reads as a plain blue dot. The
+signal-bars-and-slash shape is not legible; colour and corner are doing all the
+work.
+
+**9 — the `!` marker. Confirmed.** Two genuine server refusals, not simulated
+ones — the server answered `Unit 999 is not in this building any more.` The red
+`!` badge drew on the unit chip's top-right corner and the sync bar read
+`2 edits did not save`. `Try again` sent it again and it came back held with the
+same reason. `Delete` cleared both and the empty state returned.
+
+**10 — the red `Saving` flash. Confirmed fixed at the root.** I put a DOM
+observer on the sync bar slot, went offline, and set an item. **Exactly one
+paint was recorded:** `syncbar syncbar--quiet` / `Offline · 1 edit queued`.
+There is no accent `Saving…` paint in the trace at all, so there is nothing left
+to flash. And nothing is stranded by the early return: firing the `online` event
+drained the queued edit immediately and the Sheet took it.
+
+**11 — the stale line and the header stack. Confirmed.** One bar, two lines:
+`Offline · 1 edit queued` on top, `updated Sun 4:50 AM` and `Queue ›` under it.
+Still on screen after 18 seconds and several redraws. There is no third header.
+
+**12 — `1 edit queued`. Confirmed**, singular, and `queued` not `wait`.
+
+**13 — `Outbox` → `Queue`. Confirmed** in all four places: the file is
+`queue.html`, the header reads `Queue`, the tab title reads
+`Queue — PFC Control`, and the sync bar link reads `Queue ›`.
+
+**14 — setup offline message. Confirmed unchanged.** Still three sentences:
+`This phone has no connection. The app opened from its saved copy. Move to a
+spot with signal, then try again.` Step 5.
+
+**15 — the false empty message. Confirmed unchanged, and still false.** Offline
+with two buildings cached, `Change a building` says `There are no buildings yet.
+Create one above.` Block 1's word sweep turned `saved projects` into
+`buildings`, so the sentence moved but the lie did not. Step 5. This is still
+the worse of the two.
+
+### Regressions
+
+**None found.** The four things the fix round touched were all exercised:
+
+- **Rollup.** Setting three items Complete on unit 102 turned its phase pill,
+  its unit pill and its chip green in step, and lifted Floor 1 from `0/3` to
+  `1/3 Units done` and the building from `0/6` to `1/6`.
+- **Sync bar.** All shapes rendered: `Saving 1 edit…` in accent online,
+  `Offline · 1 edit queued` quiet, `2 edits did not save` in red, the combined
+  `Offline · 1 edit queued · 2 did not save`, the stale two-line shape, and
+  genuinely nothing at all when online with an empty queue.
+- **Queue drain.** Edits made online land in a few seconds. An edit made offline
+  waits and goes out the moment the phone is back. `Try again` and `Delete` both
+  work. The queue was empty at the end.
+- **Unit header.** Pill and bar stack cleanly. No smoosh.
+
+No console errors on any screen. The offline shell cache holds all eleven
+`SHELL` entries **including the renamed `tracker/queue.html` and
+`setup/index.html`**, which was HANDOFF's "works on a desk, blank in a basement"
+warning — cleared, at least as far as a browser can tell.
+
+### Four things worth a look, none of them on his list
+
+- **A queued row's ring spins for ever while offline.** The `spin` animation
+  runs at 0.75s on the Unit screen and on the Queue screen even though nothing
+  is being sent and the bar two lines above says `Offline`. A spinner that never
+  stops says "working" when nothing is working.
+- **A held row can print a raw code key.** `Item exterior_doors is not in this
+  building any more.` is a server string, and it reaches a crew screen with the
+  underscore key in it. Fixable in `Code.js` by sending the label.
+- **The Unit screen gives no sign of an open issue on the row.** Today the only
+  way to find one is to open the dropdown and see `Complete` greyed. That is
+  what step 4's records fix, and it is the same ground point 1's redesign
+  stands on.
+- **Offline with an empty, fresh queue draws no bar at all.** Miguel's sketch has
+  `■ Offline · updated 1:22 AM` for that row, but the code only draws it once a
+  fetch has actually failed. Defensible — the app never warns a copy *might* be
+  old — but it does mean the phone says nothing about signal until something
+  fails.
+
+### For Miguel — a browser cannot do these
+
+1. **A real phone, at chip size.** The blue queued glyph and the red `!` corner
+   badge, side by side on a 77px chip.
+2. **A real phone, the Unit screen corner.** Pill over bar at phone width.
+3. **Real airplane mode on site.** The shell cache is complete, so it should
+   open. Nobody has proved it on a phone.
+4. **Two decisions.** Point 8's second half — give the sync bar `ICON.offline`
+   instead of the grey slab, one line. And point 6 — patch now, or roll the
+   padding into step 4.
+
+### Is step 4 clear to start?
+
+**Yes.** Fourteen of the fifteen points are where they should be, and the one
+miss is a padding value on one screen that blocks nothing. Points 1, 14 and 15
+are deliberately still open and belong to step 4 and step 5.
+
+**Next:** step 4 — records, Logging, chips — plus fresh unsaturated test Sheets,
+and point 6 folded in.
