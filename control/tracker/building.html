@@ -65,7 +65,16 @@ if (!projectId) {
   }
 
   mountSyncBar();
-  Outbox.onChange(function () { if (copy) render(); });
+
+  // RE-READ THE COPY, DO NOT JUST REDRAW. When an edit lands, the drain
+  // writes the value into the STORED copy and takes the job off the shelf.
+  // This screen is holding its own object from before that, so redrawing it
+  // alone would lose the paint and show the value the tap replaced.
+  Outbox.onChange(function () {
+    if (!copy) return;
+    copy = Store.project(projectId) || copy;
+    render();
+  });
 
   refresh();
   enablePullToRefresh(function () {
