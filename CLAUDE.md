@@ -17,6 +17,18 @@ This file gives Claude Code persistent context for this repo. Read it before mak
 
 This does not apply to code syntax or variable names.
 
+**Two dictionaries carry this standard, in `docs/`.** Both were started on
+2026-08-09, after the 0.2 step 3 test round found crew-facing screens using words
+the crew does not use.
+
+- `docs/crew-words.md` — **the rule book for text on a screen.** Check every new
+  UI string against it before writing the string. A word it does not cover gets a
+  new row marked OPEN, never a guess. An OPEN row does not block building a
+  screen; it blocks shipping one.
+- `docs/code-words.md` — plain-English definitions of the coding terms used on
+  this project, for Miguel. Reference only. It never changes the app. If a term
+  comes up in a session and is not in there, add it.
+
 **Everything else — documentation, comments, commit messages, chat — is written plainly, not formally.** The goal is no filler, not stiffness. Contractions are fine. Cut marketing adjectives, hedging, padding, and restated points. Say a thing once and move on.
 
 ---
