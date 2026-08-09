@@ -771,7 +771,7 @@ function writeRecordJob(ss, job) {
     var value = record[name];
     if (name === 'quantity') return parseInt(value, 10) || 1;
     // created and closed go in as real dates so the tab sorts by them.
-    if ((name === 'created' || name === 'closed') && value) return new Date(value);
+    if (name === 'created' || name === 'closed') return dayValue(value);
     return (value === undefined || value === null) ? '' : value;
   });
 
@@ -780,6 +780,28 @@ function writeRecordJob(ss, job) {
 
   sheet.getRange(row, 1, 1, DEFICIENCY_COLUMNS.length).setValues([cells]);
   return { key: job.key, ok: true };
+}
+
+
+/**
+ * Turns "2026-08-08" into a Date at MIDNIGHT LOCAL TIME.
+ *
+ * new Date('2026-08-08') does not do this. A date-only string is read as
+ * UTC midnight, and this script runs on Atlantic time, so the Sheet stored
+ * 2026-08-07 9:00 PM and the cell printed 2026-08-07. A record logged this
+ * morning would be dated yesterday, in the tab a supplier claim is built
+ * from. Found live on 2026-08-09, in the step 3 test round.
+ *
+ * Anything that is not yyyy-mm-dd falls through to the normal parse, and
+ * an empty value stays an empty cell.
+ */
+function dayValue(value) {
+  if (!value) return '';
+
+  var parts = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!parts) return new Date(value);
+
+  return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
 }
 
 
