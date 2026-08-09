@@ -1601,3 +1601,148 @@ check.** It is three commands and one `CACHE_NAME` that is already raised.
    the rebuild, `cancel-item-records`, the removal refusal panel, and test
    points 14 and 15, which are the two false offline messages on the
    Set Up Building screen.
+
+## Session 14 — 2026-08-09
+
+**Step:** 4 — the browser test round session 13 could not run.
+**Branch:** `0.2`, unchanged. **No code was touched this session.**
+**Deployed:** nothing. Backend still Apps Script version 9.
+**Merged to main:** **no.** One real defect found. See below.
+
+Miguel asked for the step 4 testing. The protocol says step 4 is a smoke
+check, not a round — but step 4 was built blind, so this was run as a full
+round against the plan section 6 step 4 list.
+
+**How it was driven.** The `0.2` branch is not on GitHub Pages, so the app
+was served from `python -m http.server` at `127.0.0.1:8765` and driven in
+Chrome against the live Apps Script backend and the real `ZZ 0.2 Step 3
+Test` Sheet. Offline was simulated by overriding `navigator.onLine` and
+rejecting `fetch`, because this session had no DevTools throttle. Records
+were written to the ZZ Sheet freely — it is junk and already on the trash
+list.
+
+### The six plan tests
+
+**1 — a record logged with no signal flags the item before it lands.
+Confirmed.** Saved `Bypass · 32 6 RH` on unit 202 offline, opened the unit,
+and the issue chip drew while the job was still on the shelf.
+
+**2 — Complete is blocked, and comes back by itself. Confirmed.** The
+dropdown refused Complete on the flagged item, `Fix all 2` closed both
+records, and after that Complete was selectable again with no write of its
+own.
+
+**3 — a record on an already-Complete item. Confirmed.** Windows on 202 was
+stored `complete`. After logging `sash cracked` the screen read
+`In Progress` with a 1 chip, and the stored value was still `complete`.
+Store what is set, display what is true.
+
+**4 — the same needed line three times. Confirmed.** The chip row read
+`32 6 RH` then `28 6 RH`, most used first. Typing `28` filtered to one
+chip. On Save, `32" 6" RH` raised the near-match prompt —
+`This phone already has 32 6 RH. You typed 32" 6" RH.` — and `Keep mine`
+saved the typed spelling.
+
+**5 — cancel takes the chip back. Confirmed, after a redraw.** The row went
+to `Cancelled` and the record went Cancelled in the copy, but the chip only
+disappeared after the page was reloaded. Same root cause as the defect
+below.
+
+**6 — the eleventh building. Confirmed.** With ten copies held and distinct
+seen times, the eleventh dropped the least recently seen, the phone stayed
+at ten, and the dropped building's needed line was still offered as a chip
+out of the history index. Worth knowing: when several copies share the same
+`seen` millisecond the drop order is arbitrary. Only reachable in a
+synthetic test, and one real tap apart is enough to separate them.
+
+### The defect — a landed record does not refresh the screen
+
+**One cause, three faces.**
+
+`applyOutcome` in `common.js` takes a landed job off the shelf with
+`Store.removeJob`, which fires `Queue.changed()` **before** the fold runs.
+Every screen listening redraws from the copy as it was before the fold. The
+fold, `Store.foldLanded`, then writes the copy and tells nobody: it does not
+call `Queue.changed()` and it does not move `jobsRev`, which is the only
+thing `paintedRecords` watches. So the memo keeps serving the pre-fold list
+until the next outbox write or a reload.
+
+Seen three times:
+
+- **The issue chip count drops when the record lands.** Chip read `2` while
+  queued, `1` one second later, with the record Open in the copy. On the
+  last record of an item, the chip disappears and Complete unblocks.
+- **`Fix all 2` left one row drawn as still open**, with its own `Fixed`
+  button, while both records were Fixed in the copy and the green card
+  above them said every record was fixed.
+- **A cancelled line stayed in the chip pool** on the Logging screen.
+
+Why it matters: the crew logs an issue in a basement, walks into signal,
+opens the unit, and the issue they just logged vanishes off the row. The
+comment above `foldLanded` says exactly what must not happen, and the fold
+does its half of the job — the screen just never learns.
+
+**The fix is small.** Either run the `foldLanded` loop before the removeJob
+pass in `applyOutcome`, or add `jobsRev += 1; Queue.changed();` to the end
+of `foldLanded` when `touched`. Not applied — the round's rule is to
+collect findings and let Miguel decide, and nothing here blocked the round.
+
+Item status edits were not seen to go stale the same way. Only records.
+
+### Also confirmed, none of it on the plan's list
+
+- **Test point 1, rebuilt.** Complete keeps its own green, carries a small
+  red dot, and the line `Fix the open issue first. Then Complete comes
+  back.` appears only after the row is tapped. The tap sets nothing.
+- **Test point 6, the Queue padding.** Rows now sit 12px in from the card
+  edge. `Try again` and `Delete` are different shapes.
+- **A Waiting record on a whole phase** lands on the phase header with its
+  own kind and count, beside a Deficiency count on an item below it.
+- The Logging screen: place bar in two fixed lines, `set unit` before and
+  `change` after, the sheet asking `Where are you?`, Subtype drawn only on
+  an item that defines types, the item's hint as the Needed placeholder,
+  the unit box printing the floor it found and refusing `999` by name, the
+  phone remembering building and phase and never the unit, both `Other`
+  boxes, `Logged here` carrying the send state and a Cancel that writes
+  Cancelled.
+- Save is disabled at half opacity until the form is complete.
+- The Hub card, `./logging/index.html` in the Service Worker SHELL, and no
+  console error on any screen all round.
+
+### Small things, none of them blocking
+
+- **Escape does not close the status menu.** Tapping outside does.
+- **`Whole phase — Phase 1 — Doors & Windows`** reads with two dashes,
+  because the phase label already carries `Phase 1 —`. `crew-words.md`
+  writes it as `Whole phase — Doors & Windows`.
+- **Two crew-facing sentences are missing from `crew-words.md`**, which says
+  it lists every string the screen draws: the near-match sentence
+  (`This phone already has …`) and the green card question (`Every record on
+  X is fixed. Set it to Complete?`). Only their buttons are listed.
+- **Save says nothing about which field is missing.** The dimmed button is
+  the only signal.
+- Carried over and still true: a queued row's ring spins for ever while
+  offline, and the sync bar's offline mark is still the grey slab.
+
+### For Miguel — a browser cannot do these
+
+1. **The pinned Save on a real phone**, with the keyboard up and the Needed
+   box focused. PLAN CALL 3. This is the one part of step 4 nothing here
+   can prove.
+2. The chips and the red `!` at chip size, still unproven on a phone.
+3. Real airplane mode on site.
+
+### Open
+
+- **Fix the landed-record refresh before merging to `main`.** Main is what
+  his phone serves, and this is the one defect in step 4 that loses work in
+  a way the crew can see.
+- The two OPEN words, `Subtype` and `Needed`, are still open. They block
+  shipping 0.2, not building it.
+
+### Next
+
+1. The one-line fix above, then a re-check of the three faces, then merge
+   `0.2` to `main` and push. `CACHE_NAME` is already at
+   `pfc-control-0.2-step4`.
+2. Then step 5 — Admin, and test points 14 and 15.
