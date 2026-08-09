@@ -42,6 +42,48 @@
   .op-msg { font-size: 13px; line-height: 1.45; }
   .op-msg.good { color: var(--good); }
   .op-msg.bad  { color: var(--danger); }
+
+  /* The removal refusal, inside the Remove an item card. It carries a left
+     edge in the danger colour so it does not read as another op card. */
+  .refusal {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 4px; padding: 12px;
+    border-radius: 10px;
+    border-left: 3px solid var(--danger);
+    background: rgba(240, 128, 128, 0.07);
+  }
+  .refusal-line { font-size: 14px; font-weight: 700; color: var(--fg-2); }
+  .refusal-note { font-size: 12.5px; color: var(--fg-5); line-height: 1.45; }
+
+  /* The Lists card */
+  .list-label {
+    font-size: 12.5px; font-weight: 700;
+    color: var(--fg-5);
+    margin-top: 8px;
+  }
+  .list-sub {
+    display: flex; flex-direction: column; gap: 10px;
+    padding-left: 10px;
+    border-left: 2px solid var(--accent-2-line);
+  }
+  /* The add row is indented in the create form, where it sits under a
+     checkbox. Here it sits under a label, so the indent comes off. */
+  .op-card .add-row { margin: 0; }
+
+  /* A read-only list of values. Add-only, so no value carries an x. */
+  .value-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .value-chip {
+    font-size: 13px; color: var(--fg-3);
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: var(--accent-chip);
+    border: 1px solid var(--accent-chipbd);
+  }
+
+  /* The reason trim. Two columns where the width allows it. */
+  .trim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .trim-grid .check { min-height: 40px; }
+  .trim-grid .check-label { font-size: 14px; }
 </style>
 </head>
 <body>
@@ -336,7 +378,11 @@ function submitForm() {
   }).then(function (result) {
     draft.busy = false;
     if (!result.ok) {
-      draft.error = reasonText(result.reason, result.detail);
+      // Offline gets its own sentence here. The shared one talks about a
+      // saved copy, and there is no such thing as a saved copy of a
+      // building that was never made. Step 3 test round, point 14.
+      draft.error = failText(result.reason, result.detail,
+                             'The app did not create the building.');
       return render();
     }
     created = result.data;
@@ -368,10 +414,25 @@ var edit = {
   open: false,
   loading: false,
   projects: [],
+  listError: null,     // { reason, detail } when the building list failed
   projectId: '',
   structure: null,
   message: '',
-  good: false
+  good: false,
+
+  // The removal refusal. blocked holds the server's counts; confirm is the
+  // second tap, which is the only friction a bulk cancel gets.
+  blocked: null,
+  confirm: false,
+
+  // The Lists card. listItemKey picks which item the item-level lists show.
+  // The trim and the hint are edited as a working copy and sent whole, so a
+  // redraw between two ticks cannot lose the first one.
+  listItemKey: '',
+  trimDraft: [],
+  hintDraft: '',
+  typeDraft: '',
+  reasonDraft: ''
 };
 
 function editSectionHtml() {
@@ -388,10 +449,17 @@ function editSectionHtml() {
   var choices = edit.projects;
 
   if (choices.length === 0) {
-    return head + '<div class="op-card card"><div class="op-msg">' +
-      escapeHtml(API_URL
-        ? 'There are no buildings yet. Create one above.'
-        : reasonText('not-configured')) +
+    // A FAILED LIST AND AN EMPTY LIST ARE NOT THE SAME THING. Both arrive
+    // here as no buildings, and saying "there are none yet" over a dead
+    // connection tells the person their work is gone. Found in the 0.2 step
+    // 3 test round, point 15.
+    return head + '<div class="op-card card"><div class="op-msg' +
+      (edit.listError ? ' bad' : '') + '">' +
+      escapeHtml(edit.listError
+        ? failText(edit.listError.reason, edit.listError.detail,
+                   'The app can not load the buildings.')
+        : (API_URL ? 'There are no buildings yet. Create one above.'
+                   : reasonText('not-configured'))) +
       '</div></div>';
   }
 
@@ -456,6 +524,19 @@ function editOpsHtml(structure) {
       '<div class="field-note">The item loses its Progress column. Every other column keeps its values.</div>' +
       '<select class="input" id="e-remove-item">' + itemOptions.join('') + '</select>' +
       '<button type="button" class="btn btn-ghost btn-small press" onclick="runOp(\'remove-item\')">Remove item</button>' +
+      refusalHtml() +
+    '</div>' +
+
+    /* Rename an item — the label moves, the key never does. Without this
+       card, fixing a typo costs a remove plus an add, and the new item gets
+       a new key: every issue logged against the old one is orphaned, and
+       its subtypes, its reasons and every unit's Progress go with it. */
+    '<div class="op-card card">' +
+      '<div class="op-title">Rename an item</div>' +
+      '<div class="field-note">The name changes everywhere. Progress and issues stay with the item.</div>' +
+      '<select class="input" id="e-rename-item">' + itemOptions.join('') + '</select>' +
+      '<input class="input" id="e-rename-item-label" type="text" placeholder="New name" autocomplete="off">' +
+      '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'rename-item\')">Rename item</button>' +
     '</div>' +
 
     /* Add a unit */
@@ -472,7 +553,161 @@ function editOpsHtml(structure) {
       '<select class="input" id="e-rename-unit">' + unitOptions.join('') + '</select>' +
       '<input class="input" id="e-rename-label" type="text" placeholder="New name" autocomplete="off">' +
       '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'rename-unit\')">Rename unit</button>' +
+    '</div>' +
+
+    listsHtml(structure);
+}
+
+
+/* ── THE REMOVAL REFUSAL ──────────────────────────────────────────── */
+/*
+   An item holding open issues is not removed. The server counts them and
+   refuses, and this panel offers the one action that unblocks it.
+
+   IT IS TWO STEPS ON PURPOSE. Cancel all does not remove the item. You
+   press Remove item again afterwards, which is why the panel says so. A
+   bulk cancel has no Undo, so the confirm below is the only friction there
+   is.
+
+   Cancelled, never Fixed. Removing an item says PFC is not doing that work
+   on this job. Fixed would say somebody repaired them.
+*/
+function refusalHtml() {
+  var stop = edit.blocked;
+  if (!stop) return '';
+
+  var count = stop.records;
+  var issue = count === 1 ? 'issue' : 'issues';
+
+  if (edit.confirm) {
+    return '<div class="refusal">' +
+      '<div class="refusal-line">Cancel ' + count + ' ' + issue + '?</div>' +
+      '<div class="refusal-note">This can not be undone.</div>' +
+      '<button type="button" class="btn btn-ghost btn-small press" onclick="cancelAll()">' +
+        'Yes, cancel ' + count + '</button>' +
+      '<button type="button" class="btn btn-ghost btn-small press" onclick="closeConfirm()">Back</button>' +
     '</div>';
+  }
+
+  return '<div class="refusal">' +
+    '<div class="refusal-line">Can not remove ' + escapeHtml(stop.label) + '.</div>' +
+    '<div class="refusal-note">It holds ' + count + ' open ' + issue + ' across ' +
+      stop.units + ' ' + (stop.units === 1 ? 'unit' : 'units') + '.</div>' +
+    '<button type="button" class="btn btn-ghost btn-small press" onclick="openConfirm()">' +
+      'Cancel all ' + count + ' ' + issue + '</button>' +
+    '<div class="refusal-note">Then remove the item again.</div>' +
+  '</div>';
+}
+
+
+/* ── THE LISTS CARD ───────────────────────────────────────────────── */
+/*
+   One card, two levels. The building's reason list at the top, then one
+   item dropdown serving all three item-level lists below it. Two cards
+   would make you pick the item twice to set up one item.
+
+   ADD IS ADD-ONLY. There is no Delete button on a reason or a subtype, and
+   there must never be one: a saved issue stores the value as text, so a
+   value that stopped existing would leave rows pointing at nothing.
+
+   The trim and the hint are different, and both are freely reversible. A
+   trim removes no value from any list — it only decides what one item's
+   dropdown offers next time — and the hint is one line of grey text.
+
+   None of this rebuilds the Tracker tab. A list change moves no column.
+*/
+function listsHtml(structure) {
+  var reasons = structure.reasons || [];
+  var item    = itemInStructure(structure, edit.listItemKey);
+
+  var itemPicker = '<select class="input" id="e-list-item" onchange="pickListItem(this.value)">' +
+      '<option value="">Choose an item…</option>' +
+      structure.phases.map(function (phase) {
+        return phase.items.map(function (one) {
+          return '<option value="' + escapeHtml(one.key) + '"' +
+                 (one.key === edit.listItemKey ? ' selected' : '') + '>' +
+                 escapeHtml(one.label) + '</option>';
+        }).join('');
+      }).join('') +
+    '</select>';
+
+  return '<div class="op-card card">' +
+    '<div class="op-title">Lists</div>' +
+
+    /* The building's reason list */
+    '<div class="list-label">Reasons for this building</div>' +
+    valueChips(reasons, 'No reasons yet.') +
+    '<div class="add-row">' +
+      '<input class="input input--sm" id="e-add-reason" type="text" placeholder="New reason" ' +
+             'autocomplete="off" value="' + escapeHtml(edit.reasonDraft) + '" ' +
+             'oninput="edit.reasonDraft = this.value" ' +
+             'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); runOp(\'add-reason\'); }">' +
+      '<button type="button" class="press" onclick="runOp(\'add-reason\')">Add</button>' +
+    '</div>' +
+
+    /* The item level */
+    '<div class="list-label">Item</div>' +
+    itemPicker +
+    (item ? itemListsHtml(item, reasons) : '') +
+  '</div>';
+}
+
+function itemListsHtml(item, reasons) {
+  var types = item.types || [];
+
+  return '<div class="list-sub">' +
+
+    '<div class="list-label">Subtypes</div>' +
+    valueChips(types, 'This item has no subtypes. It shows no Subtype box.') +
+    '<div class="add-row">' +
+      '<input class="input input--sm" id="e-add-type" type="text" placeholder="New subtype" ' +
+             'autocomplete="off" value="' + escapeHtml(edit.typeDraft) + '" ' +
+             'oninput="edit.typeDraft = this.value" ' +
+             'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); runOp(\'add-type\'); }">' +
+      '<button type="button" class="press" onclick="runOp(\'add-type\')">Add</button>' +
+    '</div>' +
+
+    '<div class="list-label">Reasons for ' + escapeHtml(item.label) + '</div>' +
+    '<div class="field-note">Choose the reasons this item offers. ' +
+      'A reason you leave out stays on the building list.</div>' +
+    '<div class="trim-grid">' +
+      reasons.map(function (reason) {
+        // Ticked means the item OFFERS it. The trim stores the opposite,
+        // because an empty trim is the common case and it offers all eight.
+        return checkRow(edit.trimDraft.indexOf(reason) < 0, escapeHtml(reason),
+                        'toggleTrim(' + escapeHtml(jsStr(reason)) + ')');
+      }).join('') +
+    '</div>' +
+    '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'set-trim\')">' +
+      'Save the reasons</button>' +
+
+    '<div class="list-label">Hint</div>' +
+    '<div class="field-note">The grey text inside the empty Needed box.</div>' +
+    '<input class="input input--sm" id="e-hint" type="text" placeholder="e.g. Size   Jamb   Swing" ' +
+           'autocomplete="off" value="' + escapeHtml(edit.hintDraft) + '" ' +
+           'oninput="edit.hintDraft = this.value">' +
+    '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'set-hint\')">' +
+      'Save the hint</button>' +
+  '</div>';
+}
+
+/** A read-only row of values, or one line saying the list is empty. */
+function valueChips(values, emptyText) {
+  if (!values.length) return '<div class="field-note">' + escapeHtml(emptyText) + '</div>';
+  return '<div class="value-chips">' +
+    values.map(function (value) {
+      return '<span class="value-chip">' + escapeHtml(value) + '</span>';
+    }).join('') +
+  '</div>';
+}
+
+function itemInStructure(structure, itemKey) {
+  if (!itemKey) return null;
+  var found = null;
+  structure.phases.forEach(function (phase) {
+    phase.items.forEach(function (one) { if (one.key === itemKey) found = one; });
+  });
+  return found;
 }
 
 function toggleEdit() {
@@ -483,10 +718,7 @@ function toggleEdit() {
     render();
     loadProjects().then(function (result) {
       edit.loading = false;
-      // A failed list answers with an error and no buildings. This screen
-      // runs on a computer with signal, so the empty message below is
-      // enough. Step 5 owns its offline behaviour.
-      edit.projects = result.projects || [];
+      applyProjectList(result);
       render();
     });
     return;
@@ -494,10 +726,23 @@ function toggleEdit() {
   render();
 }
 
+/** Files a building-list answer, keeping a failure apart from an empty list. */
+function applyProjectList(result) {
+  if (result.source === 'error') {
+    edit.listError = { reason: result.reason, detail: result.detail };
+    return;
+  }
+  edit.listError = null;
+  edit.projects  = result.projects || [];
+}
+
 function pickProject(id) {
   edit.projectId = id;
   edit.structure = null;
   edit.message = '';
+  clearRefusal();
+  edit.listItemKey = '';
+  seedListDrafts(null);
   render();
   if (!id) return;
 
@@ -507,13 +752,69 @@ function pickProject(id) {
       edit.good = false;
     } else {
       edit.structure = result.data;
+      seedListDrafts(itemInStructure(result.data, edit.listItemKey));
     }
     render();
   });
 }
 
+
+/* ── THE LISTS CARD, ACTIONS ──────────────────────────────────────── */
+
+/* The trim and the hint are edited as a working copy, then sent whole.
+   Every tick redraws the card, so reading them off the elements at save
+   time would lose whatever the redraw threw away. */
+function seedListDrafts(item) {
+  edit.trimDraft = item && item.trim ? item.trim.slice() : [];
+  edit.hintDraft = item && item.hint ? item.hint : '';
+  edit.typeDraft = '';
+}
+
+function pickListItem(itemKey) {
+  edit.listItemKey = itemKey;
+  edit.message = '';
+  seedListDrafts(itemInStructure(edit.structure, itemKey));
+  render();
+}
+
+function toggleTrim(reason) {
+  var at = edit.trimDraft.indexOf(reason);
+  if (at < 0) edit.trimDraft.push(reason);
+  else edit.trimDraft.splice(at, 1);
+  render();
+}
+
+
+/* ── THE REMOVAL REFUSAL, ACTIONS ─────────────────────────────────── */
+
+function openConfirm()  { edit.confirm = true;  render(); }
+function closeConfirm() { edit.confirm = false; render(); }
+
+function clearRefusal() {
+  edit.blocked = null;
+  edit.confirm = false;
+}
+
+function cancelAll() {
+  var stop = edit.blocked;
+  if (!stop) return;
+
+  clearRefusal();
+  setEditMessage('Working…', true);
+
+  cancelItemRecords(edit.projectId, stop.itemKey).then(function (result) {
+    if (!result.ok) return setEditMessage(reasonText(result.reason, result.detail), false);
+
+    var count = (result.data && result.data.cancelled) || 0;
+    setEditMessage(count + ' ' + (count === 1 ? 'issue is' : 'issues are') +
+                   ' cancelled. Remove the item again.', true);
+  });
+}
+
+
 function runOp(op) {
   var payload = { id: edit.projectId, op: op };
+  var picked;
 
   if (op === 'add-item') {
     payload.phaseKey = valueOf('e-add-phase');
@@ -521,10 +822,17 @@ function runOp(op) {
     if (!payload.label.trim()) return setEditMessage('Enter an item name.', false);
 
   } else if (op === 'remove-item') {
-    var picked = valueOf('e-remove-item').split('::');
+    picked = valueOf('e-remove-item').split('::');
     payload.phaseKey = picked[0];
     payload.itemKey = picked[1];
     if (!payload.itemKey) return setEditMessage('Choose an item.', false);
+
+  } else if (op === 'rename-item') {
+    picked = valueOf('e-rename-item').split('::');
+    payload.itemKey = picked[1];
+    payload.label = valueOf('e-rename-item-label');
+    if (!payload.itemKey) return setEditMessage('Choose an item.', false);
+    if (!payload.label.trim()) return setEditMessage('Enter a new name.', false);
 
   } else if (op === 'add-unit') {
     payload.groupKey = valueOf('e-add-group');
@@ -534,20 +842,77 @@ function runOp(op) {
     payload.unitKey = valueOf('e-rename-unit');
     payload.label = valueOf('e-rename-label');
     if (!payload.label.trim()) return setEditMessage('Enter a new name.', false);
+
+  } else if (op === 'add-reason') {
+    payload.value = edit.reasonDraft;
+    if (!payload.value.trim()) return setEditMessage('Enter a reason.', false);
+
+  } else if (op === 'add-type' || op === 'set-trim' || op === 'set-hint') {
+    payload.itemKey = edit.listItemKey;
+    if (!payload.itemKey) return setEditMessage('Choose an item.', false);
+
+    if (op === 'add-type') {
+      payload.value = edit.typeDraft;
+      if (!payload.value.trim()) return setEditMessage('Enter a subtype.', false);
+    } else if (op === 'set-trim') {
+      payload.trim = edit.trimDraft.slice();
+    } else {
+      payload.value = edit.hintDraft;
+    }
   }
+
+  // A new remove attempt starts clean. The old refusal counted records that
+  // Cancel all may since have closed.
+  if (op === 'remove-item') clearRefusal();
 
   setEditMessage('Working…', true);
 
   updateStructure(payload).then(function (result) {
-    if (!result.ok) return setEditMessage(reasonText(result.reason, result.detail), false);
+    if (!result.ok) {
+      // The server refuses a removal that would orphan open issues, and it
+      // sends the two counts with the refusal so this screen can offer the
+      // one action that unblocks it.
+      var stop = result.data && result.data.blocked;
+      if (stop) {
+        edit.blocked = stop;
+        edit.confirm = false;
+        return setEditMessage('', false);
+      }
+      return setEditMessage(reasonText(result.reason, result.detail), false);
+    }
 
     setEditMessage('Done. The building is updated.', true);
+    if (op === 'add-reason') edit.reasonDraft = '';
+
     // Read the structure back, so the lists show the change.
     loadStructure(edit.projectId).then(function (fresh) {
-      if (fresh.source !== 'error') edit.structure = fresh.data;
+      if (fresh.source !== 'error') {
+        edit.structure = fresh.data;
+
+        // An item that was just removed stops being the Lists card's item.
+        var still = itemInStructure(fresh.data, edit.listItemKey);
+        if (!still) edit.listItemKey = '';
+        seedListDrafts(still);
+      }
       render();
     });
   });
+}
+
+
+/**
+ * A failure sentence for a screen that holds no saved copy.
+ *
+ * The shared offline line says the app opened from its saved copy and to
+ * try again with signal. That is right on Tracking, which draws a copy.
+ * THIS SCREEN ALWAYS ASKS THE SERVER, so there is nothing to fall back to
+ * and nothing to see. It says what did not happen instead.
+ *
+ * Every other reason keeps the shared sentence. Only offline is wrong here.
+ */
+function failText(reason, detail, what) {
+  if (reason === 'offline') return 'No connection. ' + what;
+  return reasonText(reason, detail);
 }
 
 function setEditMessage(text, good) {
@@ -574,11 +939,14 @@ render();
 */
 enablePullToRefresh(function () {
   return loadProjects().then(function (result) {
-    edit.projects = result.projects || edit.projects;
+    applyProjectList(result);
     if (!edit.projectId) { render(); return; }
 
     return loadStructure(edit.projectId).then(function (fresh) {
-      if (fresh.source !== 'error') edit.structure = fresh.data;
+      if (fresh.source !== 'error') {
+        edit.structure = fresh.data;
+        seedListDrafts(itemInStructure(fresh.data, edit.listItemKey));
+      }
       render();
     });
   }, function () { render(); });

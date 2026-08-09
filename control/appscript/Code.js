@@ -115,6 +115,20 @@ var MAX_JOBS_PER_BATCH = 100;
 var RECORD_STATES = ['Open', 'Fixed', 'Cancelled'];
 
 /**
+ * The structure ops that change a LIST and nothing else.
+ *
+ * Every other op moves a column or a row, so the Tracker tab is cleared and
+ * redrawn around it. These four touch the hidden _Config tab alone: a
+ * subtype, a reason, which reasons an item offers, and the grey text inside
+ * the Needed box. No column moves, so no status value can move either.
+ *
+ * handleUpdateStructure reads this list to skip the rebuild. Adding an op
+ * here is how a new list gets that treatment. Adding one that DOES move a
+ * column would silently leave the Sheet disagreeing with the config.
+ */
+var LIST_ONLY_OPS = ['add-reason', 'add-type', 'set-trim', 'set-hint'];
+
+/**
  * Fill for the Dashboard's open-flag count.
  * It is the old Deficiency fill. The colour stayed useful when the status
  * stopped existing.
@@ -140,10 +154,12 @@ var DEFICIENCY_COLUMNS = ['record_id', 'unit', 'phase', 'item', 'type', 'reason'
 
 /** Column numbers inside the Deficiencies tab, worked out from the list above. */
 var DEF_COL = {
-  unit:  DEFICIENCY_COLUMNS.indexOf('unit')  + 1,   // B
-  phase: DEFICIENCY_COLUMNS.indexOf('phase') + 1,   // C
-  type:  DEFICIENCY_COLUMNS.indexOf('type')  + 1,   // E
-  state: DEFICIENCY_COLUMNS.indexOf('state') + 1    // K
+  unit:   DEFICIENCY_COLUMNS.indexOf('unit')   + 1,   // B
+  phase:  DEFICIENCY_COLUMNS.indexOf('phase')  + 1,   // C
+  item:   DEFICIENCY_COLUMNS.indexOf('item')   + 1,   // D
+  type:   DEFICIENCY_COLUMNS.indexOf('type')   + 1,   // E
+  state:  DEFICIENCY_COLUMNS.indexOf('state')  + 1,   // K
+  closed: DEFICIENCY_COLUMNS.indexOf('closed') + 1    // M
 };
 
 /** Theme colours, taken from the master template. */
@@ -225,6 +241,7 @@ function route(action, data) {
     case 'create-project':   return handleCreateProject(data);
     case 'update-structure': return handleUpdateStructure(data);
     case 'save-batch':       return handleSaveBatch(data.jobs);
+    case 'cancel-item-records': return handleCancelItemRecords(data);
     default:                 return { success: false, error: 'Unknown action: ' + action };
   }
 }
@@ -488,14 +505,27 @@ function handleGetStructure(id) {
     };
   });
 
-  // The item list goes out too. The Admin edit screen needs it to offer
-  // the right items to remove, and the Unit screen uses it to group items.
+  // The item list goes out too. The Set Up Building screen needs it to
+  // offer the right items to remove and to rename.
+  //
+  // EVERY phase goes out, not activePhases(config). An empty phase takes no
+  // columns, but Set Up Building is the one screen that can put an item back
+  // into it, and it cannot offer a phase the answer does not name.
+  //
+  // Each item carries its three lists, because the Lists card edits them.
+  // get-project sends the same three for Logging. Two callers, one shape.
   var phases = config.phases.map(function (phase) {
     return {
       key:   phase.key,
       label: phase.label,
       items: phase.items.map(function (item) {
-        return { key: item.key, label: item.label };
+        return {
+          key:   item.key,
+          label: item.label,
+          types: item.types || [],
+          trim:  item.trim  || [],
+          hint:  item.hint  || ''
+        };
       })
     };
   });
@@ -507,6 +537,7 @@ function handleGetStructure(id) {
     mode:      config.mode,
     url:       ss.getUrl(),
     unitCount: units.length,
+    reasons:   config.reasons || FALLBACK_REASONS.slice(),
     groups:    groups,
     phases:    phases
   };
@@ -962,16 +993,32 @@ function handleUpdateStructure(data) {
     var stale = configVersionError(config);
     if (stale) return { success: false, error: stale };
 
+    // An item holding open issues is not removed. The refusal carries the
+    // two counts, so the screen can offer to cancel them all.
+    if (data.op === 'remove-item') {
+      var blocked = removalBlock(ss, config, data.itemKey);
+      if (blocked) return blocked;
+    }
+
+    // A LIST CHANGE NEVER REBUILDS THE TRACKER TAB. Adding a subtype or a
+    // reason changes no column, so a rebuild could only put a status value
+    // back in the wrong place, and it would cost a full grid read and a
+    // redraw for a change nothing on the grid can see. These ops write the
+    // config alone.
+    var listOnly = LIST_ONLY_OPS.indexOf(data.op) >= 0;
+
     // Step 1 — keep the values that already exist.
-    var preserved = readAllValues(ss, config);
+    var preserved = listOnly ? null : readAllValues(ss, config);
 
     // Step 2 — change the structure.
     var message = applyStructureOp(config, data);
     if (message) return { success: false, error: message };
 
-    // Step 3 — rebuild.
-    rebuildTracker(ss, config, preserved);
-    rebuildDashboard(ss, config);
+    // Step 3 — rebuild, unless the op only touched a list.
+    if (!listOnly) {
+      rebuildTracker(ss, config, preserved);
+      rebuildDashboard(ss, config);
+    }
     writeConfig(ss, config);
 
     CacheService.getScriptCache().remove('list-projects');
@@ -1012,6 +1059,14 @@ function applyStructureOp(config, data) {
   }
 
   if (data.op === 'remove-item') {
+    // The open-issue refusal ran before this, in handleUpdateStructure,
+    // because it reads the Sheet and this function only ever reads the
+    // config. Reaching here means the item holds no open record.
+    //
+    // The Fixed and Cancelled records it holds STAY in the Deficiencies
+    // tab, pointing at a key the config no longer names. That is
+    // deliberate: a record is history, and history is what a supplier
+    // claim is built from.
     var target = findByKey(config.phases, data.phaseKey);
     if (!target) return 'Phase not found: ' + data.phaseKey;
 
@@ -1065,7 +1120,262 @@ function applyStructureOp(config, data) {
     return 'Unit not found: ' + data.unitKey;
   }
 
+  /*
+   * THE LABEL MOVES. THE KEY NEVER DOES.
+   *
+   * This mirrors rename-unit above, and it exists for the same reason at a
+   * much higher cost. Without it, fixing a typo in an item name means
+   * remove plus add, and the new item gets a NEW KEY. Everything hanging
+   * off the old key goes: every deficiency record, the subtype list, the
+   * reason trim, the hint, and the status value in every unit.
+   *
+   * It DOES rebuild the Tracker tab, because the header text on the grid is
+   * the label. It never touches the Deficiencies tab, because that tab
+   * stores the item KEY and not the label. That is exactly what makes a
+   * label-only rename safe.
+   */
+  if (data.op === 'rename-item') {
+    var itemLabel = String(data.label || '').trim();
+    if (!itemLabel) return 'Enter an item name.';
+
+    var renaming = itemByKey(config, data.itemKey);
+    if (!renaming) return 'Item not found: ' + data.itemKey;
+
+    renaming.label = itemLabel;
+    return null;
+  }
+
+  /*
+   * THE THREE LIST OPS, PLUS THE HINT. See LIST_ONLY_OPS at the top.
+   *
+   * Add is Add-only. There is no Delete branch here and there must never be
+   * one: a record stores the reason and the subtype as text, so a value
+   * that stopped existing would leave rows pointing at nothing. A wrong
+   * value is removed by hand, through the escape hatch, and written down.
+   *
+   * The trim and the hint are different. Neither removes a value from any
+   * list, so both are freely reversible and both are set whole.
+   */
+  if (data.op === 'add-reason') {
+    var reason = String(data.value || '').trim();
+    if (!reason) return 'Enter a reason.';
+
+    if (!config.reasons || !config.reasons.length) config.reasons = FALLBACK_REASONS.slice();
+    if (hasValue(config.reasons, reason)) return 'The list already has ' + reason + '.';
+
+    config.reasons.push(reason);
+    return null;
+  }
+
+  if (data.op === 'add-type') {
+    var typeItem = itemByKey(config, data.itemKey);
+    if (!typeItem) return 'Item not found: ' + data.itemKey;
+
+    var type = String(data.value || '').trim();
+    if (!type) return 'Enter a subtype.';
+
+    // Other is not stored in a list. Logging adds it to the bottom of every
+    // subtype dropdown itself, where it opens a text box.
+    if (type.toLowerCase() === 'other') {
+      return 'Every subtype list already ends with Other.';
+    }
+
+    if (!typeItem.types) typeItem.types = [];
+    if (hasValue(typeItem.types, type)) return 'The list already has ' + type + '.';
+
+    typeItem.types.push(type);
+    return null;
+  }
+
+  if (data.op === 'set-trim') {
+    var trimItem = itemByKey(config, data.itemKey);
+    if (!trimItem) return 'Item not found: ' + data.itemKey;
+
+    // The trim names the reasons this item does NOT offer, matched exactly
+    // against the building list. A value that is not on that list is
+    // dropped rather than stored: it could only come from a stale screen,
+    // and holding it would trim a reason nobody can see.
+    var building = config.reasons || [];
+    trimItem.trim = stringList(data.trim).filter(function (value) {
+      return hasValue(building, value);
+    });
+    return null;
+  }
+
+  if (data.op === 'set-hint') {
+    var hintItem = itemByKey(config, data.itemKey);
+    if (!hintItem) return 'Item not found: ' + data.itemKey;
+
+    // An empty hint is a real answer. It leaves the Needed box blank.
+    hintItem.hint = String(data.value || '').trim();
+    return null;
+  }
+
   return 'Unknown operation: ' + data.op;
+}
+
+
+/** One item by key, wherever its phase is. Returns the real object. */
+function itemByKey(config, itemKey) {
+  var items = allItems(config);
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].key === itemKey) return items[i];
+  }
+  return null;
+}
+
+
+/**
+ * Is this value already on the list?
+ *
+ * Case and outside spaces do not count. "wrong size" and "Wrong Size" are
+ * one reason, and two of them in a dropdown is a bug report waiting to
+ * happen.
+ */
+function hasValue(list, value) {
+  var wanted = String(value || '').trim().toLowerCase();
+  return (list || []).some(function (entry) {
+    return String(entry || '').trim().toLowerCase() === wanted;
+  });
+}
+
+
+/**
+ * The refusal, when an item still holds open issues. Returns null when the
+ * removal may go ahead.
+ *
+ * Removing an item means PFC is not doing that work on this job, so the
+ * open records on it are CANCELLED, not fixed — but that is a second,
+ * deliberate action, taken from the screen. This one only refuses.
+ *
+ * `blocked` carries the counts as numbers so the screen can write its own
+ * sentence and its own button. The error string is there for anything that
+ * only reads the text.
+ */
+function removalBlock(ss, config, itemKey) {
+  var item  = itemByKey(config, itemKey);
+  var label = item ? item.label : itemKey;
+  var open  = openRecordsOnItem(ss, itemKey);
+
+  if (open.records === 0) return null;
+
+  return {
+    success: false,
+    error: 'Can not remove ' + label + '. It holds ' + open.records +
+           ' open ' + (open.records === 1 ? 'issue' : 'issues') + ' across ' +
+           open.units + ' ' + (open.units === 1 ? 'unit' : 'units') + '.',
+    blocked: {
+      itemKey: itemKey,
+      label:   label,
+      records: open.records,
+      units:   open.units
+    }
+  };
+}
+
+
+/**
+ * How many open records one item holds, and how many units they sit in.
+ *
+ * Two columns of the Deficiencies tab, whatever the record count. The unit
+ * count is the useful half: twelve records across nine units is nine doors
+ * to walk, and one record in one unit is a thirty second job.
+ */
+function openRecordsOnItem(ss, itemKey) {
+  var out   = { records: 0, units: 0 };
+  var sheet = ss.getSheetByName(DEFICIENCIES_SHEET_NAME);
+  if (!sheet || !itemKey) return out;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return out;      // header row only, no records yet
+
+  var items  = sheet.getRange(2, DEF_COL.item,  lastRow - 1, 1).getValues();
+  var states = sheet.getRange(2, DEF_COL.state, lastRow - 1, 1).getValues();
+  var units  = sheet.getRange(2, DEF_COL.unit,  lastRow - 1, 1).getValues();
+  var seen   = {};
+
+  for (var i = 0; i < items.length; i++) {
+    if (String(items[i][0]).trim()  !== itemKey) continue;
+    if (String(states[i][0]).trim() !== 'Open')  continue;
+
+    out.records += 1;
+    var unitKey = String(units[i][0]).trim();
+    if (unitKey && !seen[unitKey]) { seen[unitKey] = true; out.units += 1; }
+  }
+
+  return out;
+}
+
+
+/**
+ * Sets every OPEN record on one item to Cancelled. Returns the count.
+ *
+ * This is the second half of the removal refusal, and it is its own action
+ * on purpose: it writes the Deficiencies tab and nothing else. No config
+ * changes, no column moves, no rebuild. Removing the item afterwards is a
+ * separate tap, so a bulk cancel can never remove an item by itself.
+ *
+ * CANCELLED, NEVER FIXED. Removing an item says PFC is not doing that work
+ * on this job. Fixed would say somebody repaired twelve doors, and that
+ * lie would reach a supplier claim.
+ *
+ * There is no Undo. The screen asks once before it calls this.
+ *
+ * Two column writes, whatever the record count. Both columns are rewritten
+ * whole, with every untouched row carrying the value it already held.
+ */
+function handleCancelItemRecords(data) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    return { success: false, error: 'The server is busy. Try again.' };
+  }
+
+  try {
+    if (!data.id)      return { success: false, error: 'No project id was given.' };
+    if (!data.itemKey) return { success: false, error: 'No item was given.' };
+
+    var ss    = SpreadsheetApp.openById(data.id);
+    var sheet = ss.getSheetByName(DEFICIENCIES_SHEET_NAME);
+    if (!sheet) return { success: true, cancelled: 0 };
+
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { success: true, cancelled: 0 };
+
+    var rows   = lastRow - 1;
+    var items  = sheet.getRange(2, DEF_COL.item,   rows, 1).getValues();
+    var states = sheet.getRange(2, DEF_COL.state,  rows, 1).getValues();
+    var closed = sheet.getRange(2, DEF_COL.closed, rows, 1).getValues();
+
+    // Midnight local, the same shape dayValue() writes. A plain new Date()
+    // would stamp a time into a column of dates.
+    var now   = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    var count = 0;
+    for (var i = 0; i < rows; i++) {
+      if (String(items[i][0]).trim()  !== data.itemKey) continue;
+      if (String(states[i][0]).trim() !== 'Open')       continue;
+
+      states[i][0] = 'Cancelled';
+      closed[i][0] = today;
+      count += 1;
+    }
+
+    if (count > 0) {
+      sheet.getRange(2, DEF_COL.state,  rows, 1).setValues(states);
+      sheet.getRange(2, DEF_COL.closed, rows, 1).setValues(closed);
+
+      // The open-issue counts on the Buildings screen come out of this tab.
+      CacheService.getScriptCache().remove('list-projects');
+    }
+
+    return { success: true, cancelled: count };
+
+  } catch (err) {
+    return { success: false, error: err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 
