@@ -159,6 +159,18 @@ Writing his name into the app would break the first time that is not true.
 
 ---
 
+## Open rows
+
+A word this file does not cover gets a row here rather than a guess at build
+time. An OPEN row does not block building a screen. It blocks shipping one.
+
+| Word | Where | Status |
+|---|---|---|
+| `Job site` | Hub subtitle `Job site tracker`, and the `description` in `manifest.json` and the `<meta>` tag | **OPEN.** Raised 2026-08-09 while applying this file to the code. `Job` is a code word meaning one queued edit, and it may not appear on a screen — but `job site` is one compound word for the physical place, and it is what the crew says out loud. The two do not read as the same word. Left as it is until Miguel calls it. The alternative is `Site tracker` |
+| `Deficiencies` | The greyed Hub card | **OPEN** on purpose. It is a 0.3 placeholder for a window that does not exist. Whether it stays `Deficiencies` or becomes `Issues` is decided when that window is designed, not before |
+
+---
+
 ## How to add to this file
 
 When a screen is written, every new string gets checked here first. A word this
@@ -169,7 +181,4 @@ not a blocker for building a screen — it is a blocker for shipping one.
 in the app: Type, Subtype, Needed, Reason, Count, and every dropdown behind them.
 Those get checked here before they are written, not after.
 
-**One row is deliberately left OPEN.** The greyed `Deficiencies` Hub card is a
-0.3 placeholder for a window that does not exist. Whether it stays
-`Deficiencies` or becomes `Issues` is decided when that window is designed, not
-before.
+Open rows live in the section above. There are two.

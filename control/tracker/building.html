@@ -51,7 +51,7 @@ var openFloor = 0;
 
 
 if (!projectId) {
-  screen.innerHTML = errorHtml('server', 'No project was given. Go back and choose one.');
+  screen.innerHTML = errorHtml('server', 'No building was given. Go back and choose one.');
 } else {
   copy = Store.project(projectId);
 
@@ -70,7 +70,7 @@ if (!projectId) {
   // writes the value into the STORED copy and takes the job off the shelf.
   // This screen is holding its own object from before that, so redrawing it
   // alone would lose the paint and show the value the tap replaced.
-  Outbox.onChange(function () {
+  Queue.onChange(function () {
     if (!copy) return;
     copy = Store.project(projectId) || copy;
     render();
@@ -79,7 +79,7 @@ if (!projectId) {
   refresh();
   enablePullToRefresh(function () {
     // Send first, then ask. A pull is the one gesture that means "catch up".
-    return Outbox.wake().then(refresh, refresh);
+    return Queue.wake().then(refresh, refresh);
   });
 }
 

@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="../shared/logo.png">
 <link rel="manifest" href="../manifest.json">
 <link rel="icon" href="../shared/logo.png">
-<title>Create Job — PFC Control</title>
+<title>Set Up Building — PFC Control</title>
 <link rel="stylesheet" href="../shared/theme.css">
 <style>
   /* Screen-only rules. Anything shared lives in theme.css. */
@@ -29,7 +29,7 @@
   .done-text  { font-size: 14px; color: var(--fg-5); line-height: 1.5; }
   .done .btn:first-of-type { margin-top: 8px; }
 
-  /* The "Edit an existing project" block, closed by default. */
+  /* The "Change a building" block, closed by default. */
   .edit-toggle {
     display: flex; align-items: center; justify-content: space-between;
     padding: 16px 2px; width: 100%; text-align: left;
@@ -52,7 +52,7 @@
       <path d="M10 2L2 10l8 8" stroke="#DE7452" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </a>
-  <div class="hdr-titles"><h1 class="hdr-title">Create Job</h1></div>
+  <div class="hdr-titles"><h1 class="hdr-title">Set Up Building</h1></div>
 </header>
 
 <main id="screen"></main>
@@ -60,27 +60,29 @@
 <script src="../shared/common.js"></script>
 <script>
 /* =====================================================================
-   ADMIN — create a project, and change an existing project's structure
+   SET UP BUILDING — create a building, and change an existing one
    =====================================================================
-   This screen never changes a status or a details note. It only decides
-   which units and which items a project has. Status values are changed on
-   the Unit screen.
+   This screen never changes Progress. It only decides which units and
+   which items a building has. Progress is changed on the Unit screen.
+
+   The folder is control/setup/ and the card reads Set Up Building. It was
+   called Admin during 0.1. Admin is now the name of a ROLE, not a screen.
    ===================================================================== */
 
 
 /* ── FORM STATE ───────────────────────────────────────────────────── */
 
 /*
- * The new project, as the form has it so far.
+ * The new building, as the form has it so far.
  *
  * IMPORTANT: do not rename this to "form".
- * An inline handler such as oninput="job.name = this.value" looks the name
+ * An inline handler such as oninput="draft.name = this.value" looks the name
  * up on the element first. Every input element already has a "form"
  * property, which holds its parent <form> tag, or null. A variable named
  * "form" would therefore be hidden, and every field would silently do
  * nothing.
  */
-var job = {
+var draft = {
   name: '',
   mode: 'floors',        // 'floors' or 'flat'
   floorCount: 3,
@@ -94,11 +96,11 @@ var job = {
 
 // Every standard item starts ticked.
 DEFAULT_PHASES.forEach(function (phase) {
-  phase.items.forEach(function (label) { job.ticked[phase.key + '|' + label] = true; });
-  job.other[phase.key] = { on: false, text: '', items: [] };
+  phase.items.forEach(function (label) { draft.ticked[phase.key + '|' + label] = true; });
+  draft.other[phase.key] = { on: false, text: '', items: [] };
 });
 
-var created = null;     // the project, once the server makes it
+var created = null;     // the building, once the server makes it
 var screen = document.getElementById('screen');
 
 
@@ -113,35 +115,35 @@ function formHtml() {
 
     /* 1. Name */
     '<div class="field">' +
-      '<label class="field-label" for="f-name">Project name</label>' +
+      '<label class="field-label" for="f-name">Building name</label>' +
       '<input class="input" id="f-name" type="text" placeholder="e.g. Elsliger 36-B" ' +
-             'value="' + escapeHtml(job.name) + '" autocomplete="off" ' +
-             'oninput="job.name = this.value">' +
+             'value="' + escapeHtml(draft.name) + '" autocomplete="off" ' +
+             'oninput="draft.name = this.value">' +
     '</div>' +
 
     /* 2. Shape */
     '<div class="field">' +
       '<div class="field-label">Building shape</div>' +
       '<div class="seg">' +
-        '<button type="button" class="press accent-edge" aria-pressed="' + (job.mode === 'floors') + '" ' +
-                'onclick="setMode(\'floors\')">Floors + Units</button>' +
-        '<button type="button" class="press" aria-pressed="' + (job.mode === 'flat') + '" ' +
-                'onclick="setMode(\'flat\')">Flat List</button>' +
+        '<button type="button" class="press accent-edge" aria-pressed="' + (draft.mode === 'floors') + '" ' +
+                'onclick="setMode(\'floors\')">Floors and units</button>' +
+        '<button type="button" class="press" aria-pressed="' + (draft.mode === 'flat') + '" ' +
+                'onclick="setMode(\'flat\')">Units only</button>' +
       '</div>' +
       '<div class="field-note">' +
-        (job.mode === 'floors'
+        (draft.mode === 'floors'
           ? 'Unit numbers follow the site convention: floor 1 gives 101, 102, 103.'
-          : 'Units get placeholder names. Rename them below once you know the addresses.') +
+          : 'Units are numbered for now. Rename them when you know the addresses.') +
       '</div>' +
     '</div>' +
 
     /* 3. Counts */
-    (job.mode === 'floors'
+    (draft.mode === 'floors'
       ? '<div class="row-2">' +
-          numberField('f-floors', 'Floors', job.floorCount, 'job.floorCount = clamp(this.value)') +
-          numberField('f-per', 'Units per floor', job.unitsPerFloor, 'job.unitsPerFloor = clamp(this.value)') +
+          numberField('f-floors', 'Floors', draft.floorCount, 'draft.floorCount = clamp(this.value)') +
+          numberField('f-per', 'Units per floor', draft.unitsPerFloor, 'draft.unitsPerFloor = clamp(this.value)') +
         '</div>'
-      : numberField('f-count', 'Unit count', job.unitCount, 'job.unitCount = clamp(this.value)')) +
+      : numberField('f-count', 'Unit count', draft.unitCount, 'draft.unitCount = clamp(this.value)')) +
 
     /* 4. Items */
     '<div class="field">' +
@@ -150,10 +152,10 @@ function formHtml() {
     '</div>' +
 
     /* 5. Error and submit */
-    (job.error ? '<div class="form-error">' + escapeHtml(job.error) + '</div>' : '') +
+    (draft.error ? '<div class="form-error">' + escapeHtml(draft.error) + '</div>' : '') +
     '<button type="button" class="btn btn-primary press" id="f-submit" ' +
-            (job.busy ? 'disabled' : '') + ' onclick="submitForm()">' +
-      (job.busy ? 'Creating…' : 'Create project') +
+            (draft.busy ? 'disabled' : '') + ' onclick="submitForm()">' +
+      (draft.busy ? 'Creating…' : 'Create building') +
     '</button>' +
 
     editSectionHtml() +
@@ -169,12 +171,12 @@ function numberField(id, label, value, handler) {
 }
 
 function phaseHtml(phase) {
-  var other = job.other[phase.key];
+  var other = draft.other[phase.key];
 
   var rows = phase.items.map(function (label) {
     // jsStr gives a quoted JavaScript string. escapeHtml then makes it safe
     // to sit inside an HTML attribute.
-    return checkRow(job.ticked[phase.key + '|' + label], escapeHtml(label),
+    return checkRow(draft.ticked[phase.key + '|' + label], escapeHtml(label),
                     'toggleItem(\'' + phase.key + '\',' + escapeHtml(jsStr(label)) + ')');
   }).join('');
 
@@ -185,7 +187,7 @@ function phaseHtml(phase) {
         '<input class="input input--sm" id="other-' + phase.key + '" type="text" ' +
                'placeholder="Custom item name" autocomplete="off" ' +
                'value="' + escapeHtml(other.text) + '" ' +
-               'oninput="job.other[\'' + phase.key + '\'].text = this.value" ' +
+               'oninput="draft.other[\'' + phase.key + '\'].text = this.value" ' +
                'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); addOther(\'' + phase.key + '\'); }">' +
         '<button type="button" class="press" onclick="addOther(\'' + phase.key + '\')">Add</button>' +
       '</div>'
@@ -216,13 +218,13 @@ function checkRow(checked, label, handler) {
 function doneHtml() {
   return '<div class="done">' +
     '<div class="done-mark">' + ICON.success + '</div>' +
-    '<div class="done-title">Project created</div>' +
+    '<div class="done-title">Building created</div>' +
     '<div class="done-text">' + escapeHtml(created.name) +
       ' is ready to track. All items start as Not Started.</div>' +
     '<a class="btn btn-primary press" href="../tracker/building.html?p=' + encodeURIComponent(created.id) + '">View building</a>' +
     '<button type="button" class="btn btn-ghost press" onclick="startOver()">Create another</button>' +
     (created.url ? '<a href="' + escapeHtml(created.url) + '" target="_blank" rel="noopener" ' +
-                   'style="font-size:13.5px">Open the project Sheet</a>' : '') +
+                   'style="font-size:13.5px">Open in Google Sheets</a>' : '') +
   '</div>';
 }
 
@@ -239,17 +241,17 @@ function clamp(value) {
 
 function jsStr(text) { return JSON.stringify(String(text)); }
 
-function setMode(mode) { job.mode = mode; job.error = ''; render(); }
+function setMode(mode) { draft.mode = mode; draft.error = ''; render(); }
 
 function toggleItem(phaseKey, label) {
   var id = phaseKey + '|' + label;
-  job.ticked[id] = !job.ticked[id];
-  job.error = '';
+  draft.ticked[id] = !draft.ticked[id];
+  draft.error = '';
   render();
 }
 
 function toggleOther(phaseKey) {
-  var other = job.other[phaseKey];
+  var other = draft.other[phaseKey];
   other.on = !other.on;
   render();
   if (other.on) {
@@ -259,19 +261,19 @@ function toggleOther(phaseKey) {
 }
 
 function addOther(phaseKey) {
-  var other = job.other[phaseKey];
+  var other = draft.other[phaseKey];
   var name = String(other.text || '').trim();
   if (!name) return;             // nothing typed, do nothing
   other.items.push(name);
   other.text = '';
-  job.error = '';
+  draft.error = '';
   render();
   var field = document.getElementById('other-' + phaseKey);
   if (field) field.focus();
 }
 
 function removeOther(phaseKey, index) {
-  job.other[phaseKey].items.splice(index, 1);
+  draft.other[phaseKey].items.splice(index, 1);
   render();
 }
 
@@ -280,7 +282,7 @@ function removeOther(phaseKey, index) {
  *  Each item carries its three lists — the subtype list, the reason trim
  *  and the needed-box hint. They are seeded into the building's _Config on
  *  the server and read back from there afterwards. Nothing downstream
- *  reads a list out of code, so Admin can change one later without a
+ *  reads a list out of code, so this screen can change one later without a
  *  release.
  *
  *  A custom item gets empty lists: all eight reasons, no subtype dropdown,
@@ -288,10 +290,10 @@ function removeOther(phaseKey, index) {
 function collectPhases() {
   return DEFAULT_PHASES.map(function (phase) {
     var items = phase.items
-      .filter(function (label) { return job.ticked[phase.key + '|' + label]; })
+      .filter(function (label) { return draft.ticked[phase.key + '|' + label]; })
       .map(function (label) { return itemPayload(label); });
 
-    var other = job.other[phase.key];
+    var other = draft.other[phase.key];
     if (other.on) {
       other.items.forEach(function (name) { items.push(itemPayload(name)); });
 
@@ -311,30 +313,30 @@ function itemPayload(label) {
 }
 
 function submitForm() {
-  if (job.busy) return;
+  if (draft.busy) return;
 
-  job.error = '';
-  if (!job.name.trim()) { job.error = 'Enter a project name.'; return render(); }
+  draft.error = '';
+  if (!draft.name.trim()) { draft.error = 'Enter a building name.'; return render(); }
 
   var phases = collectPhases();
   var total = phases.reduce(function (sum, p) { return sum + p.items.length; }, 0);
-  if (total === 0) { job.error = 'Select at least one item to track.'; return render(); }
+  if (total === 0) { draft.error = 'Select at least one item to track.'; return render(); }
 
-  job.busy = true;
+  draft.busy = true;
   render();
 
   createProject({
-    name: job.name.trim(),
-    mode: job.mode,
-    floorCount: job.floorCount,
-    unitsPerFloor: job.unitsPerFloor,
-    unitCount: job.unitCount,
+    name: draft.name.trim(),
+    mode: draft.mode,
+    floorCount: draft.floorCount,
+    unitsPerFloor: draft.unitsPerFloor,
+    unitCount: draft.unitCount,
     reasons: DEFAULT_REASONS,
     phases: phases
   }).then(function (result) {
-    job.busy = false;
+    draft.busy = false;
     if (!result.ok) {
-      job.error = reasonText(result.reason, result.detail);
+      draft.error = reasonText(result.reason, result.detail);
       return render();
     }
     created = result.data;
@@ -344,22 +346,22 @@ function submitForm() {
 
 function startOver() {
   created = null;
-  job.name = '';
-  job.error = '';
+  draft.name = '';
+  draft.error = '';
   DEFAULT_PHASES.forEach(function (phase) {
-    phase.items.forEach(function (label) { job.ticked[phase.key + '|' + label] = true; });
-    job.other[phase.key] = { on: false, text: '', items: [] };
+    phase.items.forEach(function (label) { draft.ticked[phase.key + '|' + label] = true; });
+    draft.other[phase.key] = { on: false, text: '', items: [] };
   });
-  job.mode = 'floors';
-  job.floorCount = 3;
-  job.unitsPerFloor = 6;
-  job.unitCount = 12;
+  draft.mode = 'floors';
+  draft.floorCount = 3;
+  draft.unitsPerFloor = 6;
+  draft.unitCount = 12;
   render();
   window.scrollTo(0, 0);
 }
 
 
-/* ── EDIT AN EXISTING PROJECT ─────────────────────────────────────── */
+/* ── CHANGE AN EXISTING BUILDING ──────────────────────────────────── */
 /* Structure only. Add or remove an item. Add or rename a unit.          */
 
 var edit = {
@@ -374,29 +376,29 @@ var edit = {
 
 function editSectionHtml() {
   var head = '<button type="button" class="edit-toggle press" onclick="toggleEdit()">' +
-               '<span>Edit an existing project</span>' +
+               '<span>Change a building</span>' +
                '<span class="caret' + (edit.open ? ' open' : '') + '">' + ICON.caret + '</span>' +
              '</button>';
 
   if (!edit.open) return head;
-  if (edit.loading) return head + loadingHtml('Loading projects…');
+  if (edit.loading) return head + loadingHtml('Loading buildings…');
 
-  // Every project on the list is a real Sheet. The demo buildings that
+  // Every building on the list is a real Sheet. The demo buildings that
   // this used to filter out were deleted in 0.2.
   var choices = edit.projects;
 
   if (choices.length === 0) {
     return head + '<div class="op-card card"><div class="op-msg">' +
       escapeHtml(API_URL
-        ? 'There are no saved projects yet. Create one above.'
-        : 'Connect the backend first. Paste the web app address into API_URL.') +
+        ? 'There are no buildings yet. Create one above.'
+        : reasonText('not-configured')) +
       '</div></div>';
   }
 
   var picker = '<div class="field">' +
-    '<label class="field-label" for="e-project">Project</label>' +
+    '<label class="field-label" for="e-project">Building</label>' +
     '<select class="input" id="e-project" onchange="pickProject(this.value)">' +
-      '<option value="">Choose a project…</option>' +
+      '<option value="">Choose a building…</option>' +
       choices.map(function (p) {
         return '<option value="' + escapeHtml(p.id) + '"' +
                (p.id === edit.projectId ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>';
@@ -451,7 +453,7 @@ function editOpsHtml(structure) {
     /* Remove an item */
     '<div class="op-card card">' +
       '<div class="op-title">Remove an item</div>' +
-      '<div class="field-note">The item loses its Status column. Every other column keeps its values.</div>' +
+      '<div class="field-note">The item loses its Progress column. Every other column keeps its values.</div>' +
       '<select class="input" id="e-remove-item">' + itemOptions.join('') + '</select>' +
       '<button type="button" class="btn btn-ghost btn-small press" onclick="runOp(\'remove-item\')">Remove item</button>' +
     '</div>' +
@@ -481,8 +483,9 @@ function toggleEdit() {
     render();
     loadProjects().then(function (result) {
       edit.loading = false;
-      // A failed list answers with an error and no projects. Admin runs on
-      // a computer with signal, so the empty message below is enough.
+      // A failed list answers with an error and no buildings. This screen
+      // runs on a computer with signal, so the empty message below is
+      // enough. Step 5 owns its offline behaviour.
       edit.projects = result.projects || [];
       render();
     });
@@ -538,7 +541,7 @@ function runOp(op) {
   updateStructure(payload).then(function (result) {
     if (!result.ok) return setEditMessage(reasonText(result.reason, result.detail), false);
 
-    setEditMessage('Done. The project is updated.', true);
+    setEditMessage('Done. The building is updated.', true);
     // Read the structure back, so the lists show the change.
     loadStructure(edit.projectId).then(function (fresh) {
       if (fresh.source !== 'error') edit.structure = fresh.data;

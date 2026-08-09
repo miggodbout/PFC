@@ -94,6 +94,8 @@ This is the part 0.2 is built out of, so these are the words that come up most.
 | **Redraw** | Build a piece of the screen again from current data |
 | **Flex** / **Flexbox** | The CSS way of laying things out in a row or column. A "flex container" arranges its children; the children are "flex items" |
 | **Inline** vs **Block** | Inline elements sit in a line of text and ignore width and height. Block elements take a full line and obey both. This is exactly what broke the unit spinner |
+| **Console** | The hidden log every browser keeps. Code writes to it, nothing on the page shows it, and you open it from the browser's developer tools. Where the technical half of an E1/E2/E3 failure goes |
+| **Identifier** | A name the code uses to find a thing, as opposed to a **label**, which is text a person reads. `pfc.control.v1.outbox` is an identifier — the window it belongs to is called Queue now, but renaming the identifier would orphan every edit already saved under the old one |
 | **localStorage** | A small store on the phone that survives closing the app. Holds the queue and the saved copies |
 | **Service Worker** | A script that sits between the app and the network. Ours serves saved files when there is no signal |
 | **App shell** | The files that make the app open at all — HTML, CSS, JS. Cached by the Service Worker |

@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="../shared/logo.png">
 <link rel="manifest" href="../manifest.json">
 <link rel="icon" href="../shared/logo.png">
-<title>Outbox — PFC Control</title>
+<title>Queue — PFC Control</title>
 <link rel="stylesheet" href="../shared/theme.css">
 </head>
 <body>
@@ -22,7 +22,7 @@
     </svg>
   </a>
   <div class="hdr-titles">
-    <h1 class="hdr-title">Outbox</h1>
+    <h1 class="hdr-title">Queue</h1>
     <div class="hdr-sub" id="subtitle"></div>
   </div>
 </header>
@@ -32,19 +32,20 @@
 <script src="../shared/common.js"></script>
 <script>
 /* =====================================================================
-   OUTBOX — every edit that has not reached its Sheet
+   QUEUE — every edit that has not reached its Sheet
    =====================================================================
-   THIS WINDOW EXISTS BECAUSE ONLY A PERSON DROPS AN EDIT. The app holds a
-   failed edit forever and never deletes one, so there has to be a screen
-   with a Drop button on it. There is no version of 0.2 that obeys that
-   rule and has no Outbox.
+   THIS WINDOW EXISTS BECAUSE ONLY A PERSON DELETES AN EDIT. The app holds
+   a failed edit forever and never deletes one, so there has to be a screen
+   with a Delete button on it. There is no version of 0.2 that obeys that
+   rule and has no Queue.
 
    Two kinds of row:
 
      waiting — on its way, or between retries. It paints the tracker
                screens, and there is nothing to do about it but wait.
      held    — the app has stopped trying. It does NOT paint the tracker
-               screens, so those show what the Sheet holds. Retry or Drop.
+               screens, so those show what the Sheet holds. Try again, or
+               delete it.
 
    PLAN CALL 2 — A ROW DOES NOT TAP THROUGH TO ITS UNIT. The row names the
    building, the unit and the item, which is enough to walk there. A
@@ -54,19 +55,19 @@
 
 var screen = document.getElementById('screen');
 
-// No Outbox link in the bar on the Outbox screen. It is already here.
+// No Queue link in the bar on the Queue screen. It is already here.
 mountSyncBar('');
 
-Outbox.onChange(render);
+Queue.onChange(render);
 render();
 
 // A pull here means "try the failed ones now", which is what wake does.
-enablePullToRefresh(function () { return Outbox.wake(); });
+enablePullToRefresh(function () { return Queue.wake(); });
 
 
 function render() {
-  var held    = Outbox.heldJobs();
-  var waiting = Outbox.waiting();
+  var held    = Queue.heldJobs();
+  var waiting = Queue.waiting();
 
   document.getElementById('subtitle').textContent = subtitleFor(held, waiting);
 
@@ -74,24 +75,27 @@ function render() {
     screen.innerHTML =
       '<div class="state">' +
         '<div class="state-title">Nothing waiting</div>' +
-        '<div class="state-text">Every edit on this phone has reached its project Sheet.</div>' +
+        '<div class="state-text">All edits reached the server.</div>' +
       '</div>';
     return;
   }
 
   // Held first. It is the half that needs a person.
+  //
+  // "Waiting" is not used as a heading here on purpose. In this app
+  // Waiting is a kind of issue on an item. An edit on its way is queued.
   screen.innerHTML =
     '<div class="body">' +
       sectionHtml('Did not save', held, true) +
-      sectionHtml('Waiting to send', waiting, false) +
+      sectionHtml('Queued', waiting, false) +
     '</div>';
 }
 
 
 function subtitleFor(held, waiting) {
   var parts = [];
-  if (waiting.length) parts.push(waiting.length + ' waiting');
-  if (held.length)    parts.push(held.length + ' failed');
+  if (waiting.length) parts.push(waiting.length + ' queued');
+  if (held.length)    parts.push(held.length + ' did not save');
   return parts.join(' · ');
 }
 
@@ -122,13 +126,23 @@ function jobHtml(job, canAct) {
                      : '<span class="ring"></span>') +
            '</div>' +
            '<div class="item-details">' + escapeHtml(place.where) + '</div>' +
-           (job.error ? '<div class="fix-lost">' + escapeHtml(job.error) + '</div>' : '') +
+
+           /*
+              THE REASON PRINTS ON A HELD ROW ONLY.
+              A queued row's reason is almost always "this phone has no
+              connection", and the sync bar above the list has already said
+              that once. Printed again on every row it read three times on
+              one screen, which is noise, and noise is what gets skipped.
+              SAY IT ONCE PER SCREEN.
+           */
+           (canAct && job.error ? '<div class="fix-lost">' + escapeHtml(job.error) + '</div>' : '') +
+
            (canAct
              ? '<div class="fix-acts" style="margin-top:8px">' +
                  '<button type="button" class="btn btn-small btn-ghost press" ' +
-                         'onclick="Outbox.retry(' + attr(job.key) + ')">Try again</button>' +
-                 '<button type="button" class="btn btn-small btn-ghost press" ' +
-                         'onclick="Outbox.drop(' + attr(job.key) + ')">Drop</button>' +
+                         'onclick="Queue.retry(' + attr(job.key) + ')">Try again</button>' +
+                 '<button type="button" class="btn btn-small btn-delete press" ' +
+                         'onclick="Queue.drop(' + attr(job.key) + ')">Delete</button>' +
                '</div>'
              : '') +
          '</div>';

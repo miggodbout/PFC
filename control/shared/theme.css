@@ -134,7 +134,7 @@ button {
    0.2 step 2 shipped scale(0.95) here. On a full-width control the dead
    band is 2.5% of the width on each side, which is 9px on a phone and
    more than 15px on a desktop card — wide enough to swallow the whole
-   22px checkbox on Admin's Create form and the caret on a floor header.
+   22px checkbox on the Set Up Building form and the caret on a floor header.
    Both sit hard against an edge. Both read as "only the label is
    tappable". Paint only from here on: no transform, no margin, no width.
 
@@ -615,6 +615,8 @@ button {
 .fix-lost { font-size: 12.5px; color: var(--fg-5); line-height: 1.45; }
 .fix-acts { display: flex; gap: 8px; }
 .fix-acts .btn-small { flex: 1; }
+/* Delete keeps its own width, so the row is not two equal grey slabs. */
+.fix-acts .btn-delete { flex: 0 0 auto; }
 
 /* ── PULL TO REFRESH ─────────────────────────────────────────────── */
 
@@ -841,6 +843,17 @@ button {
   padding: 0 16px;
   border-radius: 10px;
   font-size: 14px;
+}
+
+/* DELETE IS THE ONLY BUTTON IN THE APP THAT LOSES WORK ON PURPOSE, so it
+   must not be a grey twin of the button beside it. Two things separate
+   them: this one is lettered and lined in red, and it does not take half
+   the row. Try again gets the width, because Try again is the answer
+   almost every time. */
+.btn-delete {
+  border: 1px solid rgba(224,82,82,0.45);
+  color: var(--danger);
+  font-size: 15px; font-weight: 600;
 }
 
 

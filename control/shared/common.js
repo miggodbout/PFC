@@ -4,7 +4,7 @@
    Every screen loads this file. It holds:
      - the connection to the Apps Script backend
      - the three Progress values, the two flag kinds, and the rollup rule
-     - the local copy on the phone, and the outbox of unsent edits
+     - the local copy on the phone, and the queue of unsent edits
      - the small drawing helpers the screens share
 
    Rule for this file: no screen-specific code. If only one screen needs
@@ -183,7 +183,7 @@ function displayStatus(stored, openFlagCount) {
 /**
  * THIS BLOCK IS THE SEED FOR A NEW BUILDING.
  *
- * Admin loads it into the new project form, sends it up in the create
+ * Set Up Building loads it into the new building form, sends it up in the create
  * payload, and the server writes it into that building's _Config. After
  * that the building reads its own config and never looks here again. So
  * changing anything below changes what the NEXT building starts with, and
@@ -229,7 +229,7 @@ var DEFAULT_PHASES = [
  * not one per phase and not one per item. An item narrows it with its own
  * trim.
  *
- * Add-only once the building exists. Admin can add a reason and there is
+ * Add-only once the building exists. Set Up Building can add a reason and there is
  * never a Delete button, so no record can ever point at a value that
  * stopped existing.
  *
@@ -259,17 +259,17 @@ var WAITING_REASONS = ['Waiting on Another Trade', 'Awaiting Delivery',
  * Other is NOT in a types list. Logger adds it to the bottom of the
  * dropdown itself, where it opens a text box. The typed text goes in that
  * one record's subtype cell and never joins the list — a one-off stays a
- * one-off, and making it permanent is an Admin Add.
+ * one-off, and making it permanent is an Add on the setup screen.
  *
  * Every trim ships empty on purpose. An empty trim is never wrong, only
- * wider than it needs to be, and Miguel narrows them through the Admin
+ * wider than it needs to be, and Miguel narrows them through the setup
  * Lists card without a release. The test is responsibility, not the item:
  * ask "does PFC own this", not "can this item have this". The framer hangs
  * the patio and entry doors, so Wrong Swing comes off Exterior Door(s)
  * even though the door plainly swings.
  *
  * Only the hint Miguel gave is filled in. A blank hint is never wrong,
- * only less helpful, and Admin fills one in without a release too.
+ * only less helpful, and the setup screen fills one in without a release too.
  */
 var DEFAULT_ITEM_LISTS = {
   'Interior Doors': {
@@ -318,7 +318,7 @@ function defaultItemLists(label) {
  * A job site has poor signal, so no screen may crash on a failed call.
  *
  * options.noFallback stops the JSONP fallback below and answers 'blocked'
- * instead. Only the outbox drain passes it. The fallback puts the whole
+ * instead. Only the queue drain passes it. The fallback puts the whole
  * payload in the web address, and an address near 8,000 characters FAILS
  * SILENTLY — which is fine for a small read and is the one thing in this
  * app that could quietly lose a person's work. The drain takes the
@@ -356,7 +356,10 @@ function apiCall(action, data, method, options) {
     .then(function (response) {
       clearTimeout(timer);
       if (!response.ok) {
-        return { ok: false, reason: 'server', detail: 'The server replied ' + response.status + '.' };
+        // 'blocked', not 'server'. A status code is not a message a person
+        // can act on, and reason 'server' is reserved for a reply the
+        // backend WROTE — those go on the screen as they are.
+        return { ok: false, reason: 'blocked', detail: 'The server replied ' + response.status + '.' };
       }
       return response.json().then(function (body) {
         if (body && body.success === false) {
@@ -441,6 +444,11 @@ function jsonpCall(action, data) {
                                   building was opened when
      pfc.control.v1.project.<id>  one whole building copy
      pfc.control.v1.outbox        edits that have not reached the Sheet
+                                  (KEEPS THE OLD NAME. The window is called
+                                  Queue now, but this string is an
+                                  identifier, not a label. Rename it and
+                                  every edit already waiting on a crew
+                                  phone is orphaned.)
      pfc.control.v1.chips         needed lines from DROPPED buildings only
                                   (0.2 step 4 fills this one)
 
@@ -540,8 +548,8 @@ var Store = {
    * Writes values the server has just accepted into the building copy.
    *
    * WITHOUT THIS, A SAVE THAT WORKED LOOKS LIKE A SAVE THAT FAILED. The
-   * screen paints a waiting edit out of the outbox, not out of the copy,
-   * and the job leaves the outbox the moment the server answers ok. So the
+   * screen paints a waiting edit out of the queue, not out of the copy,
+   * and the job leaves the queue the moment the server answers ok. So the
    * paint disappears while the copy still holds the OLD value, and the row
    * snaps back to what it said before the tap. On site that reads as a lost
    * edit, and the crew taps it again.
@@ -552,7 +560,7 @@ var Store = {
    *
    * A refused write costs nothing here. The Sheet holds the value and the
    * next fetch brings it back, so this never deletes a copy to make room —
-   * unlike the outbox, which holds the only copy of an unsent edit.
+   * unlike the queue, which holds the only copy of an unsent edit.
    */
   foldLanded: function (id, jobs) {
     var held = this.read('project.' + id, null);
@@ -602,7 +610,7 @@ var Store = {
    * Deletes one building copy.
    *
    * A copy is only a copy. The Sheet is the record, and an unsent edit
-   * lives in the outbox under its own key, so nothing is lost here.
+   * lives in the queue under its own key, so nothing is lost here.
    */
   dropProject: function (id) {
     var copy = this.project(id);
@@ -615,7 +623,7 @@ var Store = {
    * opened first.
    *
    * A BUILDING HOLDING AN UNSENT EDIT IS NEVER DROPPED, whatever its age.
-   * The edit itself is safe either way — it lives in the outbox — but the
+   * The edit itself is safe either way — it lives in the queue — but the
    * copy is what the screen paints it on.
    */
   enforceLimit: function () {
@@ -633,7 +641,7 @@ var Store = {
   },
 
 
-  /* -- the outbox ---------------------------------------------------- */
+  /* -- the queue ---------------------------------------------------- */
   /*
      A KEYED SHELF, NOT A LINE-UP.
 
@@ -653,7 +661,7 @@ var Store = {
        error         — why the last attempt failed, once one has
 
      A WAITING edit paints the screen. A HELD edit does not: it shows what
-     the Sheet holds and lives only in the Outbox window, because a floor
+     the Sheet holds and lives only in the Queue window, because a floor
      must never read 18/18 Complete off an edit that will never land.
 
      Step 2 built the shelf. Step 3 added the drain below it.
@@ -690,7 +698,7 @@ var Store = {
     all[job.key] = job;
     this._jobs   = all;      // set first, so writeJobs sees this building
 
-    if (this.writeJobs(all)) { Outbox.changed(); return true; }
+    if (this.writeJobs(all)) { Queue.changed(); return true; }
 
     /*
        IT WAS NOT STORED, SO IT MUST NOT PAINT. A job held in memory and
@@ -701,7 +709,7 @@ var Store = {
     */
     if (before) all[job.key] = before; else delete all[job.key];
     this._jobs = all;
-    Outbox.changed();
+    Queue.changed();
     return false;
   },
 
@@ -711,7 +719,7 @@ var Store = {
    * Ten building copies are about a megabyte, and they are what fills the
    * phone. A copy is ONLY a copy — the Sheet holds it and opening the
    * building once brings it back. AN UNSENT EDIT EXISTS NOWHERE ELSE ON
-   * EARTH. So when storage refuses the outbox, copies are deleted to make
+   * EARTH. So when storage refuses the queue, copies are deleted to make
    * room for it, least recently opened first, and never one belonging to a
    * building that is itself holding an unsent edit.
    *
@@ -741,7 +749,7 @@ var Store = {
     delete all[key];
     this._jobs = all;
     this.write('outbox', all);
-    Outbox.changed();
+    Queue.changed();
   },
 
   /** True when this building holds any unsent edit, waiting or held. */
@@ -812,19 +820,19 @@ function foldNeededLinesIntoChips(copy) {
  * the same beat, which is the pattern most likely to keep losing the fight
  * for the script lock.
  */
-var OUTBOX_BACKOFF = [0, 5000, 15000, 60000, 300000];
+var QUEUE_BACKOFF = [0, 5000, 15000, 60000, 300000];
 
 /**
  * How many failed attempts hold a job. With the backoff above that is
  * about thirty minutes.
  *
- * A JOB IS NEVER DROPPED BY THE APP. Held means it stops painting the
- * screen and waits in the Outbox window, where only a person can Drop it.
+ * A JOB IS NEVER DELETED BY THE APP. Held means it stops painting the
+ * screen and waits in the Queue window, where only a person can delete it.
  */
-var OUTBOX_MAX_TRIES = 10;
+var QUEUE_MAX_TRIES = 10;
 
 /** The server writes at most this many jobs in one call. The rest wait. */
-var OUTBOX_BATCH = 100;
+var QUEUE_BATCH = 100;
 
 /** PLAN CALL 1 — the JSONP fallback sends five jobs at a time. */
 var JSONP_SLICE = 5;
@@ -839,7 +847,7 @@ var JSONP_SLICE = 5;
 var JSONP_MAX_URL = 6000;
 
 
-var Outbox = {
+var Queue = {
 
   _timer:     null,
   _sending:   false,
@@ -903,7 +911,7 @@ var Outbox = {
     var jobs = self.waiting();
     if (!jobs.length) { self.stop(); return Promise.resolve({ sent: 0 }); }
 
-    var batch = jobs.slice(0, OUTBOX_BATCH);
+    var batch = jobs.slice(0, QUEUE_BATCH);
 
     self._sending = true;
     self.clearTimer();
@@ -939,7 +947,7 @@ var Outbox = {
 
   schedule: function () {
     var self = this;
-    var wait = OUTBOX_BACKOFF[Math.min(self._misses, OUTBOX_BACKOFF.length - 1)];
+    var wait = QUEUE_BACKOFF[Math.min(self._misses, QUEUE_BACKOFF.length - 1)];
     self.clearTimer();
     self._timer = setTimeout(function () {
       self._timer = null;
@@ -957,7 +965,7 @@ var Outbox = {
     this._misses = 0;
   },
 
-  /* -- what a person does in the Outbox window ----------------------- */
+  /* -- what a person does in the Queue window ----------------------- */
 
   /** Puts a held job back in line, with its try count at zero. */
   retry: function (key) {
@@ -1091,8 +1099,9 @@ function classifyCallFailure(result) {
   if (reason === 'server') {
     // The backend is older than this app. Retrying cannot fix that.
     if (/unknown action/i.test(detail)) {
+      logTechnical('E3', 'The backend does not know this action. Deploy the Apps Script again. ' + detail);
       return { retry: false, burn: false,
-               error: 'This app is newer than the backend. Deploy the script again.' };
+               error: 'This app needs an update. Tell the Admin. (E3)' };
     }
     return { retry: true, burn: true, error: detail || reasonText(reason) };
   }
@@ -1166,7 +1175,7 @@ function settleJob(job, retry, error, burn) {
     fresh.held = true;
   } else if (burn !== false) {
     fresh.tries = (fresh.tries || 0) + 1;
-    if (fresh.tries >= OUTBOX_MAX_TRIES) fresh.held = true;
+    if (fresh.tries >= QUEUE_MAX_TRIES) fresh.held = true;
   }
 
   Store.putJob(fresh);
@@ -1180,18 +1189,18 @@ function settleJob(job, retry, error, burn) {
  * yesterday with no signal is on its way before the screen asks the server
  * for anything.
  */
-(function startOutbox() {
+(function startQueue() {
   if (typeof window === 'undefined') return;
 
-  window.addEventListener('online', function () { Outbox.wake(); });
+  window.addEventListener('online', function () { Queue.wake(); });
 
   // iOS wakes a backgrounded web app without firing online. Coming back to
   // the app is the moment worth trying again.
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) Outbox.wake();
+    if (!document.hidden) Queue.wake();
   });
 
-  Outbox.wake();
+  Queue.wake();
 })();
 
 
@@ -1236,9 +1245,9 @@ function fetchProject(projectId) {
 
 
 /**
- * The project list, for Admin.
+ * The building list, for the setup screen.
  *
- * Admin wants the server's answer and nothing else — it is used on a
+ * The setup screen wants the server's answer and nothing else — it is used on a
  * computer with signal, to change structure, and a stale list there would
  * offer a building that no longer exists. The Tracking screen does not use
  * this: it draws its stored copy first and refreshes behind it.
@@ -1249,10 +1258,10 @@ function loadProjects() {
 
 
 /**
- * One project's floors, units and item list, for Admin.
+ * One building's floors, units and item list, for the setup screen.
  *
  * The phone stopped calling this in 0.2. get-project answers with the
- * whole building instead. Admin still needs the plain structure, and it
+ * whole building instead. The setup screen still needs the plain structure, and it
  * needs it fresh from the server rather than from a phone copy.
  */
 function loadStructure(projectId) {
@@ -1263,13 +1272,13 @@ function loadStructure(projectId) {
 }
 
 
-/** Creates a project. Admin calls this. */
+/** Creates a building. The setup screen calls this. */
 function createProject(config) {
   return apiCall('create-project', config, 'POST');
 }
 
 
-/** Changes a project's structure. Admin calls this. */
+/** Changes a building's structure. The setup screen calls this. */
 function updateStructure(payload) {
   return apiCall('update-structure', payload, 'POST');
 }
@@ -1287,12 +1296,12 @@ function updateStructure(payload) {
  * Puts an unsent edit on top of what the Sheet last said, on the way to
  * the screen.
  *
- * The building copy and the outbox are separate keys, so A FRESH FETCH CAN
+ * The building copy and the queue are separate keys, so A FRESH FETCH CAN
  * NEVER OVERWRITE AN UNSENT EDIT. A fetch replaces the copy only, and the
  * paint happens after it, every time a screen draws.
  *
  * A WAITING edit paints. A HELD edit does not — a held edit shows what the
- * Sheet holds and lives only in the Outbox window. Otherwise a floor could
+ * Sheet holds and lives only in the Queue window. Otherwise a floor could
  * read 18/18 Complete off an edit that will never land.
  *
  * A job's paint is removed when, and only when, the server answers ok.
@@ -1637,21 +1646,58 @@ function loadingHtml(text) {
          '<div class="state-text">' + escapeHtml(text || 'Loading…') + '</div></div>';
 }
 
-/** Turns a failure reason into a sentence a person can act on. */
+/**
+ * Writes the technical half of a failure to the browser console.
+ *
+ * THREE FAILURES CAN REACH A CREW PHONE THAT NO CREW MEMBER CAN ACT ON.
+ * Each one gets one plain sentence and a short code, E1 to E3, so a worker
+ * can read the code down the phone without opening anything. The reason
+ * itself — a deployment setting, an empty address, a status code — belongs
+ * to whoever set the app up, so it goes here instead. The console is the
+ * hidden log every browser keeps. It costs nothing and no crew member will
+ * ever open it.
+ */
+function logTechnical(code, text) {
+  if (typeof console !== 'undefined' && console.warn) {
+    console.warn('PFC Control ' + code + ' — ' + text);
+  }
+}
+
+/**
+ * Turns a failure reason into a sentence a person can act on.
+ *
+ * NOTHING ELSE GETS A CODE. Offline, a slow server and a message the
+ * backend wrote itself all tell the crew what to do already, and a code on
+ * those reads as though something is wrong when nothing is.
+ */
 function reasonText(reason, detail) {
   switch (reason) {
     case 'not-configured':
-      return 'The backend is not connected yet. Open control/shared/common.js and paste the web app address into API_URL.';
+      logTechnical('E1', 'API_URL is empty. Paste the web app address into API_URL in control/shared/common.js.');
+      return 'This app is not set up yet. Tell the Admin. (E1)';
+
     case 'offline':
       return 'This phone has no connection. The app opened from its saved copy. Move to a spot with signal, then try again.';
+
     case 'timeout':
       return 'The server did not answer in time. The signal here may be weak. Try again.';
+
     case 'blocked':
-      return 'The browser could not read the reply. Check that the web app is deployed with access set to Anyone.';
+      logTechnical('E2', detail ||
+        'The browser could not read the reply. Check that the web app is deployed with access set to Anyone.');
+      return 'This app cannot reach the server. Tell the Admin. (E2)';
+
+    // A reply the backend WROTE. It is a sentence aimed at a person, so it
+    // goes on the screen as it is. Only the empty case falls back to E2.
     case 'server':
-      return detail || 'The server refused the request.';
+      if (detail) return detail;
+      logTechnical('E2', 'The server refused the request and gave no reason.');
+      return 'This app cannot reach the server. Tell the Admin. (E2)';
+
     default:
-      return detail || 'Something went wrong.';
+      if (detail) return detail;
+      logTechnical('E2', 'Unknown failure. reason=' + reason);
+      return 'This app cannot reach the server. Tell the Admin. (E2)';
   }
 }
 
@@ -1790,8 +1836,8 @@ function enablePullToRefresh(onRefresh) {
 /**
  * Puts the bar under the page header and keeps it in step with the shelf.
  *
- * href is the Outbox window, relative to the calling screen. Pass '' on
- * the Outbox screen itself, so it does not offer a door to where you are.
+ * href is the Queue window, relative to the calling screen. Pass '' on
+ * the Queue screen itself, so it does not offer a door to where you are.
  */
 function mountSyncBar(href) {
   var slot = document.createElement('div');
@@ -1801,11 +1847,11 @@ function mountSyncBar(href) {
   if (header && header.parentNode) header.parentNode.insertBefore(slot, header.nextSibling);
   else document.body.insertBefore(slot, document.body.firstChild);
 
-  var to = (href === undefined) ? 'outbox.html' : href;
+  var to = (href === undefined) ? 'queue.html' : href;
 
   function paint() { slot.innerHTML = syncBarHtml(to); }
 
-  Outbox.onChange(paint);
+  Queue.onChange(paint);
   paint();
   return slot;
 }
@@ -1816,40 +1862,40 @@ function mountSyncBar(href) {
  * waiting, and what did not make it.
  *
  *   Saving 3 edits…            a call is in the air
- *   Offline · 3 edits wait     nothing can go out yet
+ *   Offline · 3 edits queued   nothing can go out yet
  *   2 edits did not save       the app gave up and a person must look
  *
- * Two of them together read "Saving 3 edits… · 2 failed".
+ * Two of them together read "Saving 3 edits… · 2 did not save".
  */
 function syncBarHtml(href) {
-  var counts = Outbox.counts();
+  var counts = Queue.counts();
   if (!counts.waiting && !counts.held) return '';
 
   var parts = [];
   var kind  = 'quiet';
 
   if (counts.waiting) {
-    if (Outbox.sending()) {
+    if (Queue.sending()) {
       kind = 'accent';
       parts.push('<span class="sync-ring"></span>Saving ' + editsText(counts.waiting) + '…');
     } else if (navigator.onLine === false) {
-      parts.push('<span class="sync-slab"></span>Offline · ' + editsText(counts.waiting) + ' wait');
+      parts.push('<span class="sync-slab"></span>Offline · ' + editsText(counts.waiting) + ' queued');
     } else {
       // Online, between retries. Saying "Offline" here would be a lie.
-      parts.push('<span class="sync-slab"></span>' + editsText(counts.waiting) + ' wait');
+      parts.push('<span class="sync-slab"></span>' + editsText(counts.waiting) + ' queued');
     }
   }
 
   if (counts.held) {
     kind = 'bad';
     parts.push('<span class="sync-bad"></span>' +
-               (counts.waiting ? counts.held + ' failed'
+               (counts.waiting ? counts.held + ' did not save'
                                : editsText(counts.held) + ' did not save'));
   }
 
   return '<div class="syncbar syncbar--' + kind + '">' +
            '<span class="sync-text">' + parts.join('<span class="sync-sep">·</span>') + '</span>' +
-           (href ? '<a class="sync-link press" href="' + href + '">Outbox ›</a>' : '') +
+           (href ? '<a class="sync-link press" href="' + href + '">Queue ›</a>' : '') +
          '</div>';
 }
 
