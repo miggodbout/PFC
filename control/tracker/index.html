@@ -70,6 +70,10 @@ if (lastList) {
 
 mountSyncBar();
 
+// Only if the visit has not shown it yet. Somebody who opened a link
+// straight into Tracking never passed the Hub, so it has to be here too.
+mountInstallNudge();
+
 // A held or a queued edit is a mark on a Tracking row, so the list
 // redraws whenever the queue changes.
 Queue.onChange(function () { if (lastList) draw(lastList); });

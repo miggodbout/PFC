@@ -139,9 +139,10 @@ var C_FLAG_FILL = '#FFC7CE';
  * The reason list a building starts with, if the create payload sends none.
  *
  * The real seed is DEFAULT_REASONS in control/shared/common.js, and the
- * Admin create form sends it up in the payload. This copy is only a floor,
- * so an old Admin build or a hand-made API call cannot create a building
- * with no reasons at all — Logger would have nothing to offer.
+ * Set Up Building create form sends it up in the payload. This copy is
+ * only a floor, so an older build of that screen, or a hand-made API
+ * call, cannot create a building with no reasons at all — Logging would
+ * have nothing to offer.
  * Keep the two in step.
  */
 var FALLBACK_REASONS = ['Wrong Size', 'Wrong Type', 'Wrong Swing', 'Wrong Color',
@@ -167,7 +168,7 @@ var C_TITLE_BG    = '#1A1A1A';
 var C_SUBTITLE_BG = '#242424';
 var C_BAND_BG     = '#DE7452';   // phase band, PFC Control accent
 var C_ITEM_BG     = '#404040';   // item name row
-var C_SUBHEAD_BG  = '#555555';   // Status / Details row
+var C_SUBHEAD_BG  = '#555555';   // Status row. 0.2 removed Details
 var C_LABEL_BG    = '#F5F5F5';   // Dashboard row labels
 var C_BORDER      = '#D0D0D0';
 var C_TITLE_FG    = '#FFFFFF';
@@ -376,8 +377,8 @@ function handleListProjects(fresh) {
  * Three things go out that nothing in 0.2 draws yet, and none of them may
  * be trimmed later:
  *
- *   - every item's types, trim and hint, so Logger draws its dropdowns from
- *     the local copy with no second call;
+ *   - every item's types, trim and hint, so Logging draws its dropdowns
+ *     from the local copy with no second call;
  *   - the building's reason list, for the same reason;
  *   - THE WHOLE DEFICIENCIES TAB, EVERY STATE — Open, Fixed and Cancelled.
  *     Fixed records feed the suggestion chips, and the 0.3 Archive window is
@@ -792,8 +793,8 @@ function writeItemJob(tracker, config, layout, job, touched) {
  * A record is never deleted and never moved. Fixed and Cancelled both stay
  * in place with a closed date.
  *
- * Nothing calls this yet. Logger arrives in 0.2 step 4 and puts record
- * jobs on the same shelf, which this call already drains.
+ * Logging puts record jobs on the same shelf, which this call drains
+ * alongside the item jobs. Both kinds go up in one batch.
  */
 function writeRecordJob(ss, job) {
   var record = job.record || {};
@@ -1428,7 +1429,9 @@ function handleCancelItemRecords(data) {
  */
 function buildConfig(data) {
   var name = String(data.name || '').trim();
-  if (!name) return { error: 'Enter a project name.' };
+  // The screen catches this first and says the same thing. They must not
+  // drift: Building is the word on every screen, never Project.
+  if (!name) return { error: 'Enter a building name.' };
 
   var mode = (data.mode === 'flat') ? 'flat' : 'floors';
 
@@ -1543,10 +1546,13 @@ function configVersionError(config) {
   if (version === CONFIG_VERSION) return null;
 
   if (version < CONFIG_VERSION) {
-    return 'This project Sheet was made by an older version of PFC Control ' +
+    // Crew words: Building on every screen, never Project or Sheet. The
+    // person reading this has to make the building again, and naming the
+    // plumbing does not help them do it.
+    return 'This building was made by an older version of PFC Control ' +
            '(version ' + version + '). Make the building again.';
   }
-  return 'This project Sheet was made by a newer version of PFC Control ' +
+  return 'This building was made by a newer version of PFC Control ' +
          '(version ' + version + '). Update the app.';
 }
 
@@ -1559,7 +1565,7 @@ function writeConfig(ss, config) {
   sheet.getRange('A1').setValue(JSON.stringify(config));
   sheet.getRange('A3').setValue(
     'This tab holds the project structure. Do not edit it by hand. ' +
-    'Use the Admin screen in PFC Control.'
+    'Use the Set Up Building screen in PFC Control.'
   );
   sheet.hideSheet();
 }
@@ -2327,7 +2333,7 @@ function countOpenFlags(ss) {
  * Reads the whole Deficiencies tab, EVERY STATE, one row per record.
  *
  * Do not add a state filter here. Fixed records feed the suggestion chips
- * on the Logger screen, and the 0.3 Archive window is a filter over
+ * on the Logging screen, and the 0.3 Archive window is a filter over
  * records. Filtering at the server takes both away, and the payload it
  * saves is measured in kilobytes.
  *

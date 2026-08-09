@@ -676,6 +676,77 @@ button {
 }
 
 
+/* ── THE INSTALL NUDGE ───────────────────────────────────────────────
+
+   A small note asking for the app to be added to the Home Screen. It is
+   drawn ONLY in a browser tab, and at most once in a visit. An installed
+   app never sees it. The rule lives in mountInstallNudge() in common.js.
+
+   It sits under the sync bar, never above it: the bar is news about right
+   now, and this note is a one-off about setting the phone up.  */
+
+.nudge {
+  margin: 12px 20px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.nudge-body { flex: 1; min-width: 0; }
+
+.nudge-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.1px;
+}
+
+.nudge-text {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-5);
+}
+
+/* THE PATH THROUGH THE PHONE'S OWN MENU, drawn as two keys rather than
+   written as a sentence. Both labels are the words iOS prints on those
+   buttons, so the note and the phone read the same. */
+.nudge-steps {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fg-2);
+}
+.nudge-step {
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--line-soft);
+}
+.nudge-arrow { color: var(--fg-7); }
+
+/* A thumb target, not a 12px x, and it keeps its own corner. A miss must
+   not dismiss the note the person was about to read. */
+.nudge-x {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  margin: -5px -6px 0 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The x glyph carries its own stroke colour. Nothing to set here. */
+}
+
+
 /* ── PENDING MARKS ON THE UNIT SCREEN ────────────────────────────────
 
    On Unit you look at seven items, so a mark per item points straight at

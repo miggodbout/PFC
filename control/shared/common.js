@@ -1827,7 +1827,7 @@ function fetchProjects() {
  * Fetches ONE WHOLE BUILDING and stores it.
  *
  * One call carries the structure, every unit's item statuses, every
- * record, and the lists Logger draws its dropdowns from. The Building
+ * record, and the lists Logging draws its dropdowns from. The Building
  * screen and every Unit screen inside it are drawn from this one copy.
  */
 function fetchProject(projectId) {
@@ -2881,6 +2881,126 @@ function editsText(n) {
 
 
 /* ── OFFLINE SHELL ────────────────────────────────────────────────── */
+
+/**
+ * PERSISTENT STORAGE, ASKED FOR SILENTLY, ON EVERY SCREEN.
+ *
+ * iOS deletes a website's stored data after seven days with no
+ * interaction, and WebKit exempts an app that was added to the Home
+ * Screen. This asks the browser to exempt the data anyway. It is a safety
+ * net under the nudge below, not a replacement for installing.
+ *
+ * THERE IS NO WARNING WHEN IT IS REFUSED. A refusal is not something a
+ * carpenter can act on, and a message that cannot be acted on gets cut.
+ * Installing is the answer either way, and the nudge is where that is
+ * said. Plan section 7.
+ */
+(function keepStorage() {
+  if (!navigator.storage || !navigator.storage.persist) return;
+  try {
+    navigator.storage.persist();
+  } catch (e) {
+    // Nothing to do about a refusal, and nothing to say about one.
+  }
+})();
+
+
+/**
+ * True when the app runs from the Home Screen rather than a browser tab.
+ *
+ * ONE SIGNAL, ASKED TWO WAYS. display-mode is the standard, and it is
+ * what Android and a current iPhone answer. navigator.standalone is
+ * Apple's own and answers on an older one. Either one saying yes is yes.
+ *
+ * The lopsided part is deliberate: a wrong NO nudges somebody who already
+ * installed the app, and a wrong YES only means a note goes unshown. The
+ * first is the one that annoys, so the test leans away from it.
+ */
+function isInstalled() {
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  return navigator.standalone === true;
+}
+
+
+/*
+   ONCE PER VISIT, NOT ONCE PER SCREEN.
+
+   sessionStorage, and that is deliberate. It is not one of the four data
+   stores, nothing syncs it, and it has to die when the tab does — which
+   is exactly what "once per tab-mode open" means. Losing it costs one
+   extra note. The Buildings screen keeps its finished-set the same way.
+*/
+var NUDGE_KEY = 'pfc.control.v1.session.nudged';
+
+
+/**
+ * THE INSTALL NUDGE. Draws only in a browser tab, at most once a visit.
+ *
+ * Install is the line between storage that survives and storage iOS wipes
+ * after seven days. It fixes a second thing on its own: data written in a
+ * tab is invisible to the installed app, so somebody who edits in both
+ * sees two different sets of queued edits. One action answers both, so
+ * there is one note and not two.
+ *
+ * Walking Hub -> Buildings -> a unit prints it once, on the first screen
+ * that asks for it. The key is stamped on mount rather than on dismiss,
+ * because a note that returns on the next screen reads as a fault.
+ */
+function mountInstallNudge() {
+  if (isInstalled()) return null;
+
+  try {
+    if (sessionStorage.getItem(NUDGE_KEY)) return null;
+  } catch (e) {
+    // No sessionStorage at all. Draw it: once is no worse than never,
+    // and the note takes itself off the screen when it is tapped.
+  }
+
+  var slot = document.createElement('div');
+  slot.className = 'nudge-slot';
+  slot.innerHTML = nudgeHtml();
+
+  // Under the sync bar where there is one, so news about right now keeps
+  // the line directly below the header. The Hub draws no sync bar.
+  var after = document.querySelector('.syncbar-slot') || document.querySelector('header.hdr');
+  if (after && after.parentNode) after.parentNode.insertBefore(slot, after.nextSibling);
+  else document.body.insertBefore(slot, document.body.firstChild);
+
+  slot.querySelector('.nudge-x').addEventListener('click', function () {
+    if (slot.parentNode) slot.parentNode.removeChild(slot);
+  });
+
+  try { sessionStorage.setItem(NUDGE_KEY, '1'); } catch (e) {}
+
+  return slot;
+}
+
+
+/**
+ * The note itself.
+ *
+ * The two steps are drawn as keys, not written into a sentence. `Share`
+ * and `Add to Home Screen` are the words iOS prints on those buttons, so
+ * the note reads the same as the phone. It also means the note needs no
+ * verb of its own, and this app has never settled on tap or press.
+ */
+function nudgeHtml() {
+  return '<div class="nudge">' +
+           '<div class="nudge-body">' +
+             '<div class="nudge-title">Add PFC Control to the Home Screen</div>' +
+             '<div class="nudge-text">A browser can lose your queued edits.</div>' +
+             '<div class="nudge-steps">' +
+               '<span class="nudge-step">Share</span>' +
+               '<span class="nudge-arrow" aria-hidden="true">›</span>' +
+               '<span class="nudge-step">Add to Home Screen</span>' +
+             '</div>' +
+           '</div>' +
+           '<button type="button" class="nudge-x press" aria-label="Hide this note">' +
+             ICON.close +
+           '</button>' +
+         '</div>';
+}
+
 
 /**
  * Registers the Service Worker, which keeps a copy of the app's own files.

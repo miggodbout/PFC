@@ -317,9 +317,12 @@ with one downgrade: Complete shows as In Progress while an open flag sits on the
 item. Fix the last record and Complete comes back by itself, because the stored
 value was never touched. No extra column, and no automatic write.
 
-Version 0.1 code still holds the old model: `STATUS`, `CYCLE` and `ROLLUP_ORDER` in
-`control/shared/common.js`, and `buildRollupFormula` in
-`control/appscript/Code.js`.
+**This section describes the shipped code, as of 0.2.0.** It used to carry a
+warning that 0.1 still held the old five-value model. That is gone: `STATUS` and
+`CYCLE` in `control/shared/common.js` hold three values, `worst()` and
+`ROLLUP_ORDER` were deleted from both files, and `buildRollupFormula` in
+`control/appscript/Code.js` counts by the rule above. The phone applies the same
+rule in `rollup()`, and `displayStatus()` is the one downgrade.
 
 ---
 
@@ -347,8 +350,8 @@ Use `MAJOR.MINOR.PATCH`. Never use `v1`, `v2` style names for a milestone again 
 - **PATCH** (`0.1.1` → `0.1.2`) — fixes only, inside a milestone. No new features.
 - **1.0** — reached when the crew uses PFC Control daily as the primary tool. It marks trust, not a feature count.
 
-Current: PFC Control `0.2.0-dev`. Camera app `0.1.2`. Last shipped Control
-release: `0.1.2`.
+Current: PFC Control `0.2.0`. Camera app `0.1.2`. Last shipped Control
+release: `0.2.0`, on 2026-08-09.
 
 ### Mid-build versions, and the counter that feeds the cache
 

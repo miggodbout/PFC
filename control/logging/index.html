@@ -821,7 +821,8 @@ function bump(by) {
  * form top to bottom.
  *
  * A Waiting record is allowed a blank Item: that is the `Whole phase` row,
- * and it is a real choice. A Deficiency is always about one item.
+ * and it is a real choice. A Deficiency is always about one item. It is
+ * also allowed a blank Needed line, for the reason at that test below.
  */
 function missingLine() {
   if (!copy)    return 'Choose a building.';
@@ -835,7 +836,14 @@ function missingLine() {
 
   // The field the whole screen exists for. A record with no needed line
   // gives the crew nothing to order and makes no chip for the next person.
-  if (!needed.trim()) return 'Type what is needed.';
+  //
+  // A WAITING RECORD IS EXEMPT, and this is the only field that treats the
+  // two kinds differently. A deficiency is always a thing to replace. A
+  // Waiting record is often a fact about the schedule and nothing else —
+  // "waiting on painters" names no material — so demanding a line would
+  // make somebody invent one. Plan section 1.4: optional on a Waiting
+  // record. Miguel confirmed it on 2026-08-09.
+  if (type === 'Deficiency' && !needed.trim()) return 'Type what is needed.';
 
   if (!reason) return 'Choose a reason.';
   if (reason === 'Other' && !reasonOther.trim()) return 'Fill in the Reason box.';
