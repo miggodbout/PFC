@@ -63,6 +63,11 @@ var copy     = null;   // the whole building
 var place    = null;   // { unit, group } inside it
 var openMenu = null;   // item key of the open status dropdown
 
+/* True once the phone has refused to store an edit. It stays up until the
+   next tap succeeds, because the person has to be told BEFORE they walk
+   away thinking the change is saved. */
+var storageRefused = false;
+
 
 document.getElementById('back').href = 'building.html?p=' + encodeURIComponent(projectId);
 
@@ -134,6 +139,7 @@ function render(note) {
   screen.innerHTML =
     '<div class="body body--flush">' +
       (note || '') +
+      (storageRefused ? storageFullHtml() : '') +
       copy.phases.map(phaseHtml).join('') +
     '</div>';
 
@@ -332,7 +338,9 @@ function chooseStatus(event, itemKey, status) {
   // redraws the screen and the menu would flash open for a frame.
   openMenu = null;
 
-  Store.putJob({
+  // putJob answers false when the phone would not store the edit. Nothing
+  // downstream can recover that, so it goes on the screen at once.
+  storageRefused = !Store.putJob({
     key:       itemJobKey(projectId, unitKey, itemKey),
     kind:      'item',
     projectId: projectId,
@@ -346,7 +354,7 @@ function chooseStatus(event, itemKey, status) {
   });
 
   render();
-  Outbox.wake();
+  if (!storageRefused) Outbox.wake();
 }
 
 
