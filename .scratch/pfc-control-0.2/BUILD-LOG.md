@@ -423,3 +423,67 @@ updated, per sessions 1 to 3. Everything from step 3 onward.
   wrap, and PLAN CALL 3 at step 4.
 
 **Next:** unchanged — start step 3.
+
+## Session 5 — 2026-08-08
+
+**Miguel's step 2 test notes**, at `Miguel's Notes/0.2-Step 2 Testing.md`. Four
+items. Three needed no code. One did.
+
+**Item 3, the only bug: new project Sheets landed in `My Drive/Projects/`.**
+`PFC_ROOT_FOLDER_ID` in `control/appscript/Code.js` was `''`, which means the top
+of My Drive, and `PROJECTS_FOLDER_NAME` was `Projects`. So `getProjectsFolder`
+built a folder at the top level, beside PFC rather than inside it.
+
+Fixed. The root is now pinned to the `PFC` folder by ID,
+`1fw8Wl7EEWIdHpr0QtD0vr6OBJDK86e2N`, and the folder name is **`Project Sheets`**,
+so it reads apart from the camera app's `PFC/Project Logs/` at a glance.
+
+**Pinned by ID, not looked up by name, on purpose.** A name lookup from the top of
+My Drive would silently build a second `PFC` folder the day this one is renamed or
+moved, and every project made after that would disappear from the app with no
+error. An ID survives a rename and a move.
+
+`CLAUDE.md` said `PFC/Projects/` and was wrong on both halves. Corrected, with the
+folder ID recorded beside it.
+
+**Miguel chose to start clean** rather than move the test projects across. The old
+`My Drive/Projects/` folder and its contents are his to delete.
+
+**Item 4, the missing flag on the Unit screen: not a bug.** Flag chips are step 4.
+`unit.html:256` already says so, and the build plan agrees. Building and floor
+views carry chips today only because the rollup needs the counts to compute.
+
+**Item 1, the dead tap zone: already fixed in session 4** and already on
+`origin/0.2`. Miguel's note says it is unpushed. It is not.
+
+**Item 2, the animation: half of it is still open, and Miguel's worry was
+unfounded.** There is no "text fade". `.press:active` is a 7% white inset wash
+that appears instantly and fades out over 160ms, painted under the text, moving
+nothing. That is what he asked for.
+
+The half that is genuinely not done: **`.floor-body` has no expand transition.**
+The unit grid still pops in. He wants it to "merge out like a smooth dropdown".
+Deferred to the step 3 UI push by his choice, so there is one redeploy.
+
+**A trap for whoever builds that animation.** It is the same one already logged
+against `.caret` in session 4: `toggleFloor` calls `render()`, which replaces the
+element, so a fresh node draws in its final state and no CSS transition ever
+plays. A `max-height` or `grid-template-rows` transition on `.floor-body` will do
+nothing at all unless the open state stops going through a full re-render. Budget
+for that, do not budget for a two-line CSS change.
+
+**Not landed:** nothing new. `reference/PFC_Master_Template.xlsx` still not
+updated, per sessions 1 to 4. Everything from step 3 onward.
+
+**Open:**
+
+- **The `.floor-body` expand animation**, with the re-render trap above. Step 3.
+- **`My Drive/Projects/`** — Miguel deletes the folder and the test projects in it.
+- The Apps Script needs a redeploy for the folder fix to take effect.
+- Everything still open from session 4: nothing may move a control on `:active`
+  again, the dead `.caret` transition for the step 6 sweep, the
+  `ZZ 0.2 Step 2 Test` Sheet to trash, the greyed Complete not reachable until
+  step 4, the chip bar looking long on a desktop window, `.details-btn` /
+  `.details-edit` unused, the Tracker row 5 wrap, and PLAN CALL 3 at step 4.
+
+**Next:** unchanged — start step 3.

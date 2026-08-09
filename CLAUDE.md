@@ -83,7 +83,8 @@ Backend: separate Google Apps Script project from `Code.gs`. Do not merge them.
 Data: one Google Sheet per project (building), generated from a master template.
 - Local reference copy: `reference/PFC_Master_Template.xlsx` (repo root)
 - Live template (Drive): `PFC/Master Template/PFC_Master_Template.xlsx` (ID: 1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M)
-- Generated project Sheets (Drive): `PFC/Projects/`
+- Generated project Sheets (Drive): `PFC/Project Sheets/` (folder `PFC` is ID: 1fw8Wl7EEWIdHpr0QtD0vr6OBJDK86e2N)
+  - Named to sit beside the camera app's `PFC/Project Logs/`. Corrected 2026-08-08 during 0.2 step 2 testing — the code wrote to `My Drive/Projects/`, at the top level, because `PFC_ROOT_FOLDER_ID` in `control/appscript/Code.js` was empty. It is now pinned by ID.
 
 Branding: dark theme, accent color `#DE7452` (primary), `#A47263` (secondary) — deliberately distinct from the camera app's gold, so the two tools are visually distinguishable.
 

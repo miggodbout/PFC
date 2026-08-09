@@ -35,14 +35,26 @@
 // Change these two lines if you move the Drive folders.
 
 /**
- * Drive folder that holds the "Projects" folder.
- * Leave this empty to use the top level of My Drive.
- * To pin it, open the folder in Drive and copy the ID from the address bar.
+ * Drive folder that holds the project Sheets folder. This is My Drive/PFC,
+ * the same folder that holds Master Template and the camera app's
+ * Project Logs.
+ *
+ * Pinned by ID, not by name, on purpose. A name lookup from the top of My
+ * Drive would silently build a second PFC folder the day this one is
+ * renamed or moved, and every project made after that would vanish from
+ * the app. An ID survives both.
+ *
+ * Leave it empty to use the top level of My Drive instead.
+ * To repoint it, open the folder in Drive and copy the ID from the address bar.
  */
-var PFC_ROOT_FOLDER_ID = '';
+var PFC_ROOT_FOLDER_ID = '1fw8Wl7EEWIdHpr0QtD0vr6OBJDK86e2N';
 
-/** Name of the folder that holds every generated project Sheet. */
-var PROJECTS_FOLDER_NAME = 'Projects';
+/**
+ * Name of the folder that holds every generated project Sheet.
+ * Named to sit beside the camera app's "Project Logs", so the two systems
+ * read apart at a glance inside PFC/.
+ */
+var PROJECTS_FOLDER_NAME = 'Project Sheets';
 
 
 // ── FIXED NAMES AND VALUES (do not change) ────────────────────────────
@@ -207,7 +219,7 @@ function respond(obj, callback) {
 // ── READ ACTIONS ──────────────────────────────────────────────────────
 
 /**
- * Lists every project Sheet in the Projects folder.
+ * Lists every project Sheet in the Project Sheets folder.
  * A file is a project only if it has a _Config tab.
  *
  * Every building is returned, finished or not. The server sends numbers
@@ -564,7 +576,7 @@ function handleCreateProject(data) {
 
     ss.setActiveSheet(ss.getSheetByName(TRACKER_SHEET_NAME));
 
-    // Move the new file into PFC/Projects/.
+    // Move the new file into PFC/Project Sheets/.
     var file = DriveApp.getFileById(ss.getId());
     file.moveTo(getProjectsFolder());
 
