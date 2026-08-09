@@ -189,6 +189,48 @@ draws is listed here. **Six field names come straight from the build plan**
 
 Two rows are **OPEN**, added below.
 
+## The Set Up Building screen — checked 2026-08-09, in step 5
+
+Step 5 added three cards to this screen: Rename an item, Lists, and the panel
+that refuses a removal. Every string they draw is listed here.
+
+**The refusal panel says `issues`, and the build plan says `records`.** The plan
+was written before this file existed, and Amendment A3 says this file wins on
+any word the crew reads. `record` is a code word. `issue` is the settled
+umbrella, and it is the same word the Unit screen already uses.
+
+| String | Where | Status |
+|---|---|---|
+| `Rename an item` | the card title | Mirrors `Rename a unit`, which was already there |
+| `The name changes everywhere. Progress and issues stay with the item.` | under it | Says what moves and what does not. `Progress` and `issues` are both settled |
+| `Lists` | the card title | Plain. It holds the reason list and the subtype list |
+| `Reasons for this building` | the building-wide list | `Reason` and `Building` are both settled |
+| `Reasons for Interior Doors` | the same list, narrowed to one item | The item names itself, so nothing new is read |
+| `Choose the reasons this item offers. A reason you leave out stays on the building list.` | under the tick boxes | Names the action, then answers the question it raises. **It avoids a verb on purpose** — `untick` and `uncheck` are both words this file does not settle, and the sentence does not need one |
+| `Subtypes` | the item's subtype list | **OPEN** below, same row as the Logging field |
+| `This item has no subtypes. It shows no Subtype box.` | an item that defines none | States the list, then what follows from it |
+| `New reason` / `New subtype` | the two Add boxes | Two words, and the button beside each says `Add` |
+| `Choose an item…` | the Lists item dropdown | Matches `Choose a building…` already on the screen |
+| `Save the reasons` / `Save the hint` | the two save buttons | Active. Each names what it saves, because the card holds three lists |
+| `Hint` | the item's placeholder text | **OPEN** below |
+| `The grey text inside the empty Needed box.` | under the Hint box | Says where the text lands. `Needed` is OPEN below on its own account |
+| `Can not remove Interior Doors.` | the refusal, first line | No contraction. It names the item and refuses in one short sentence |
+| `It holds 12 open issues across 9 units.` | the refusal, second line | The unit count is the useful half: nine units is nine doors to walk |
+| `Cancel all 12 issues` | the refusal button | Singular at one: `Cancel all 1 issue` |
+| `Then remove the item again.` | under the button | **It is two steps**, and this is the line that says so |
+| `Cancel 12 issues?` `This can not be undone.` `Yes, cancel 12` `Back` | the confirm | A bulk cancel has no Undo, so the confirm is the only friction there is |
+| `12 issues are cancelled. Remove the item again.` | after the cancel | States the result, then the next action |
+| `No connection. The app can not load the buildings.` | the building list, offline | **The shared offline line was wrong here.** It says the app opened from its saved copy, and this screen holds no copy — it always asks the server. Step 3 round, point 15 |
+| `No connection. The app did not create the building.` | the create form, offline | Same reason. Step 3 round, point 14 |
+| `Enter a reason.` / `Enter a subtype.` / `Choose an item.` | the form checks | Match `Enter an item name.`, already on the screen |
+| `The list already has Missing.` | adding a value twice | Names the value, so it is clear which one was the duplicate |
+| `Every subtype list already ends with Other.` | adding `Other` as a subtype | Says why it was refused, not only that it was |
+
+**One string on this screen is still a developer string:** `Item not found: cut`,
+and the `Phase not found` and `Unit not found` beside it. They predate 0.2 and no
+tap can reach one — the dropdowns only offer values the same answer named. Left
+as they are.
+
 ## Open rows
 
 A word this file does not cover gets a row here rather than a guess at build
@@ -197,7 +239,8 @@ time. An OPEN row does not block building a screen. It blocks shipping one.
 | Word | Where | Status |
 |---|---|---|
 | `Job site` | Hub subtitle `Job site tracker`, and the `description` in `manifest.json` and the `<meta>` tag | **OPEN.** Raised 2026-08-09 while applying this file to the code. `Job` is a code word meaning one queued edit, and it may not appear on a screen — but `job site` is one compound word for the physical place, and it is what the crew says out loud. The two do not read as the same word. Left as it is until Miguel calls it. The alternative is `Site tracker` |
-| `Subtype` | The Logging field under Item | **OPEN.** Raised 2026-08-09 while building Logging. It comes from the build plan, so it is not a guess — but the crew does not say "subtype" out loud. They say the value itself: a Bypass, a Privacy, a Spring stop. `Kind` and `Style` are the alternatives, and `Type` is already taken by the field above it |
+| `Hint` | The Set Up Building Lists card, and the `hint` key in the building config | **OPEN.** Raised 2026-08-09 while building step 5. It is the grey text inside the empty Needed box, and the box under the label says exactly that. `Example` is the alternative and is arguably plainer, because the text is an example of what to type. `Hint` was kept for now so the screen and the config key read the same word |
+| `Subtype` | The Logging field under Item, **and the Set Up Building Lists card** | **OPEN.** Raised 2026-08-09 while building Logging. It comes from the build plan, so it is not a guess — but the crew does not say "subtype" out loud. They say the value itself: a Bypass, a Privacy, a Spring stop. `Kind` and `Style` are the alternatives, and `Type` is already taken by the field above it |
 | `Needed` | The Logging hero field | **OPEN.** From the plan, and it is the field the whole screen exists for. On its own as a label it reads short. `What is needed` is the alternative, and it is what the empty box says on an item with no hint |
 | `Deficiencies` | The greyed Hub card | **OPEN** on purpose. It is a 0.3 placeholder for a window that does not exist. Whether it stays `Deficiencies` or becomes `Issues` is decided when that window is designed, not before |
 
@@ -213,8 +256,9 @@ not a blocker for building a screen — it is a blocker for shipping one.
 in the app: Type, Subtype, Needed, Reason, Count, and every dropdown behind them.
 Those get checked here before they are written, not after.
 
-Open rows live in the section above. There are four: `Job site`,
-`Deficiencies`, and the two Logging raised — `Subtype` and `Needed`.
+Open rows live in the section above. There are five: `Job site`,
+`Deficiencies`, the two Logging raised — `Subtype` and `Needed` — and `Hint`,
+raised by the Set Up Building Lists card in step 5.
 
 **Logging was the test of this file, and it held.** Every string on the
 screen was checked before it was written, and the two the file could not

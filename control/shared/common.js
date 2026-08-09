@@ -395,7 +395,13 @@ function apiCall(action, data, method, options) {
       }
       return response.json().then(function (body) {
         if (body && body.success === false) {
-          return { ok: false, reason: 'server', detail: body.error || 'The server refused the request.' };
+          // data carries the WHOLE refusal, not only its sentence. Set Up
+          // Building reads blocked.records off it to write its own line and
+          // size its own button. Every other caller reads reason and detail
+          // and never looks at data unless ok is true.
+          return { ok: false, reason: 'server',
+                   detail: body.error || 'The server refused the request.',
+                   data: body };
         }
         return { ok: true, data: body };
       });
@@ -455,7 +461,12 @@ function jsonpCall(action, data) {
 
       if (!body) return resolve(null);
       if (body.success === false) {
-        return resolve({ ok: false, reason: 'server', detail: body.error || 'The server refused the request.' });
+        // data carries the whole refusal here too. Both paths answer with
+        // the same shape, or a screen would behave differently on the
+        // networks that force this one.
+        return resolve({ ok: false, reason: 'server',
+                         detail: body.error || 'The server refused the request.',
+                         data: body });
       }
       resolve({ ok: true, data: body });
     }
@@ -1863,6 +1874,20 @@ function createProject(config) {
 /** Changes a building's structure. The setup screen calls this. */
 function updateStructure(payload) {
   return apiCall('update-structure', payload, 'POST');
+}
+
+
+/**
+ * Sets every open issue on one item to Cancelled. Answers with the count.
+ *
+ * This is the second half of the removal refusal, and the setup screen is
+ * the only caller. IT DOES NOT GO ON THE QUEUE. The queue exists for an
+ * edit typed on site with no signal, and this is a bulk change made on a
+ * computer, in front of a count the server just read. Queuing it would
+ * fire it against a Sheet that has moved on since.
+ */
+function cancelItemRecords(projectId, itemKey) {
+  return apiCall('cancel-item-records', { id: projectId, itemKey: itemKey }, 'POST');
 }
 
 
