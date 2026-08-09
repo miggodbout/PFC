@@ -32,7 +32,7 @@ round thing" is not something two people can agree on.
 | **Header** | The strip at the top of a screen with the title in it. | Every screen |
 | **Footer** | The same thing at the bottom. | Nothing uses one yet |
 | **Modal** / **Dialog** | A box that opens on top of the screen and blocks everything behind it until you answer. | Nothing uses one — on purpose |
-| **Placeholder** | Grey text sitting inside an empty box, showing what to type. It is not a value and it does not save. | The `Size Jamb Swing` hint |
+| **Placeholder** | Grey text sitting inside an empty box, showing what to type. It is not a value and it does not save. | The `Size Jamb Swing` line in the Needed box. The screen calls it the Example |
 | **Hairline** | A line one pixel thick. A description, not a component. | The progress bar |
 
 ---
@@ -52,6 +52,8 @@ round thing" is not something two people can agree on.
 | **Structure** | Floors, units, items — the skeleton. Changed only in Admin | As opposed to status, which changes all day |
 | **Migration** | Changing already-saved data so it fits a new shape | Renaming `Exterior Door(s)` needs one, because the key is built from the label |
 | **Schema** | The agreed shape of the data — which columns exist, in what order | The Deficiencies tab's thirteen columns are a schema |
+| **`subtype`** | The narrower kind of an item — a Bypass door, a Privacy set. The record column, the variable and the Logging field all use it | **The screen says `Type`.** It said `Subtype` until 2026-08-09. The stored list was always `item.types`, so only the label moved |
+| **`hint`** | The config key holding one item's placeholder line | **The screen says `Example`.** Same day, same reason. The key was left alone because every building already on Drive stores `hint`, and renaming it would need a fallback read forever |
 
 ---
 

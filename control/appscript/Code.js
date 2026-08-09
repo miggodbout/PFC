@@ -1000,7 +1000,7 @@ function handleUpdateStructure(data) {
       if (blocked) return blocked;
     }
 
-    // A LIST CHANGE NEVER REBUILDS THE TRACKER TAB. Adding a subtype or a
+    // A LIST CHANGE NEVER REBUILDS THE TRACKER TAB. Adding a type or a
     // reason changes no column, so a rebuild could only put a status value
     // back in the wrong place, and it would cost a full grid read and a
     // redraw for a change nothing on the grid can see. These ops write the
@@ -1045,7 +1045,7 @@ function applyStructureOp(config, data) {
     if (!label) return 'Enter an item name.';
 
     // A custom item defines no subtypes, trims no reasons and shows no
-    // placeholder. It offers all eight reasons and no Subtype dropdown.
+    // placeholder. It offers all eight reasons and no Type dropdown.
     // Admin fills these in later, through the Lists card.
     var taken = allItems(config).map(function (it) { return it.key; });
     phase.items.push({
@@ -1172,12 +1172,12 @@ function applyStructureOp(config, data) {
     if (!typeItem) return 'Item not found: ' + data.itemKey;
 
     var type = String(data.value || '').trim();
-    if (!type) return 'Enter a subtype.';
+    if (!type) return 'Enter a type.';
 
     // Other is not stored in a list. Logging adds it to the bottom of every
-    // subtype dropdown itself, where it opens a text box.
+    // Type dropdown itself, where it opens a text box.
     if (type.toLowerCase() === 'other') {
-      return 'Every subtype list already ends with Other.';
+      return 'Every type list already ends with Other.';
     }
 
     if (!typeItem.types) typeItem.types = [];
@@ -1414,9 +1414,10 @@ function buildConfig(data) {
         key:   uniqueKey(slug(label), takenItemKeys),
         label: label,
 
-        // types — the Subtype dropdown. Empty means no dropdown at all.
+        // types — the Type dropdown on Logging. Empty means no dropdown.
         // trim  — the reasons this item does NOT offer. Empty offers all.
-        // hint  — grey placeholder inside the empty needed box.
+        // hint  — grey placeholder inside the empty Needed box. The
+        //         Set Up Building screen calls this Example.
         types: stringList(item.types),
         trim:  stringList(item.trim),
         hint:  String(item.hint || '')

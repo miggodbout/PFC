@@ -1,7 +1,7 @@
 {
   "name": "PFC Control",
   "short_name": "Control",
-  "description": "Job site progress and deficiency tracker for Premier Finish & Construction.",
+  "description": "Site progress and deficiency tracker for Premier Finish & Construction.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -282,13 +282,14 @@ var WAITING_REASONS = ['Waiting on Another Trade', 'Awaiting Delivery',
 /**
  * What each item starts with, keyed by its label.
  *
- *   types — the Subtype dropdown. Four items define one. Every other item
+ *   types — the Type dropdown on Logging. Four items define one. Every other
  *           defines none and shows no dropdown at all.
  *   trim  — the reasons this item does NOT offer, matched exactly against
  *           DEFAULT_REASONS. Empty offers all eight.
- *   hint  — grey placeholder text inside the empty needed box.
+ *   hint  — grey placeholder text inside the empty Needed box. Set Up
+ *           Building calls this Example on screen; the key stays `hint`.
  *
- * Other is NOT in a types list. Logger adds it to the bottom of the
+ * Other is NOT in a types list. Logging adds it to the bottom of the Type
  * dropdown itself, where it opens a text box. The typed text goes in that
  * one record's subtype cell and never joins the list — a one-off stays a
  * one-off, and making it permanent is an Add on the setup screen.
