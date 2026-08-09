@@ -479,7 +479,18 @@ updated, per sessions 1 to 4. Everything from step 3 onward.
 
 - **The `.floor-body` expand animation**, with the re-render trap above. Step 3.
 - **`My Drive/Projects/`** — Miguel deletes the folder and the test projects in it.
-- The Apps Script needs a redeploy for the folder fix to take effect.
+  Still there, ID `14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`.
+
+**Redeployed, same session.** `clasp push`, then `clasp deploy` against the
+**existing** deployment id `AKfycbzo9lC…4vj8_YCrtnGjv5e`, now at version 5. Never
+`clasp deploy` with no id here: that mints a new deployment with a new URL, and
+`API_URL` in `control/shared/common.js` names this one. Note `clasp deployments`
+keeps printing the old `@4 - 0.2 step 2` line after a redeploy. It is a stale
+description, not a failed deploy — verify against the live URL instead.
+
+Verified live: `list-projects` answered `{"success":true,"projects":[]}`, and
+Drive shows `PFC/Project Sheets` created at the moment of that call. Only the new
+code creates that folder, so version 5 is serving.
 - Everything still open from session 4: nothing may move a control on `:active`
   again, the dead `.caret` transition for the step 6 sweep, the
   `ZZ 0.2 Step 2 Test` Sheet to trash, the greyed Complete not reachable until
