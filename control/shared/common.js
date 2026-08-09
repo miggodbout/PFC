@@ -2213,6 +2213,26 @@ function barHtml(roll) {
  * The total filled width is unchanged: the runs add up to itemsDone, which
  * is what the single fill was. Only the colouring is new.
  *
+ * EVERY JOIN CARRIES A SEAM, and that reverses the first rule this function
+ * shipped with. It said two amber phases in a row must read as one bar. On
+ * a whole building that hid the split completely: Elsliger 36-B stood at
+ * 115/144, 8/72 and 48/252, so all three runs were amber and butted into
+ * one amber block, identical to the old single fill. A phase only turns
+ * green at 100%, and a building rarely closes one until the end, so the
+ * split could not show at the level Miguel looks at most.
+ *
+ * THE SEAM IS DRAWN INSIDE THE RUN, as an inset shadow on its right edge,
+ * not as a spacer between runs. A spacer would add its own pixels and make
+ * the fill read longer than itemsDone. This way the arithmetic above stays
+ * exactly true — the bar still ends where progress ends.
+ *
+ * The last drawn run gets no seam. It is the leading edge of progress, and
+ * a cut there would read as a gap in front of the empty track.
+ *
+ * A phase with nothing done draws no run, so it contributes no seam either.
+ * Phase 1 and Phase 3 with an empty Phase 2 between them show ONE seam,
+ * which is correct: there is one boundary you can see.
+ *
  * Answers '' when there is no breakdown, or when it is a single phase — at
  * one phase this is the old bar with extra markup.
  */
@@ -2220,18 +2240,18 @@ function phaseRunsHtml(roll) {
   var phases = roll.phases || [];
   if (phases.length < 2) return '';
 
-  var out = '';
-  phases.forEach(function (phase) {
-    if (!phase.done) return;      // a phase with nothing done draws nothing
+  // Which phases actually draw. Worked out first, because a run needs to
+  // know whether it is the last one before it can decide on its seam.
+  var drawn = phases.filter(function (phase) { return phase.done > 0; });
 
+  return drawn.map(function (phase, index) {
     var pct  = (phase.done / roll.itemsTotal) * 100;
     var full = (phase.total > 0 && phase.done === phase.total);
+    var seam = (index < drawn.length - 1) ? ' bar-fill--seam' : '';
 
-    out += '<span class="bar-fill s-' + (full ? 'complete' : 'in_progress') + '" ' +
+    return '<span class="bar-fill s-' + (full ? 'complete' : 'in_progress') + seam + '" ' +
                  'style="width:' + pct.toFixed(3) + '%"></span>';
-  });
-
-  return out;
+  }).join('');
 }
 
 

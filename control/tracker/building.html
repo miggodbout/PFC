@@ -237,6 +237,13 @@ function floorHtml(group, index) {
 /**
  * The chip carries both flag kinds and NO NUMBERS. Tap through for the
  * count. Four marks is the ceiling on a 77px chip, not a target.
+ *
+ * AND NO BAR. Twelve chips each with their own hairline, under a floor
+ * header that already has one, read as noise — Miguel's report on the step
+ * 4 test build: "I like the split but it is quite busy." The floor keeps
+ * its bar, because that is the number you cannot work out by eye from
+ * twelve chips. A chip's own progress is the dot, and the exact figure is
+ * one tap away on the Unit screen, which keeps its corner bar.
  */
 function chipsHtml(group) {
   return group.units.map(function (unit) {
@@ -254,7 +261,6 @@ function chipsHtml(group) {
                flagChipHtml('deficiency', roll.deficiency) +
                flagChipHtml('waiting', roll.waiting) +
              '</span>' +
-             barHtml(roll) +
              notSavedChipHtml(notSaved) +
              queuedChipHtml(queued) +
            '</a>';
