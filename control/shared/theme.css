@@ -992,6 +992,14 @@ select.input {
 
 /* A statement of fact, not a warning. The screen already drew from its
    stored copy — this only says how old that copy is. */
+/* The one banner that is a warning rather than a statement of fact. */
+.banner--bad {
+  background: rgba(224,82,82,0.12);
+  border-color: rgba(224,82,82,0.30);
+  color: #F08080;
+}
+.banner--bad b { color: #F08080; }
+
 .banner--quiet {
   background: rgba(255,255,255,0.05);
   border-color: var(--line-soft);

@@ -636,14 +636,64 @@ var Store = {
     return this.jobs()[key] || null;
   },
 
-  /** Puts one job on the shelf, replacing whatever held that key. */
+  /**
+   * Puts one job on the shelf, replacing whatever held that key.
+   *
+   * ANSWERS FALSE WHEN THE PHONE COULD NOT STORE IT. The caller must say
+   * so on the screen. It is the one failure in this app that no retry
+   * fixes and no queue catches, because the edit never reached the phone.
+   */
   putJob: function (job) {
-    var all = this.jobs();
+    var all    = this.jobs();
+    var before = all[job.key];
+
     all[job.key] = job;
+    this._jobs   = all;      // set first, so writeJobs sees this building
+
+    if (this.writeJobs(all)) { Outbox.changed(); return true; }
+
+    /*
+       IT WAS NOT STORED, SO IT MUST NOT PAINT. A job held in memory and
+       not on disk is the worst state this app can be in: the screen shows
+       the value, the person walks away, and the next time the app opens it
+       is gone with nothing to show it was ever there. Put the shelf back
+       the way it was and let the caller report it.
+    */
+    if (before) all[job.key] = before; else delete all[job.key];
     this._jobs = all;
-    var written = this.write('outbox', all);
     Outbox.changed();
-    return written;
+    return false;
+  },
+
+  /**
+   * THE OUTBOX OUTRANKS EVERY BUILDING COPY.
+   *
+   * Ten building copies are about a megabyte, and they are what fills the
+   * phone. A copy is ONLY a copy — the Sheet holds it and opening the
+   * building once brings it back. AN UNSENT EDIT EXISTS NOWHERE ELSE ON
+   * EARTH. So when storage refuses the outbox, copies are deleted to make
+   * room for it, least recently opened first, and never one belonging to a
+   * building that is itself holding an unsent edit.
+   *
+   * This is the offline path's last line. Everything else about being
+   * offline is a retry, and a retry cannot help an edit that was never
+   * written down.
+   */
+  writeJobs: function (all) {
+    if (this.write('outbox', all)) return true;
+
+    var self = this;
+    var seen = (this.list() || {}).seen || {};
+
+    var droppable = this.projectIds().filter(function (id) { return !self.hasJobsFor(id); });
+    droppable.sort(function (a, b) { return (seen[a] || 0) - (seen[b] || 0); });
+
+    for (var i = 0; i < droppable.length; i++) {
+      this.dropProject(droppable[i]);
+      if (this.write('outbox', all)) return true;
+    }
+
+    return false;
   },
 
   removeJob: function (key) {
@@ -1559,6 +1609,25 @@ function staleNoteHtml(fetchedAt) {
   var when = whenText(fetchedAt);
   return '<div class="banner banner--quiet"><div>Offline.' +
          (when ? ' Last updated ' + escapeHtml(when) + '.' : '') +
+         '</div></div>';
+}
+
+
+/**
+ * The phone refused to store an edit.
+ *
+ * THIS IS THE ONLY FAILURE THE OUTBOX CANNOT CATCH. Everything else about
+ * a bad connection is a retry, and a retry needs an edit that was written
+ * down. This one was not, so the person has to be told at once, while they
+ * still remember what they tapped.
+ *
+ * It happens when the phone's storage is full, or when the browser is in
+ * private mode and refuses storage outright.
+ */
+function storageFullHtml() {
+  return '<div class="banner banner--bad"><div><b>Not stored.</b> ' +
+         'This phone has no room to save the change. ' +
+         'Free space on the phone, then set the value again.' +
          '</div></div>';
 }
 
