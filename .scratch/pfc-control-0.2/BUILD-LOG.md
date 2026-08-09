@@ -347,3 +347,185 @@ the drain with its backoff, the hold rules, the sync bar, the Unit marks and the
 red card, the Outbox window, and the greyed Complete. **Step 3 ends at the first
 of the two test rounds, and it is the gate: do not start step 5 before it
 reports back.** Delete `localOnlyNote()` in the same step.
+
+---
+
+## Session 4 — 2026-08-08
+
+**Step:** none. A defect fix between step 2 and step 3.
+**Branch:** `0.2` at `eadf9a4`. Pushed.
+**Deployed:** no. Front-end only, no `Code.js` change.
+**Merged to main:** **no, on purpose.** Not a step end. It rides into step 3's
+merge.
+**CACHE_NAME:** unchanged at `pfc-control-0.2-step2`. **`theme.css` is a file the
+phone downloads, so whoever merges this to `main` MUST bump it.** Step 3's merge
+does that by itself with `-step3`. Do not merge this to `main` on its own without
+a bump.
+
+**Landed:** the press effect no longer steals its own clicks.
+
+Miguel tested step 2 and found two dead controls: the checkbox on Admin's Create
+form would not toggle when he clicked the box, only the label, and the floor
+header would not open when he clicked the caret, only the label. He also disliked
+the animation on both. **One bug, and it was neither of those two screens.**
+
+`.press:active` used `transform: scale(0.95)`. A transform shrinks the box about
+its own centre, so both edges pull inward the moment you press. A click only
+fires when the press and the release land on the **same element** — so a release
+on an edge that has just moved away goes to the container behind, and the handler
+never runs. The centre never moves, which is why the label always worked.
+
+The dead band is 2.5% of the control's width on each side. On Admin's Create form
+at 1489px wide that is **37px**, and the 22px `.check-box` spans x 20 to 42 —
+entirely inside it. The caret sits in the same band on the right of `.floor-head`.
+
+**It was never limited to those two controls.** `.press` is on 15 kinds of
+control, and every full-width one had the same dead edges — including
+`card row press`, the item rows on the Unit screen, and `hub-card`.
+
+**Reproduced and fixed in Chrome, against the real Create form** on a local
+server. With the old rule injected back, a click on the checkbox logged
+`mousedown` inside `.check`, then `mouseup` and `click` on `.phase-block`, and
+`aria-checked` stayed `true`. With the fix, all three events stay on the button
+and the row toggles. Retested on the right edge too. Both pass.
+
+**The fix, in `theme.css`:**
+
+- New token `--press-tint: rgba(255,255,255,0.07)`.
+- `.press` is now paint only — `box-shadow: inset 0 0 0 999px var(--press-tint)`.
+  A large inset spread floods the padding box, so one rule tints a dark card and
+  an orange button alike, sits under the text, follows the border radius, and
+  **changes no geometry**. On instantly, out over 160ms; a press that fades *in*
+  reads as lag.
+- `.check` gains `border-radius: 10px`, so the flash is not a hard-edged band.
+  The row draws no background of its own, so the radius does nothing else.
+- A comment on `.press` states the rule as a hit-target rule, not a taste one,
+  and names what scale(0.95) broke.
+
+**Miguel chose the background flash** over dim-only, scale-on-small-controls-only,
+and no feedback at all.
+
+**Not landed:** nothing new. `reference/PFC_Master_Template.xlsx` still not
+updated, per sessions 1 to 3. Everything from step 3 onward.
+
+**Open:**
+
+- **Nothing may move a control on `:active` again.** Any new press state must be
+  paint. This binds the Outbox and Logger windows, which do not exist yet and
+  will inherit `theme.css`.
+- **`.caret` has a dead transition.** `theme.css` has
+  `transition: transform 150ms` on it, but `toggleFloor` calls `render()`, which
+  replaces the element, so a fresh node draws already rotated and the transition
+  never plays. Harmless. Step 6 sweeps the theme classes — drop it there.
+- Everything still open from session 3: the `ZZ 0.2 Step 2 Test` Sheet to trash,
+  the greyed Complete not reachable until step 4, the chip bar looking long on a
+  desktop window, `.details-btn` / `.details-edit` unused, the Tracker row 5
+  wrap, and PLAN CALL 3 at step 4.
+
+**Next:** unchanged — start step 3.
+
+## Session 5 — 2026-08-08
+
+**Miguel's step 2 test notes**, at `Miguel's Notes/0.2-Step 2 Testing.md`. Four
+items. Three needed no code. One did.
+
+**Item 3, the only bug: new project Sheets landed in `My Drive/Projects/`.**
+`PFC_ROOT_FOLDER_ID` in `control/appscript/Code.js` was `''`, which means the top
+of My Drive, and `PROJECTS_FOLDER_NAME` was `Projects`. So `getProjectsFolder`
+built a folder at the top level, beside PFC rather than inside it.
+
+Fixed. The root is now pinned to the `PFC` folder by ID,
+`1fw8Wl7EEWIdHpr0QtD0vr6OBJDK86e2N`, and the folder name is **`Project Sheets`**,
+so it reads apart from the camera app's `PFC/Project Logs/` at a glance.
+
+**Pinned by ID, not looked up by name, on purpose.** A name lookup from the top of
+My Drive would silently build a second `PFC` folder the day this one is renamed or
+moved, and every project made after that would disappear from the app with no
+error. An ID survives a rename and a move.
+
+`CLAUDE.md` said `PFC/Projects/` and was wrong on both halves. Corrected, with the
+folder ID recorded beside it.
+
+**Miguel chose to start clean** rather than move the test projects across. The old
+`My Drive/Projects/` folder and its contents are his to delete.
+
+**Item 4, the missing flag on the Unit screen: not a bug.** Flag chips are step 4.
+`unit.html:256` already says so, and the build plan agrees. Building and floor
+views carry chips today only because the rollup needs the counts to compute.
+
+**Item 1, the dead tap zone: already fixed in session 4** and already on
+`origin/0.2`. Miguel's note says it is unpushed. It is not.
+
+**Item 2, the animation: half of it is still open, and Miguel's worry was
+unfounded.** There is no "text fade". `.press:active` is a 7% white inset wash
+that appears instantly and fades out over 160ms, painted under the text, moving
+nothing. That is what he asked for.
+
+The half that is genuinely not done: **`.floor-body` has no expand transition.**
+The unit grid still pops in. He wants it to "merge out like a smooth dropdown".
+Deferred to the step 3 UI push by his choice, so there is one redeploy.
+
+**A trap for whoever builds that animation.** It is the same one already logged
+against `.caret` in session 4: `toggleFloor` calls `render()`, which replaces the
+element, so a fresh node draws in its final state and no CSS transition ever
+plays. A `max-height` or `grid-template-rows` transition on `.floor-body` will do
+nothing at all unless the open state stops going through a full re-render. Budget
+for that, do not budget for a two-line CSS change.
+
+**Redeployed twice, same session.** `clasp push`, then `clasp deploy` against the
+**existing** deployment id `AKfycbzo9lC…4vj8_YCrtnGjv5e` — version 5 for the
+folder fix, version 6 for the move under `Control/`. Never `clasp deploy` with no
+id here: that mints a new deployment with a new URL, and `API_URL` in
+`control/shared/common.js` names this one.
+
+`clasp deployments` printed the **old** `@4` line for minutes after the version 5
+deploy, which looked like a failed deploy and is not one — it caught up to `@6`
+later on its own. It lags. Verify a deploy against the live URL, never against
+that list.
+
+Verified live both times: `list-projects` answered `{"success":true,"projects":[]}`,
+and Drive showed the target folder created at the moment of the call. Only the new
+code creates that folder, so the new version is serving.
+
+### The Drive layout, settled the same evening
+
+Miguel moved the Apps Script project into `PFC/Apps Scripts/` by hand and asked
+whether it broke a path. It did not, and the general rule is now in `CLAUDE.md`:
+**Drive tracks a file by ID, never by path.** Both scripts pin their root by ID,
+and clasp finds a script project by `scriptId`. Dragging any of it is safe.
+
+**One exception, and it is the only one in either codebase.**
+`PROJECTS_FOLDER_NAME` is found by NAME inside whatever `PFC_ROOT_FOLDER_ID`
+points at. Drag `Project Sheets` out of `Control` on its own and the lookup
+silently creates a new empty folder — every project disappears from the app with
+no error. The comment on that constant now says so.
+
+He then asked for `PFC/Control/` so the camera app, PFC Control and his own files
+each get a branch. Done: `PFC_ROOT_FOLDER_ID` is now the `Control` folder,
+`1SwrhzsObgZpaLsjJtP5ErsEZtt53ton9`. Free to do because `Project Sheets` was
+still empty — with projects in it, they would have had to move first.
+
+**`Project Logs` stays at `PFC/` level.** Offered `PFC/Camera/` and `PFC/Log/` for
+symmetry; Miguel chose to leave it. The separation reads clearly already, and the
+camera app may be scrapped or rebuilt anyway.
+
+**Not landed:** nothing new. `reference/PFC_Master_Template.xlsx` still not
+updated, per sessions 1 to 4. Everything from step 3 onward.
+
+**Open:**
+
+- **The `.floor-body` expand animation**, with the re-render trap above. Step 3.
+- **Drive tidying: Miguel did all of it the same evening.** `Master Template` and
+  `Apps Scripts` are in `Control/`, the orphaned empty `PFC/Project Sheets` is
+  gone, and `PFC - Highland View Tracker` moved to `Personal/`. Verified against
+  Drive, and `clasp deployments` plus a live `list-projects` both still answer, so
+  moving the script project did not disturb anything. The layout is drawn in
+  `CLAUDE.md`. **Still there: `My Drive/Projects/`
+  (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`) with the old test projects.**
+- Everything still open from session 4: nothing may move a control on `:active`
+  again, the dead `.caret` transition for the step 6 sweep, the
+  `ZZ 0.2 Step 2 Test` Sheet to trash, the greyed Complete not reachable until
+  step 4, the chip bar looking long on a desktop window, `.details-btn` /
+  `.details-edit` unused, the Tracker row 5 wrap, and PLAN CALL 3 at step 4.
+
+**Next:** unchanged — start step 3.

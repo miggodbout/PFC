@@ -82,8 +82,43 @@ Backend: separate Google Apps Script project from `Code.gs`. Do not merge them.
 
 Data: one Google Sheet per project (building), generated from a master template.
 - Local reference copy: `reference/PFC_Master_Template.xlsx` (repo root)
-- Live template (Drive): `PFC/Master Template/PFC_Master_Template.xlsx` (ID: 1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M)
-- Generated project Sheets (Drive): `PFC/Projects/`
+- Live template (Drive): `PFC/Control/Master Template/PFC_Master_Template.xlsx` (ID: 1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M)
+- Generated project Sheets (Drive): `PFC/Control/Project Sheets/`
+
+### The Drive layout, and the one reference that a move can break
+
+Settled 2026-08-08 during 0.2 step 2 testing.
+
+```
+My Drive/PFC/
+  Control/          ← PFC Control owns everything in here    1SwrhzsObgZpaLsjJtP5ErsEZtt53ton9
+    Project Sheets/     generated project Sheets             1_J7pwpy3NFYIpBSAD8rg6O7L7jGLhnWE
+    Master Template/                                         1It8gHaSGjsSGgVx2gucnhsBHkibaPwvY
+    Apps Scripts/       holds the PFC Control script only    1icyZGjIM6TTCy1VFuxZR4Q6Jo1ynyCuT
+  Project Logs/     ← the camera app writes here             1-eJRDVcj7CrGM02XE-gXs_EU4YdazdYg
+  Personal/         ← Miguel's own files, no code touches it 1UoQj3eCBdgrNw_F0MoNbKelZQx8HPFYK
+```
+
+`Apps Scripts` sits **inside** `Control`, so despite the plural name it holds the
+PFC Control script alone. The camera app's script project has no home folder yet.
+Do not put it in there — that would nest a camera app file under Control. Give it
+one beside `Project Logs` when it matters.
+
+**Drive tracks a file by ID, never by path**, so dragging a folder in the Drive UI
+does not break an ID reference. Both scripts pin their root by ID:
+`PFC_ROOT_FOLDER_ID` in `control/appscript/Code.js` and `ROOT_FOLDER_ID` in
+`appscript/Code.js`. Moving or renaming either folder is safe. Moving the Apps
+Script project files is safe too — clasp finds them by `scriptId`.
+
+**One exception.** `PROJECTS_FOLDER_NAME` is found by *name*, inside whichever
+folder `PFC_ROOT_FOLDER_ID` names. Drag `Project Sheets` out of `Control` and the
+lookup silently creates a new empty one, and every project disappears from the
+app with no error. Move it only by moving `Control`, which carries it.
+
+History: the code wrote to `My Drive/Projects/` at the top level, because
+`PFC_ROOT_FOLDER_ID` was empty. Fixed to `PFC/Project Sheets/`, then moved again
+under `Control/` the same evening so the camera app, PFC Control and Miguel's own
+files each have their own branch.
 
 Branding: dark theme, accent color `#DE7452` (primary), `#A47263` (secondary) — deliberately distinct from the camera app's gold, so the two tools are visually distinguishable.
 

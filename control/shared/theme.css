@@ -17,6 +17,10 @@
   --surface-1: #171514;   /* cards, rows, inputs */
   --surface-2: #1D1A18;   /* unit chips, dropdown panel */
 
+  /* The press flash. Painted over whatever background a control already
+     has, so one value covers a dark card and an orange button. */
+  --press-tint: rgba(255, 255, 255, 0.07);
+
   /* Accents */
   --accent:       #DE7452;   /* primary, PFC Control orange */
   --accent-2:     #A47263;   /* secondary, section labels */
@@ -117,9 +121,34 @@ button {
   cursor: pointer;
 }
 
-/* One press effect, used on everything you can tap. */
-.press { transition: transform 120ms ease, opacity 120ms ease; }
-.press:active { transform: scale(0.95); opacity: 0.75; }
+/* One press effect, used on everything you can tap.
+
+   THE PRESS MUST NEVER MOVE THE CONTROL. This is a hit-target rule, not a
+   taste one. A transform on :active shrinks the box about its own centre,
+   so both edges pull inward the moment you press. A click only fires when
+   the press and the release land on the SAME element — so a release on an
+   edge that has just moved away goes to the card behind instead, and the
+   handler never runs. The centre never moves, so the middle of a control
+   keeps working while its edges are dead.
+
+   0.2 step 2 shipped scale(0.95) here. On a full-width control the dead
+   band is 2.5% of the width on each side, which is 9px on a phone and
+   more than 15px on a desktop card — wide enough to swallow the whole
+   22px checkbox on Admin's Create form and the caret on a floor header.
+   Both sit hard against an edge. Both read as "only the label is
+   tappable". Paint only from here on: no transform, no margin, no width.
+
+   An inset shadow with a large spread floods the padding box, so it tints
+   whatever background is already there, sits under the text, follows the
+   border radius, and changes no geometry.
+
+   On instantly, out over 160ms. A press that fades IN reads as lag, and
+   lag on a job site reads as a dead app. */
+.press { transition: box-shadow 160ms ease; }
+.press:active {
+  box-shadow: inset 0 0 0 999px var(--press-tint);
+  transition: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -297,6 +326,31 @@ button {
 .floor-label { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.90); }
 .floor-count { font-size: 12px; color: var(--fg-6); }
 
+/* THE FLOOR OPENS BY GROWING ITS ROW, NOT BY APPEARING.
+
+   The drawer is a one-row grid whose row goes from 0fr to 1fr. That is the
+   only way to animate to a height nobody measured, and a floor holds a
+   different number of chips every time. The body inside needs overflow
+   hidden and min-height 0, or the chips spill out of the closed row.
+
+   IT ONLY WORKS BECAUSE THE CHIPS ARE ALWAYS IN THE PAGE. A CSS transition
+   plays on an element that CHANGES; a freshly drawn element arrives in its
+   final state with nothing to move from. Redrawing the floor on every tap
+   is what kept this from ever animating. See toggleFloor in building.html:
+   it now adds and removes a class and draws nothing. */
+.floor-drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+.floor.open > .floor-drawer { grid-template-rows: 1fr; }
+
+.floor-drawer > .floor-body { overflow: hidden; min-height: 0; }
+
+/* A header reports what it hides. Open, the flagged chips are right there
+   in front of you, so the counts come off the header. */
+.floor.open .floor-head .marks { display: none; }
+
 .floor-body {
   padding: 2px 12px 14px;
   display: grid;
@@ -337,9 +391,10 @@ button {
   line-height: 1;
 }
 
-/* Caret that flips when a floor opens. */
-.caret { transition: transform 150ms ease; flex-shrink: 0; }
-.caret.open { transform: rotate(180deg); }
+/* Caret that flips when a floor opens. The transition plays now that the
+   floor header survives a tap instead of being redrawn. */
+.caret { transition: transform 220ms ease; flex-shrink: 0; }
+.caret.open, .floor.open .floor-head .caret { transform: rotate(180deg); }
 
 
 /* ── THE MARKS — THREE FACTS, THREE SHAPES ───────────────────────────
@@ -438,6 +493,115 @@ button {
   width: auto;
 }
 
+
+/* ── THE SYNC BAR ────────────────────────────────────────────────────
+
+   One line under the header, and the ONLY place a count of unsent edits
+   appears. It draws nothing at all when the outbox is empty.  */
+
+.syncbar-slot:empty { display: none; }
+
+.syncbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.sync-text { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sync-sep  { color: var(--fg-7); margin: 0 1px; }
+
+.syncbar--accent { background: var(--accent-soft); color: var(--accent); }
+.syncbar--quiet  { background: rgba(255,255,255,0.04); color: var(--fg-5); }
+.syncbar--bad    { background: rgba(224,82,82,0.12); color: #F08080; }
+
+/* Sending: a turning ring, no words about it. */
+.sync-ring {
+  width: 13px; height: 13px; flex-shrink: 0;
+  border: 2px solid rgba(222,116,82,0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 750ms linear infinite;
+}
+
+/* Waiting: a still slab. It is not turning because nothing is happening. */
+.sync-slab {
+  width: 11px; height: 11px; flex-shrink: 0;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.30);
+}
+
+/* Failed: a red dot. The corner badge shape is reserved for a CHIP, where
+   a red flag also lives and the two must not be confused. On this bar
+   there is no flag to confuse it with. */
+.sync-bad {
+  width: 9px; height: 9px; flex-shrink: 0;
+  border-radius: 50%;
+  background: #E85C5C;
+}
+
+.sync-link {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  margin: -4px -8px -4px 0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: inherit;
+  opacity: 0.85;
+}
+
+
+/* ── PENDING MARKS ON THE UNIT SCREEN ────────────────────────────────
+
+   On Unit you look at seven items, so a mark per item points straight at
+   what you tapped. On Building you look at 48 chips, so a mark per chip
+   would be noise and the sync bar carries it instead.  */
+
+/* Waiting: a small turning ring between the item name and the control.
+   NO WORDS — the item already shows the value you tapped. */
+.ring {
+  width: 13px; height: 13px; flex-shrink: 0;
+  border: 2px solid rgba(222,116,82,0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 750ms linear infinite;
+}
+
+/* The same ring on the phase header and the unit pill, one size down. */
+.ring--sm { width: 10px; height: 10px; border-width: 1.6px; }
+
+/* Failed: a still red dot where the ring was. */
+.ring--bad {
+  border: none;
+  background: #E85C5C;
+  animation: none;
+  width: 10px; height: 10px;
+}
+
+/* A failed item snaps back to what the Sheet holds, so its name greys to
+   say the value on screen is not the value you set. */
+.item--held .item-name { color: var(--fg-7); }
+
+/* The red card under a failed item. Three things: why, what was lost, and
+   the two ways out. */
+.fix-card {
+  margin: 8px 0 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(224,82,82,0.10);
+  border: 1px solid rgba(224,82,82,0.30);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fix-why  { font-size: 13px; font-weight: 700; color: #F08080; }
+.fix-lost { font-size: 12.5px; color: var(--fg-5); line-height: 1.45; }
+.fix-acts { display: flex; gap: 8px; }
+.fix-acts .btn-small { flex: 1; }
 
 /* ── PULL TO REFRESH ─────────────────────────────────────────────── */
 
@@ -619,6 +783,23 @@ button {
 }
 /* The chosen option is marked by its own tint, not by a tick. */
 .status-opt.on { background: var(--sbg); }
+
+/* COMPLETE STAYS IN THE LIST WHILE AN OPEN FLAG SITS ON THE ITEM. It is
+   dimmed and it does not answer a tap. A row that silently disappears
+   reads as a broken app, and it also moves the two rows below it under
+   your thumb between one look and the next. */
+.status-opt.blocked { opacity: 0.45; cursor: default; }
+.status-opt.blocked:active { box-shadow: none; }
+
+/* One line under the panel, saying what to do about it. */
+.status-note {
+  padding: 8px 12px 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fg-6);
+  white-space: normal;
+  max-width: 190px;
+}
 .status-opt .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); flex-shrink: 0; }
 .status-opt .txt { font-size: 14px; font-weight: 600; color: var(--sfg); white-space: nowrap; }
 
@@ -713,6 +894,10 @@ select.input {
   padding: 0 4px;
   width: 100%;
   text-align: left;
+  /* The row draws no background of its own. The radius exists only to
+     round the press flash, which would otherwise be a hard-edged band
+     across a rounded card. */
+  border-radius: 10px;
 }
 .check-box {
   width: 22px; height: 22px;

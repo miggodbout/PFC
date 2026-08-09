@@ -41,8 +41,13 @@
    Drawn from the whole-building copy get-project stored, so a unit opens
    with no signal and with no wait.
 
-   A tap on the status control goes on the outbox shelf and paints the
-   screen. Step 3 sends it. The note at the top says so until then.
+   A tap on the status control goes on the outbox shelf, paints the screen
+   at once, and the drain in common.js sends it. Nothing here calls the
+   backend to save.
+
+   WHILE IT IS ON ITS WAY the item carries a small turning ring, and so do
+   its phase header and the unit pill above it. When it lands, everything
+   stops and says nothing — a landed edit is not news.
 
    EVERY ITEM IS ALWAYS DRAWN, whatever its Progress. Complete is a mark on
    a row, never a reason to remove the row — the row is the control you set
@@ -73,8 +78,17 @@ if (!projectId || !unitKey) {
     screen.innerHTML = loadingHtml('Loading unit…');
   }
 
+  mountSyncBar();
+  Outbox.onChange(function () { if (copy) render(); });
+
   refresh();
   enablePullToRefresh(refresh);
+}
+
+
+/** The outbox job for one item on this unit, or null. */
+function jobFor(itemKey) {
+  return Store.job(itemJobKey(projectId, unitKey, itemKey));
 }
 
 
@@ -110,16 +124,39 @@ function render(note) {
   setTitle(place.unit.label);
   document.getElementById('subtitle').textContent =
     copy.name + (place.group.label ? ' · ' + place.group.label : '');
-  document.getElementById('unit-pill').innerHTML = pillHtml(unitRollup(copy, unitKey), 'md');
+
+  // The unit pill carries the ring too, so an edit anywhere in this unit
+  // is visible from the header without scrolling to find it.
+  document.getElementById('unit-pill').innerHTML =
+    (waitingIn(null) ? '<span class="ring ring--sm"></span>' : '') +
+    pillHtml(unitRollup(copy, unitKey), 'md');
 
   screen.innerHTML =
     '<div class="body body--flush">' +
       (note || '') +
-      localOnlyNote() +
       copy.phases.map(phaseHtml).join('') +
     '</div>';
 
   placeOpenMenu();
+}
+
+
+/**
+ * How many items are waiting to send, in one phase or in the whole unit.
+ *
+ * A HELD edit is not counted. It has stopped painting the screen, it shows
+ * what the Sheet holds, and its own red card says so where it happened.
+ */
+function waitingIn(phase) {
+  var count = 0;
+  (copy.phases || []).forEach(function (one) {
+    if (phase && one.key !== phase.key) return;
+    one.items.forEach(function (item) {
+      var job = jobFor(item.key);
+      if (job && !job.held) count += 1;
+    });
+  });
+  return count;
 }
 
 
@@ -140,6 +177,7 @@ function phaseHtml(phase) {
   return '<section class="phase">' +
            '<div class="phase-head">' +
              '<h2 class="phase-label">' + escapeHtml(phase.label) + '</h2>' +
+             (waitingIn(phase) ? '<span class="ring ring--sm"></span>' : '') +
              pillHtml(rollupOf(statuses, flags), 'xs') +
            '</div>' +
            phase.items.map(itemHtml).join('') +
@@ -147,27 +185,34 @@ function phaseHtml(phase) {
 }
 
 
+/**
+ * One item row, and under it the fix card when its edit failed.
+ *
+ * COMPLETE IS UNTAPPABLE WHILE AN OPEN FLAG SITS ON THE ITEM. It stays in
+ * the list, dimmed, with one line under the panel saying what to do. An
+ * item with an open problem is not Complete, and a row that vanishes reads
+ * as a broken app.
+ */
 function itemHtml(item) {
   var key      = itemStatus(copy, unitKey, item.key);
   var menuOpen = (openMenu === item.key);
+  var job      = jobFor(item.key);
+  var held     = !!(job && job.held);
 
-  var menu = menuOpen
-    ? '<div class="status-menu" id="menu-' + escapeHtml(item.key) + '">' +
-        CYCLE.map(function (option) {
-          return '<button type="button" class="status-opt press s-' + option +
-                        (option === key ? ' on' : '') + '" ' +
-                        'onclick="chooseStatus(event,' + attr(item.key) + ',\'' + option + '\')">' +
-                   '<span class="dot"></span>' +
-                   '<span class="txt">' + STATUS[option].label + '</span>' +
-                 '</button>';
-        }).join('') +
-      '</div>'
-    : '';
+  var flags   = countFlags(copy, { unit: unitKey, item: item.key });
+  var blocked = (flags.deficiency + flags.waiting) > 0;
 
-  return '<div class="item">' +
+  var menu = menuOpen ? menuHtml(item, key, blocked) : '';
+
+  // One mark, never two: the ring while it is going, the red dot when it
+  // has stopped going.
+  var mark = held ? '<span class="ring ring--bad"></span>'
+                  : (job ? '<span class="ring"></span>' : '');
+
+  return '<div class="item' + (held ? ' item--held' : '') + '">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(item.label) + '</span>' +
-
+             mark +
              '<span class="status-wrap">' +
                '<button type="button" class="status-trigger press s-' + key + '" ' +
                        'aria-expanded="' + menuOpen + '" ' +
@@ -179,7 +224,70 @@ function itemHtml(item) {
                menu +
              '</span>' +
            '</div>' +
+           (held ? fixCardHtml(item, job, key) : '') +
          '</div>';
+}
+
+
+function menuHtml(item, key, blocked) {
+  var options = CYCLE.map(function (option) {
+    var off = blocked && option === 'complete';
+
+    return '<button type="button" class="status-opt press s-' + option +
+                  (option === key ? ' on' : '') + (off ? ' blocked' : '') + '" ' +
+                  (off ? 'aria-disabled="true" ' : '') +
+                  'onclick="' + (off ? 'event.stopPropagation()'
+                                     : 'chooseStatus(event,' + attr(item.key) + ',\'' + option + '\')') + '">' +
+             '<span class="dot"></span>' +
+             '<span class="txt">' + STATUS[option].label + '</span>' +
+           '</button>';
+  }).join('');
+
+  var note = blocked
+    ? '<div class="status-note">Fix the open flag first. Then Complete comes back.</div>'
+    : '';
+
+  return '<div class="status-menu" id="menu-' + escapeHtml(item.key) + '">' +
+           options + note +
+         '</div>';
+}
+
+
+/**
+ * THE RED CARD. Three things and no more: why it failed in plain words,
+ * what was lost, and the two ways out.
+ *
+ * "What was lost" is the important line. The row above has already snapped
+ * back to what the Sheet holds, so without this sentence the screen simply
+ * shows the old value and never says the tap went nowhere.
+ */
+function fixCardHtml(item, job, showing) {
+  var tapped = STATUS[safeStatus(job.progress)].label;
+  var sheet  = STATUS[safeStatus(showing)].label;
+
+  return '<div class="fix-card">' +
+           '<div class="fix-why">' + escapeHtml(job.error || 'This edit did not save.') + '</div>' +
+           '<div class="fix-lost">You tapped ' + escapeHtml(tapped) +
+             '. The Sheet still says ' + escapeHtml(sheet) + '.</div>' +
+           '<div class="fix-acts">' +
+             '<button type="button" class="btn btn-small btn-ghost press" ' +
+                     'onclick="retryEdit(event,' + attr(job.key) + ')">Try again</button>' +
+             '<button type="button" class="btn btn-small btn-ghost press" ' +
+                     'onclick="dropEdit(event,' + attr(job.key) + ')">Drop the edit</button>' +
+           '</div>' +
+         '</div>';
+}
+
+
+function retryEdit(event, key) {
+  event.stopPropagation();
+  Outbox.retry(key);
+}
+
+/** The only way an edit leaves this phone unsent. A person has to say so. */
+function dropEdit(event, key) {
+  event.stopPropagation();
+  Outbox.drop(key);
 }
 
 
@@ -207,14 +315,22 @@ function toggleMenu(event, itemKey) {
  * Sheet.
  *
  * progress holds the SHORT KEY, which is what every screen on this phone
- * works in. Step 3's drain turns it into the Sheet's label on the way out.
+ * works in. The server turns it into the Sheet's label on the way in.
  *
  * The building copy is not touched. The paint happens on the way to the
  * screen, in paintedStatus, which is what makes a fresh fetch unable to
  * overwrite an edit that has not sent.
+ *
+ * A RETAP ON A HELD EDIT REPLACES IT. tries goes back to zero and held
+ * goes back to false, so trying again by hand is never strictly needed —
+ * setting the value again is the same thing and it is one tap closer.
  */
 function chooseStatus(event, itemKey, status) {
   event.stopPropagation();
+
+  // Closed before the job lands, because putting a job on the shelf
+  // redraws the screen and the menu would flash open for a frame.
+  openMenu = null;
 
   Store.putJob({
     key:       itemJobKey(projectId, unitKey, itemKey),
@@ -225,11 +341,12 @@ function chooseStatus(event, itemKey, status) {
     progress:  status,
     at:        Date.now(),
     tries:     0,
-    held:      false
+    held:      false,
+    error:     ''
   });
 
-  openMenu = null;
   render();
+  Outbox.wake();
 }
 
 

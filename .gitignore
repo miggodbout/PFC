@@ -1,1 +1,6 @@
 .clasp.json
+
+# Miguel's own notes. Test findings, scratch thinking, anything not meant
+# for the public repo. Claude reads them, git never sees them.
+# Name files in kebab-case: notes/0.2-step-2-testing.md
+notes/
