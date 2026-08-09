@@ -1746,3 +1746,10 @@ Item status edits were not seen to go stale the same way. Only records.
    `0.2` to `main` and push. `CACHE_NAME` is already at
    `pfc-control-0.2-step4`.
 2. Then step 5 — Admin, and test points 14 and 15.
+
+**Update, same evening — merged after all.** Miguel: "Crew does not use the
+app." Nobody but him opens it, so an untested screen on `main` costs him a
+reload, not a lost record. `0.2` merged to `main` and pushed at `03bd7a4`.
+`CACHE_NAME` was already `pfc-control-0.2-step4`. `Code.js` was not touched,
+so no clasp push — the backend stays at version 9. The line above reading
+**Merged to main: no** is what was true before this update.
