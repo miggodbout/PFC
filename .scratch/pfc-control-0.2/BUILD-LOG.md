@@ -1895,3 +1895,194 @@ as prose and gets skipped. Check the sentences too.
 ### Next
 
 Step 5 — Admin, and test points 14 and 15.
+
+
+---
+
+## Session 16 — 2026-08-09
+
+**Step:** 4 — the second fix round, from Miguel's own test run.
+**Branch:** `0.2` at `7945e55`, merged to `main` and pushed.
+**Deployed:** **not yet.** `Code.js` gained one number, so this round DOES
+need an Apps Script redeploy — the first round in three sessions that does.
+See "The one deploy" below.
+**Merged to main:** **yes.** `CACHE_NAME` is `pfc-control-0.2-step4-fix2`.
+
+The findings are `notes/0.2-step-4-testing.md`, twelve of them across Core,
+Logger, Set Up Building, UI and Bugs. Two were questions and got answers
+rather than code. The other ten are built.
+
+### The two questions
+
+- **Subtypes in Set Up Building.** Not missing — not written yet. Step 5 is
+  Admin and its test line is "add a subtype and confirm the Tracker tab is
+  not rebuilt". Today the four subtype lists are seeded from
+  `DEFAULT_ITEM_LISTS` when a building is created and nothing can edit them.
+- **The ghost `ZZ 02 Step 3 Test` building.** Not a ghost. Logging never
+  fetched anything, so it filtered a *stored* Buildings list against the
+  copies on the phone, and both were stale. The desktop had a newer list, so
+  it did not show it — which is why the report says "only from my phone".
+  The `301 is not a unit in this building` half is the same root cause one
+  level down: the copy of Elsliger 36-B predated the floor 301 sits on.
+
+**Both halves are one fix.** Logging now draws its stored copy at once and
+refreshes the list and the copy behind it, the way every Tracker screen
+already did. **This was confirmed live during the check:** the seeded test
+building vanished from the dropdown the instant the real `list-projects`
+answer landed, because the fresh list no longer named it.
+
+### The refresh ring — Core 1 and Core 2 are one mechanism
+
+Miguel picked "old numbers, no sign it is checking" out of three readings of
+"does not fetch the latest version quickly enough". So the fetch is not what
+is slow; the silence is. Every screen already drew its copy instantly and
+asked the server behind it, and nothing on the screen said so.
+
+`enablePullToRefresh`'s private indicator became a shared one, and
+`fetchProjects`, `fetchProject` and `loadStructure` now turn it. **A screen
+gets the ring for free by fetching** — no per-screen wiring, which is what
+keeps the next screen from forgetting it.
+
+It is a **counter, not a flag**: Logging fetches a list and a copy back to
+back, and the first one finishing must not stop the ring the second is
+still using.
+
+- The pull is on the Hub and Set Up Building too. On the Hub it drains the
+  queue and refreshes the list and changes nothing on screen — the turning
+  ring is the only answer it gives, which is right, because the Hub carries
+  no queue count by design.
+- `.ptr.spin` rests at `translateY(30px)`, was 60px. 60 parked it across the
+  middle of the header title.
+
+### The Logging form, rebuilt at the top
+
+Building, Unit and Phase were a two-line place bar and a bottom sheet. They
+are now the first three fields of the form, and the bar and the sheet are
+deleted along with their CSS. Miguel picked this over keeping Building on a
+bar.
+
+- Building is a dropdown and is still remembered. Unit is a text box and is
+  still never remembered.
+- `typeUnit` moves three things in place and never redraws — the note, the
+  dimmed class on the record half, and the Save bar. A redraw on a keystroke
+  takes the keyboard down mid-number.
+- `render()` now restores focus and caret for **any** input with an id, not
+  just `#needed`. The unit box needed the same treatment.
+- The unit is held as **typed text**, so a refreshed copy re-matches it. A
+  unit added on the server this morning starts matching with no retype.
+
+### The x on a suggestion chip
+
+A chip is earned, not written: saved records with the same line make one. So
+a typo saved three times became a permanent suggestion, and the only way
+back was to find and cancel every record that fed it.
+
+`chips.hidden` is a per-phone, per-group list of **normalised** lines.
+`chipRows` filters it last, after both sources are read, so the history
+index cannot put back what the live records already lost.
+
+**It never touches a record.** `painters to finish` stays exactly as written
+on every record holding it. That is history, and history does not get edited
+to tidy a dropdown.
+
+Checked in the browser: chip gone, `nearMatch` on a different spelling of
+the same line answers `null`, and the record is still in the copy.
+
+### The flags read as buttons now
+
+Both flags were bare glyphs, and a bare glyph beside a name reads as a label
+about the item.
+
+- `.phase-label` and `.item-name` stopped being `flex: 1`. A new `.head-gap`
+  eats the leftover width instead, which is what puts the flag **against the
+  name** and leaves the pill on the right edge. The label taking the space
+  itself is what pushed the flag over beside the status.
+- The item's flags came off their own line underneath and onto the row.
+- `.flag-btn` gained a round background tinted in the flag's own colour, and
+  inverts when its records are open. **Fully rounded, not a fixed circle**:
+  one open issue draws round, and a count of 12 grows sideways rather than
+  spilling out of a 30px box.
+- `queue.html` needed a `.head-gap` too — its ring rode on `.item-name`
+  being `flex: 1`.
+
+### The offline mark
+
+- **Grey, not blue.** Blue is Waiting's colour everywhere else, so a mark
+  about signal was wearing the colour of a mark about painters.
+- **A wifi symbol with a slash**, not signal bars with a dash. Three bars is
+  a strength meter, so a full bar next to a slash says two things at once.
+  **The slash is a judgement call** — the note said "just a classic Wifi
+  symbol" and did not say whether to keep it. It is one line to drop.
+- **The clipping was the floor drawer, not the badge.** The drawer clips at
+  its padding box and a chip's corner badges hang 5px above the chip, so the
+  top row lost half of one. `padding-top` on an open `.floor-body` went from
+  2px to 9px. Confirmed fixed in the browser on unit 101.
+
+### The last floor stays open
+
+Stored by **group key, not index** — add a floor in Admin and every index
+moves. Read once, on the first draw that has a copy, so the fetch behind the
+screen cannot undo a tap. `-1` is a real state and is stored as absence.
+
+### The progress bar, coloured by phase
+
+Miguel's complaint: a unit with Phase 1 wholly finished still drew one amber
+bar part way along, which hides a closed phase.
+
+He turned down the option he was offered. The slices-by-item-count version
+left a phase's fill sitting in its own slot, so a part-done phase left a gap
+before the next one started. **His rule instead: "if P3 has data logged that
+3rd should stick at the tail end of P2".**
+
+So every phase contributes a run as long as the items it has finished, and
+**the runs butt up against each other** — no slots, no gaps, no dividers. A
+run is green when its phase is wholly complete and amber while it is part
+way. Two amber phases in a row are indistinguishable from one longer amber
+run, which is the point: it is still one bar.
+
+The total filled width is unchanged. It still equals `itemsDone /
+itemsTotal`. Only the colouring is new.
+
+Checked over all 320 combinations of a 7/7/4 building: **zero** width
+mismatches against the old single fill.
+
+`rollup()` carries an optional `phases: [ { key, done, total } ]`, and it is
+optional the whole way through — a caller with none gets the old one-colour
+bar. That matters, because a phone can be holding a list answer from before
+the backend sent them.
+
+### The one deploy
+
+`countItemCells` groups the block it already reads in memory by phase — the
+item columns sit in phase order, so no second read of the Sheet — and
+`list-projects` sends it as `phaseCounts`, the **eighth** number after A1's
+fifth and the step 3 round's sixth and seventh.
+
+**Without the redeploy nothing breaks.** The Tracking rows keep drawing the
+plain one-colour bar, and every other screen colours by phase off the copy,
+because `projectRollup` passes `phaseCounts` straight through, undefined
+included. Same rule the sixth and seventh follow.
+
+### Worth knowing
+
+- **The check ran against seeded data on `localhost:8731`**, not against a
+  real Sheet. The two queued jobs named `TESTBLD1`, which no Drive file is,
+  so nothing could have reached a Sheet even when the live backend answered.
+  `API_URL` was pointed at a dead address **in the browser only** — the file
+  is untouched.
+- `overscroll-behavior-y: none` on `html` and `body` is what stops the
+  Logging form sliding into the pinned Save bar. The custom pull still
+  works: it reads touch positions and a `scrollY` of 0, and never needed the
+  browser's bounce. **This one cannot be proved on a desktop.**
+
+### Open
+
+- The two OPEN words, `Subtype` and `Needed`, still block shipping 0.2.
+- **Needs a real phone:** the overscroll fix, the pinned Save with the
+  keyboard up, the new chip x at thumb size, and the grey wifi mark at 15px.
+- Miguel's call on the slash through the wifi glyph.
+- The Apps Script redeploy for `phaseCounts`.
+
+### Next
+
+Step 5 — Admin, and test points 14 and 15. Subtype editing lands there.
