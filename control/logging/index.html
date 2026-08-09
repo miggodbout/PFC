@@ -343,13 +343,18 @@ function phaseName() {
 
 
 /**
- * TYPE SITS ABOVE EVERYTHING because the two reason lists share no value.
+ * ISSUE SITS ABOVE EVERYTHING because the two reason lists share no value.
  * It holds for the visit: four backordered locksets in one room cost one
  * tap, not four.
+ *
+ * The code calls this `type`; the screen reads `Issue`. Deficiency and
+ * Waiting are the two kinds of issue, and `issue` is the settled umbrella
+ * word in crew-words.md. The label moved so `Type` was free for the field
+ * below, whose own placeholder already read "Choose a type".
  */
 function typeFieldHtml() {
   return '<div class="field">' +
-           '<div class="field-label">Type</div>' +
+           '<div class="field-label">Issue</div>' +
            '<div class="seg">' +
              typeButton('Deficiency') +
              typeButton('Waiting') +
@@ -412,6 +417,10 @@ function currentItem() {
  * Interior Doors, Exterior Doors, Handles and Stops. Every list ends with
  * Other, which opens a text box, and the typed word goes in this record's
  * subtype cell alone. It never joins the list.
+ *
+ * The code calls this `subtype`; the screen reads `Type`. The stored list
+ * was always `item.types` and the placeholder always said "Choose a type",
+ * so the label is what was out of step, not the code.
  */
 function subtypeFieldHtml() {
   var item = currentItem();
@@ -429,7 +438,7 @@ function subtypeFieldHtml() {
     : '';
 
   return '<div class="field">' +
-           '<div class="field-label">Subtype</div>' +
+           '<div class="field-label">Type</div>' +
            '<select class="input input--sm" onchange="setSubtype(this.value)">' + options + '</select>' +
            box +
          '</div>';
@@ -826,7 +835,7 @@ function missingLine() {
 
   var item = currentItem();
   if (item && (item.types || []).length && !subtype) return 'Choose a type.';
-  if (subtype === 'Other' && !subOther.trim())       return 'Fill in the Subtype box.';
+  if (subtype === 'Other' && !subOther.trim())       return 'Fill in the Type box.';
 
   // The field the whole screen exists for. A record with no needed line
   // gives the crew nothing to order and makes no chip for the next person.

@@ -657,10 +657,10 @@ function itemListsHtml(item, reasons) {
 
   return '<div class="list-sub">' +
 
-    '<div class="list-label">Subtypes</div>' +
-    valueChips(types, 'This item has no subtypes. It shows no Subtype box.') +
+    '<div class="list-label">Types</div>' +
+    valueChips(types, 'This item has no types. It shows no Type box.') +
     '<div class="add-row">' +
-      '<input class="input input--sm" id="e-add-type" type="text" placeholder="New subtype" ' +
+      '<input class="input input--sm" id="e-add-type" type="text" placeholder="New type" ' +
              'autocomplete="off" value="' + escapeHtml(edit.typeDraft) + '" ' +
              'oninput="edit.typeDraft = this.value" ' +
              'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); runOp(\'add-type\'); }">' +
@@ -681,13 +681,17 @@ function itemListsHtml(item, reasons) {
     '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'set-trim\')">' +
       'Save the reasons</button>' +
 
-    '<div class="list-label">Hint</div>' +
+    /* The screen reads Example; the config key stays `hint`. crew-words.md
+       and code-words.md are allowed to differ on one word, the same way
+       Project survives in projectId. Renaming the key would need a fallback
+       read for every building already on Drive. */
+    '<div class="list-label">Example</div>' +
     '<div class="field-note">The grey text inside the empty Needed box.</div>' +
     '<input class="input input--sm" id="e-hint" type="text" placeholder="e.g. Size   Jamb   Swing" ' +
            'autocomplete="off" value="' + escapeHtml(edit.hintDraft) + '" ' +
            'oninput="edit.hintDraft = this.value">' +
     '<button type="button" class="btn btn-primary btn-small press" onclick="runOp(\'set-hint\')">' +
-      'Save the hint</button>' +
+      'Save the example</button>' +
   '</div>';
 }
 
@@ -853,7 +857,7 @@ function runOp(op) {
 
     if (op === 'add-type') {
       payload.value = edit.typeDraft;
-      if (!payload.value.trim()) return setEditMessage('Enter a subtype.', false);
+      if (!payload.value.trim()) return setEditMessage('Enter a type.', false);
     } else if (op === 'set-trim') {
       payload.trim = edit.trimDraft.slice();
     } else {

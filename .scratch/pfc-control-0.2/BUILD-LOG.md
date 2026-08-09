@@ -2351,3 +2351,131 @@ Release.
 
 **The five OPEN words have to close before 0.2 ships.** They are the one
 thing on the list that needs Miguel and cannot be built around.
+
+
+---
+
+## Session 19 — 2026-08-09
+
+**The four OPEN words in `crew-words.md` are closed.** One is left, and it is
+open on purpose. This was not a build step — it is the word work step 6 needs
+done before the release, pulled forward because it needed Miguel and nothing
+else did.
+
+### What Miguel decided
+
+Four picks, in one round of the question picker.
+
+| Row | Decision |
+|---|---|
+| `Subtype` | Rename the **pair**. Top field `Type` → `Issue`, `Subtype` → `Type` |
+| `Hint` | `Example` on screen. The config key stays `hint` |
+| `Needed` | Stays |
+| `Job site` | **Cut the subtitle** — not a rewrite, a deletion |
+
+### The Subtype row could not be closed by replacing Subtype
+
+The row was raised as one bad label, and the two alternatives written down at
+the time — `Kind`, `Style` — were bad in the same way, because the fault was
+never the one word. Logging read `Type` at the top and `Subtype` three rows
+down: two near-synonyms on one short form.
+
+Reading the screen top to bottom instead of reading the row found the proof
+already sitting in the code. **The Subtype dropdown's own empty option said
+`Choose a type`**, its validation line said `Choose a type.`, and the stored
+list has always been `item.types` with the op named `add-type`. Three places
+already called it Type. The label was the part out of step.
+
+So the top field took `Issue`, which is the umbrella it always chose between,
+and `Type` moved down to the field that had been calling itself that. The
+placeholder needed no edit — it was the only thing that was right.
+
+`Subtype` is a code word from here: the variable, the record cell, the Sheet
+column. Same shape as `Project`/`projectId`.
+
+### The Job site row closed by deleting the line
+
+It went to the picker as a choice between two spellings and came back as
+neither. A subtitle on the home screen is a message the crew cannot act on,
+which is the rule this file already had and had only ever pointed at warnings.
+`manifest.json` and the `<meta>` description keep a sentence — nobody reads
+those on a screen — reworded to `Site progress and deficiency tracker`.
+
+The header is `display:flex; align-items:center`, so the title centres against
+the 42px logo on its own with no CSS change. `.hdr-sub` still serves four other
+screens, so the rule stays.
+
+### Changed
+
+- `control/logging/index.html` — `Issue` and `Type` labels,
+  `Fill in the Type box.`
+- `control/setup/index.html` — `Types`, `New type`, `Enter a type.`,
+  `This item has no types. It shows no Type box.`, `Example`,
+  `Save the example`
+- `control/index.html` — subtitle cut, `<meta>` description reworded
+- `control/manifest.json` — description reworded
+- `control/appscript/Code.js` — `Enter a type.` and
+  `Every type list already ends with Other.`
+- `control/shared/common.js` — comments only
+- `docs/crew-words.md`, `docs/code-words.md` — all four written up
+- `CACHE_NAME` → `pfc-control-0.2.0-dev.4`
+
+### Two crew-facing strings live in the backend
+
+`Enter a type.` and `Every type list already ends with Other.` are returned by
+`applyStructureOp` in `Code.js`, not drawn by the setup screen. **A word change
+on the Lists card can need a redeploy.** It is the only place in the app where
+that is true, and it is easy to miss because the string appears on a screen the
+front end owns.
+
+Apps Script is at **@13**. Pushed and deployed in session.
+
+### Tested
+
+**Both changed backend strings, against the live deployment.** The `add-type`
+op refuses `Other` and refuses an empty value, and both refusals return at
+`applyStructureOp` **before** `writeConfig`, so the probe writes nothing. Both
+came back correct, and `windows.types` on the throwaway building was still
+empty afterwards.
+
+```
+value='Other'  ->  {"success":false,"error":"Every type list already ends with Other."}
+value=''       ->  {"success":false,"error":"Enter a type."}
+```
+
+**Not tested on a screen.** No browser check this session — the front-end edits
+are label strings, and step 6 opens both screens anyway.
+
+### Worth knowing
+
+- **`docs/crew-words.md` learned two things**, both written into it. An open row
+  can close by changing a word the row does not name — look at what sits beside
+  it when every replacement fails. And a subtitle is a message: check the
+  decoration against the actionable rule, not only the alerts.
+- The `ZZ 0.2 Step 5 Test` building is still on Drive and still should be
+  trashed. This session read from it and wrote nothing.
+
+### Open
+
+- **One OPEN row left: `Deficiencies`**, the greyed Hub card. It names a 0.3
+  window that does not exist, and whether it stays `Deficiencies` or becomes
+  `Issues` follows that design. **It does not block shipping 0.2** the way the
+  other four did.
+- `Can not` vs `cannot` still both appear, from session 18. Untouched.
+- Everything session 16 left open is still open: the phone checks — the
+  overscroll fix, the pinned Save with the keyboard up, the chip x at thumb
+  size, the grey wifi mark at 15px — and Miguel's call on the wifi slash.
+- The Save change from session 15, if Miguel wants Needed optional on a
+  Waiting record.
+
+### Next
+
+**Step 6, unchanged**, minus the word work. The seven Hub cards including the
+greyed Archive, the install nudge, the `sw.js` SHELL, `on_hold` renamed
+`waiting` everywhere, the theme classes, and a read of every comment this
+release made wrong. Then plan section 6 in full, and the release: `-Release
+0.2.0`, the tag, and the GitHub Release.
+
+**Step 6's comment sweep now has a known target.** This session renamed a field
+across two screens and a backend, and fixed the comments it could see. Anything
+still saying "the Subtype dropdown" is stale.

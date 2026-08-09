@@ -98,6 +98,22 @@ word on the GC's punch list, on the paperwork the same defect gets written on.
 The plain-word rule applies *where a plain word exists*, and none carries the
 same meaning to a GC. Do not revisit this without a reason that beats "shorter".
 
+**`Issue` is also a field label on Logging.** Settled 2026-08-09, closing the
+`Subtype` open row. The screen used to read `Type` at the top and `Subtype`
+three rows down — two near-synonyms on one short form. Worse, the Subtype
+dropdown's own empty option already read `Choose a type`, and its stored list
+was already `item.types`. The label was the part out of step, not the code.
+
+| Row | Was | Now | Offers |
+|---|---|---|---|
+| top | `Type` | `Issue` | Deficiency · Waiting |
+| under Item | `Subtype` | `Type` | On Interior Doors: Regular · Bypass · Bi-fold · Double · Pocket · Double Pocket · Dwarf · Unit Door · Other |
+
+The top field names the umbrella, which is what it always chose between.
+`Type` moved down to the field whose placeholder had been calling it that all
+along. **`Subtype` is now a code word only** — the variable, the Sheet column
+and the queued record keep it. See `code-words.md`.
+
 ---
 
 ## Settled replacements
@@ -115,6 +131,10 @@ same meaning to a GC. Do not revisit this without a reason that beats "shorter".
 | `Flat List` | Building shape | `Units only`, opposite `Floors and units` |
 | `Create Job` | Hub card | `Set Up Building` |
 | `Log` / `Logger` | Hub card, window | `Logging`, in all five places — card, header, folder, file, build plan |
+| `Type` | Logging, the top field | `Issue`. See the section above |
+| `Subtype` | Logging field, Set Up Building list card | `Type`. Code word only from here |
+| `Hint` | Set Up Building Lists card | `Example`. The text is an example of what to type, so the label now says what it is. **The config key stays `hint`** — a crew word and a code word may differ, and `Project`/`projectId` is the precedent. Renaming the key would need a fallback read for every building already on Drive |
+| `Job site tracker` | Hub subtitle | **Cut.** A subtitle on the home screen tells nobody anything they can act on, which is the rule this file applies to every other message. The header says `PFC Control` and the cards say what it does. The `manifest.json` and `<meta>` descriptions, which no crew member reads on a screen, now say `Site progress and deficiency tracker` |
 
 ---
 
@@ -129,6 +149,11 @@ Checked against the real strings and passed. Do not "improve" these.
 - **did not save** — chosen over failed. Says what happened, not a verdict.
 - **edit** — as in `3 edits queued`. Plain, and Miguel confirmed the phrasing.
 - **queued** — Miguel's own pick.
+- **Needed** — the Logging hero field, settled 2026-08-09. The alternative was
+  `What is needed`, and that phrase is *already* the grey text inside the empty
+  box on an item with no Example set. Promoting it to the label would print the
+  same words twice in one field. A short label over a wide box is also faster to
+  read on a phone, and this is the field the whole screen exists for.
 - Every trade term in the dropdown lists: `Bi-fold`, `Ball Catch`, `Dwarf`,
   `Backordered`, `Wrong Swing`, and the rest. **The crew knows these better than
   the app does.** They come from data, not code, so they are Miguel's to set.
@@ -167,10 +192,10 @@ draws is listed here. **Six field names come straight from the build plan**
 
 | String | Where | Status |
 |---|---|---|
-| `Type`, `Item`, `Subtype`, `Needed`, `Count`, `Reason` | the six field labels | **Settled** in plan 5.7 |
-| `Deficiency` / `Waiting` | the two Type buttons | **Settled** above. They are the two kinds of issue |
+| `Issue`, `Item`, `Type`, `Needed`, `Count`, `Reason` | the six field labels | **Settled.** Four came from plan 5.7 unchanged. `Issue` and `Type` were `Type` and `Subtype` until 2026-08-09, when the open row closed — see the section above |
+| `Deficiency` / `Waiting` | the two Issue buttons | **Settled** above. They are the two kinds of issue |
 | `Whole phase — Doors & Windows` | the first Item row, on a Waiting record | **Settled** in plan 5.7 |
-| `Choose an item`, `Choose a type`, `Choose a reason` | the empty row of each dropdown | Plain, active, names the action |
+| `Choose an item`, `Choose a type`, `Choose a reason` | the empty row of each dropdown | Plain, active, names the action. `Choose a type` needed no change in the rename — it was already right, and it is what showed the label above it was wrong |
 | `Where are you?` | the sheet that sets Building, Unit and Phase | Plain question. It is the one thing that sheet asks |
 | `set unit` / `change` | the button on the place bar | `set unit` while the unit is blank, `change` after |
 | `Type the unit number.` / `No unit 201 in this building.` | under the unit box | Says what to do, then what was found |
@@ -183,11 +208,13 @@ draws is listed here. **Six field names come straight from the build plan**
 | `Fixed` / `Undo` | on a record row in Tracker | `Fixed` is the state the Sheet stores. `Undo` is the mis-tap answer |
 | `Every issue on Interior Doors is fixed. Set it to Complete?` | the green card, above its two buttons | Added 2026-08-09 in the step 4 fix round. **It read `Every record on` and the code was changed, not the row** — `record` is a code word, and `issue` is the settled umbrella. One thing, one word |
 | `Set Complete` / `Not yet` | the green card | **Settled** in plan 5.4 |
-| `Choose a building.` · `Set the unit.` · `Type what is needed.` · `Fill in the Subtype box.` · `Fill in the Reason box.` | over the dimmed Save button, one at a time | Added 2026-08-09 in the step 4 fix round. Save names the one field it still needs. Each line is the action, and the first four reuse words already settled above |
+| `Choose a building.` · `Set the unit.` · `Type what is needed.` · `Fill in the Type box.` · `Fill in the Reason box.` | over the dimmed Save button, one at a time | Added 2026-08-09 in the step 4 fix round. Save names the one field it still needs. Each line is the action, and the first four reuse words already settled above. The fourth read `Fill in the Subtype box.` until the rename later the same day |
 | `No building on this phone` | Logging with no local copy | Says the state. The button under it says the action |
 | `Type it` / `Say what it is` | the two `Other` boxes | Short, active, and different from each other on purpose |
 
-Two rows are **OPEN**, added below.
+The two rows this screen left **OPEN** — `Subtype` and `Needed` — were both
+closed on 2026-08-09. `Subtype` became `Type` and moved the field above it to
+`Issue`. `Needed` stayed as it was.
 
 ## The Set Up Building screen — checked 2026-08-09, in step 5
 
@@ -207,13 +234,13 @@ umbrella, and it is the same word the Unit screen already uses.
 | `Reasons for this building` | the building-wide list | `Reason` and `Building` are both settled |
 | `Reasons for Interior Doors` | the same list, narrowed to one item | The item names itself, so nothing new is read |
 | `Choose the reasons this item offers. A reason you leave out stays on the building list.` | under the tick boxes | Names the action, then answers the question it raises. **It avoids a verb on purpose** — `untick` and `uncheck` are both words this file does not settle, and the sentence does not need one |
-| `Subtypes` | the item's subtype list | **OPEN** below, same row as the Logging field |
-| `This item has no subtypes. It shows no Subtype box.` | an item that defines none | States the list, then what follows from it |
-| `New reason` / `New subtype` | the two Add boxes | Two words, and the button beside each says `Add` |
+| `Types` | the item's type list | **Settled** 2026-08-09. Read `Subtypes` until the Logging rename, and this screen follows the field it fills |
+| `This item has no types. It shows no Type box.` | an item that defines none | States the list, then what follows from it |
+| `New reason` / `New type` | the two Add boxes | Two words, and the button beside each says `Add` |
 | `Choose an item…` | the Lists item dropdown | Matches `Choose a building…` already on the screen |
-| `Save the reasons` / `Save the hint` | the two save buttons | Active. Each names what it saves, because the card holds three lists |
-| `Hint` | the item's placeholder text | **OPEN** below |
-| `The grey text inside the empty Needed box.` | under the Hint box | Says where the text lands. `Needed` is OPEN below on its own account |
+| `Save the reasons` / `Save the example` | the two save buttons | Active. Each names what it saves, because the card holds three lists |
+| `Example` | the item's placeholder text | **Settled** 2026-08-09. Read `Hint` until then. The text is an example of what to type, so the label says what it is rather than what it is for |
+| `The grey text inside the empty Needed box.` | under the Example box | Says where the text lands |
 | `Can not remove Interior Doors.` | the refusal, first line | No contraction. It names the item and refuses in one short sentence |
 | `It holds 12 open issues across 9 units.` | the refusal, second line | The unit count is the useful half: nine units is nine doors to walk |
 | `Cancel all 12 issues` | the refusal button | Singular at one: `Cancel all 1 issue` |
@@ -222,9 +249,9 @@ umbrella, and it is the same word the Unit screen already uses.
 | `12 issues are cancelled. Remove the item again.` | after the cancel | States the result, then the next action |
 | `No connection. The app can not load the buildings.` | the building list, offline | **The shared offline line was wrong here.** It says the app opened from its saved copy, and this screen holds no copy — it always asks the server. Step 3 round, point 15 |
 | `No connection. The app did not create the building.` | the create form, offline | Same reason. Step 3 round, point 14 |
-| `Enter a reason.` / `Enter a subtype.` / `Choose an item.` | the form checks | Match `Enter an item name.`, already on the screen |
+| `Enter a reason.` / `Enter a type.` / `Choose an item.` | the form checks | Match `Enter an item name.`, already on the screen |
 | `The list already has Missing.` | adding a value twice | Names the value, so it is clear which one was the duplicate |
-| `Every subtype list already ends with Other.` | adding `Other` as a subtype | Says why it was refused, not only that it was |
+| `Every type list already ends with Other.` | adding `Other` as a type | Says why it was refused, not only that it was |
 
 **One string on this screen is still a developer string:** `Item not found: cut`,
 and the `Phase not found` and `Unit not found` beside it. They predate 0.2 and no
@@ -238,11 +265,24 @@ time. An OPEN row does not block building a screen. It blocks shipping one.
 
 | Word | Where | Status |
 |---|---|---|
-| `Job site` | Hub subtitle `Job site tracker`, and the `description` in `manifest.json` and the `<meta>` tag | **OPEN.** Raised 2026-08-09 while applying this file to the code. `Job` is a code word meaning one queued edit, and it may not appear on a screen — but `job site` is one compound word for the physical place, and it is what the crew says out loud. The two do not read as the same word. Left as it is until Miguel calls it. The alternative is `Site tracker` |
-| `Hint` | The Set Up Building Lists card, and the `hint` key in the building config | **OPEN.** Raised 2026-08-09 while building step 5. It is the grey text inside the empty Needed box, and the box under the label says exactly that. `Example` is the alternative and is arguably plainer, because the text is an example of what to type. `Hint` was kept for now so the screen and the config key read the same word |
-| `Subtype` | The Logging field under Item, **and the Set Up Building Lists card** | **OPEN.** Raised 2026-08-09 while building Logging. It comes from the build plan, so it is not a guess — but the crew does not say "subtype" out loud. They say the value itself: a Bypass, a Privacy, a Spring stop. `Kind` and `Style` are the alternatives, and `Type` is already taken by the field above it |
-| `Needed` | The Logging hero field | **OPEN.** From the plan, and it is the field the whole screen exists for. On its own as a label it reads short. `What is needed` is the alternative, and it is what the empty box says on an item with no hint |
 | `Deficiencies` | The greyed Hub card | **OPEN** on purpose. It is a 0.3 placeholder for a window that does not exist. Whether it stays `Deficiencies` or becomes `Issues` is decided when that window is designed, not before |
+
+**Four rows closed on 2026-08-09**, in one pass, and each one is written up
+where it belongs rather than here:
+
+| Row | Outcome | Written up under |
+|---|---|---|
+| `Subtype` | → `Type`, and the field above it → `Issue` | Issue, Deficiency, Waiting |
+| `Hint` | → `Example` on screen, `hint` stays in the config | Settled replacements |
+| `Job site` | Subtitle cut | Settled replacements |
+| `Needed` | Stays | Words that stay |
+
+**Three of the four changed a word. One deleted a line, and that is the one
+worth remembering.** `Job site` went to the picker as a choice between two
+spellings, and the answer was that the sentence had not earned its place at
+all. This file already had the rule — *a message earns its place by being
+actionable* — and had only ever pointed it at warnings and errors. A subtitle
+is a message too. Check the decoration against that rule, not only the alerts.
 
 ---
 
@@ -252,13 +292,16 @@ When a screen is written, every new string gets checked here first. A word this
 file does not cover gets a row marked OPEN rather than a guess. An OPEN row is
 not a blocker for building a screen — it is a blocker for shipping one.
 
-**Logging is the next test of this file.** It adds more new words than any screen
-in the app: Type, Subtype, Needed, Reason, Count, and every dropdown behind them.
-Those get checked here before they are written, not after.
+Open rows live in the section above. **There is one left: `Deficiencies`**, and
+it is open on purpose until its window is designed. The other four closed on
+2026-08-09.
 
-Open rows live in the section above. There are five: `Job site`,
-`Deficiencies`, the two Logging raised — `Subtype` and `Needed` — and `Hint`,
-raised by the Set Up Building Lists card in step 5.
+**An open row can close by changing a word the row does not name.** `Subtype`
+was raised as one bad label, and the alternatives on the table — `Kind`,
+`Style` — were all bad in the same way, because the real fault was the pair.
+`Type` sat three rows above it and meant something else. Reading the screen top
+to bottom, rather than reading the row, is what found that. **When an open row
+resists every replacement, look at what sits next to it.**
 
 **Logging was the test of this file, and it held.** Every string on the
 screen was checked before it was written, and the two the file could not
