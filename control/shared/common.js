@@ -1558,7 +1558,25 @@ function notSavedChipHtml(count) {
 
 
 /**
- * The marks line — both flag counts and the not-saved chip.
+ * The chip for edits still on their way — sending or waiting for signal.
+ *
+ * AN OFFLINE GLYPH, NEVER A PLAIN DOT, so it cannot be mistaken for the
+ * not-saved badge at a glance. It is not red — red means a refusal, and a
+ * queued edit has not been refused. It hangs off the opposite corner of a
+ * chip from the not-saved badge, so both can show on the same chip at once
+ * without landing on top of each other.
+ */
+function queuedChipHtml(count) {
+  if (!count) return '';
+  return '<span class="queued" aria-hidden="true">' +
+           '<span class="queued-mark">' + ICON.offline + '</span>' +
+           '<span class="queued-txt">' + count + ' queued</span>' +
+         '</span>';
+}
+
+
+/**
+ * The marks line — both flag counts, the not-saved chip and the queued chip.
  *
  * THE MARKS GET A LINE OF THEIR OWN. Left to trail the count they break in
  * a different place on every floor, which reads as a mistake.
@@ -1566,10 +1584,11 @@ function notSavedChipHtml(count) {
  * It returns an empty string when there is nothing wrong, so a clean floor
  * never draws a third line.
  */
-function marksHtml(roll, notSaved) {
+function marksHtml(roll, notSaved, queued) {
   var out = flagChipHtml('deficiency', roll.deficiency) +
             flagChipHtml('waiting',    roll.waiting) +
-            notSavedChipHtml(notSaved);
+            notSavedChipHtml(notSaved) +
+            queuedChipHtml(queued);
   return out ? '<span class="marks">' + out + '</span>' : '';
 }
 
@@ -1581,7 +1600,7 @@ function marksHtml(roll, notSaved) {
  * them. Every place that draws marks must put this on the element, or the
  * marks are decoration.
  */
-function marksLabel(name, roll, notSaved) {
+function marksLabel(name, roll, notSaved, queued) {
   var parts = [name];
 
   if (!roll.total) {
@@ -1594,6 +1613,7 @@ function marksLabel(name, roll, notSaved) {
   if (roll.deficiency) parts.push(roll.deficiency + ' ' + (roll.deficiency === 1 ? 'deficiency' : 'deficiencies'));
   if (roll.waiting)    parts.push(roll.waiting + ' waiting');
   if (notSaved)        parts.push(notSaved + ' ' + (notSaved === 1 ? 'edit' : 'edits') + ' not saved');
+  if (queued)          parts.push(queued + ' ' + (queued === 1 ? 'edit' : 'edits') + ' queued');
 
   return parts.join(', ');
 }
@@ -1628,7 +1648,11 @@ var ICON = {
 
   /* The flag. currentColor, so one glyph serves both flag kinds and the
      chip's own class picks the red or the blue. */
-  flag:    '<svg width="9" height="11" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>'
+  flag:    '<svg width="9" height="11" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
+
+  /* Signal bars, slashed — the queued-edit mark. currentColor, so the
+     badge's own background sets the colour. */
+  offline: '<svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true"><rect x="1" y="6" width="2" height="3" rx="0.5" fill="currentColor"/><rect x="4" y="4" width="2" height="5" rx="0.5" fill="currentColor"/><rect x="7" y="1" width="2" height="8" rx="0.5" fill="currentColor"/><path d="M0.5 0.5l9 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
 };
 
 /** The back button in a screen header. */

@@ -1015,3 +1015,117 @@ from `exterior_door_s` to `exterior_doors` with no data to migrate. **Do it befo
 a real building exists.**
 
 **Next:** `.scratch/pfc-control-0.2/HANDOFF.md` holds the work order.
+
+---
+
+## Session 10 — 2026-08-09
+
+**Step:** 3 fix round, block 2 of 5 (Marks and spinners). **The code is
+written and committed, but this entry is not reaching you the normal way —
+read the warning below before anything else.**
+
+Block 1 (words and renames) landed earlier tonight in `e4eaf62`, before this
+session started — confirmed by reading that commit, since no BUILD-LOG entry
+covers it.
+
+**⚠ NOTHING IN THIS SESSION REACHED GITHUB. THIS FILE, AS YOU ARE READING IT
+ON `origin/0.2`, DOES NOT YET HAVE THIS ENTRY IN IT.**
+
+This session ran in a cloud container with no push access. `git push` failed
+with `403` from the git proxy, and both GitHub write paths the MCP server
+offers — `push_files` (git trees/blobs) and `create_or_update_file`
+(Contents API) — failed the same way: `403 Resource not accessible by
+integration`. Read access worked the whole time (fetch, pull, and
+`get_file_contents` all succeeded); only writes were refused. That is a
+GitHub App permission gap for this session's installation, not something
+retriable from in here — session instructions are explicit that a 403 like
+this gets reported, not worked around. **If you are reading this file with
+this entry in it, someone with push access (you, or a session running with
+your own git credentials, the way block 1 did) copied it in by hand — check
+the note at the bottom of this entry for exactly what that means for what to
+do next.**
+
+**Branch:** `0.2`, in this container only — commits `9e4745d` (the code) and
+`5345fa8` (one follow-up comment fix), both on top of `e4eaf62`. **Not on
+`origin/0.2`.**
+**Deployed:** no clasp deploy — this block touches no `Code.js` anyway.
+**Merged to main:** no — nothing to merge until `0.2` itself has this on it.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3-fix4` **in this container's
+copy of `control/sw.js` only.** The version on GitHub still reads
+`pfc-control-0.2-step3-fix3` as of this session.
+
+**Landed, both bullets of HANDOFF.md block 2:**
+
+- **The phase-level and unit-level spinner rings are gone.** `unit.html`
+  no longer draws `.ring`/`.ring--sm` beside the unit pill or a phase header —
+  those two calls into `waitingIn()` are deleted, and `waitingIn()` itself is
+  deleted since nothing else called it. This is the `#unit-pill` fix session 9
+  diagnosed: `.ring` never set `display`, and `#unit-pill` is a plain `div`
+  rather than a flex row, so the ring collapsed onto the text baseline. Deleting
+  the element needed no CSS repair, exactly as the session 9 note said. The
+  per-item ring (beside each item's own status control) and the sync bar's ring
+  are untouched — those are the two HANDOFF said to keep. `.ring--sm` in
+  `theme.css` is deleted too, since removing both draws left it with no caller.
+- **A queued edit now gets its own mark**, wherever a held (refused) edit
+  already got the red `!` badge: the Tracking row, a closed floor header, and a
+  unit chip. New `queuedChipHtml()` in `common.js` draws a blue corner badge
+  (`#6C9CFF`, matching the existing Waiting-flag blue) holding a small
+  signal-bars-with-a-slash glyph (`ICON.offline`), never red and never a plain
+  dot, so it cannot be mistaken for the not-saved badge. On a unit chip it
+  hangs off the top-left corner while not-saved keeps the top-right, so a chip
+  with one edit held and another still queued can show both marks at once
+  without them overlapping. `marksHtml()` and `marksLabel()` both take a new
+  `queued` argument alongside the existing `notSaved` one; every call site
+  (`tracker/index.html`, both spots in `tracker/building.html`) was updated to
+  pass `jobs.waiting` / a new `queuedEditsFor()` / `queuedEditsIn()` pair that
+  mirrors the existing `heldEditsFor()` / `heldEditsIn()` but counts `!job.held`
+  instead of `job.held`. The stale comment in `building.html` claiming "only a
+  HELD edit marks anything above the Unit screen" is rewritten to say what the
+  code now does.
+
+**Not landed:** everything from block 3 onward (progress bars, the
+`Exterior Door(s)` rename, the header stack) — this firing is scoped to block 2
+only, per the pacing rule. Everything still open from session 9 that block 2
+was not asked to touch: `reference/PFC_Master_Template.xlsx`, the two ZZ test
+Sheets, the unfolded landed RECORD (step 4's job), and session 6/7's remaining
+cosmetic list.
+
+**Tested:** not on a real screen — no browser or phone available tonight.
+Reasoned through instead: every edited `.html` file's inline `<script>` block
+parses (`node -e "new Function(...)"` against each), `common.js` parses on its
+own (`node -c`), and `theme.css`'s brace count is balanced. Traced the two new
+call paths by hand — a project with only queued jobs (`jobs.held === 0`,
+`jobs.waiting > 0`) now reaches `queuedChipHtml` and draws the blue badge; a
+project with only held jobs is unchanged from before, since `queuedEditsFor`
+excludes anything with `job.held` true. The exact rendered look of the new
+offline glyph at 8-9px, and whether the two corner badges read cleanly side by
+side on a real 77px chip, has not been seen and should get one look on a phone.
+
+**Open:** the offline-glyph shape (signal bars with a slash) and its exact blue
+are a reasoned pick within the latitude HANDOFF left open ("signal bars ... or
+a wifi glyph", "Miguel chose the symbol over a plain dot") — not a guess at
+something HANDOFF specified, but still worth Miguel's eye on a phone before
+calling the visual settled. Everything else session 9 left open is unchanged.
+**Plus the push failure above — that is the bigger open item tonight.**
+
+**Next — for a human, not for the next scheduled firing:** the GitHub App
+this environment uses needs `Contents: write` (or equivalent) restored for
+`miggodbout/pfc` before any session running in this kind of cloud container
+can land a commit. Until that is fixed, every later firing tonight most
+likely hits the identical wall doing block 3, then block 4, then block 5 —
+each one probably re-diagnoses this same 403 from scratch, wasting its run,
+unless this note is on `origin/0.2` before it starts. **If you are reading
+this on GitHub, block 2's actual code is sitting in `.scratch` nowhere —
+it only exists in that one ephemeral container, which is reclaimed after
+the session ends.** The fastest recovery is likely to re-run block 2 from
+`HANDOFF.md` section 2 in a session that has real push access (the way
+block 1 was built), rather than trying to recover the dead container.
+
+**Next — if a later firing tonight reads this file straight from
+`origin/0.2` and does NOT see this warning:** that confirms the entry never
+reached GitHub, exactly as predicted above. Do not assume block 2 is
+untouched — check the open PRs / branches for a stray `0.2`-based branch
+from this session first (there should not be one, since branch creation is
+also a write and would have failed the same way), then just re-run block 2
+following `HANDOFF.md` section 2 as if this session had not happened, and
+say so plainly in your own entry.

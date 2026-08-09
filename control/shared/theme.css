@@ -479,6 +479,33 @@ button {
 }
 .unit-chip .not-saved-txt { display: none; }
 
+/* The queued-edit mark. Blue, not red — red means a refusal, and a queued
+   edit has not been refused. Same shape as not-saved so the two badges
+   read as a pair, never as the same mark twice. */
+.queued {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+}
+.queued-mark {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #6C9CFF;
+  color: #0D0D0D;
+}
+.queued-txt { font-size: 11px; font-weight: 700; color: #8CB0FF; }
+
+/* On a chip it hangs off the opposite corner from not-saved, so a chip
+   with both a refusal and a queued edit can show both at once. */
+.unit-chip .queued {
+  position: absolute;
+  top: -5px; left: -5px;
+}
+.unit-chip .queued-txt { display: none; }
+
 /* ── THE PROGRESS BAR ────────────────────────────────────────────────
    A hairline, coloured by Progress. A group with nothing done draws no
    bar at all, not an empty track. */
@@ -583,9 +610,6 @@ button {
   border-radius: 50%;
   animation: spin 750ms linear infinite;
 }
-
-/* The same ring on the phase header and the unit pill, one size down. */
-.ring--sm { width: 10px; height: 10px; border-width: 1.6px; }
 
 /* Failed: a still red dot where the ring was. */
 .ring--bad {
