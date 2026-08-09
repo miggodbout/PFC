@@ -1833,10 +1833,28 @@ fine and always has been.** `git log -S` shows the handler in `unit.html`
 unchanged since the first commit, and a real `keydown` closes the menu:
 `openMenu` goes to `null`.
 
-What fails is the **browser extension's key press**. Same menu, same page:
-a dispatched `KeyboardEvent` closes it; `computer` `key: Escape` leaves it
-open. No code was changed. **Do not test a keyboard shortcut with the
-extension's key action** — dispatch the event instead.
+What fails is the test rig. Chased down after the entry was first written,
+and **the first answer here was wrong** — it blamed the key action alone.
+
+**The real cause: every tab in this Chrome reads `document.visibilityState
+= "hidden"`.** The Chrome window is behind everything else or minimised, so
+no synthetic input reaches the page at all. A keydown listener armed on the
+page recorded **nothing** — not Escape, not a plain letter. A click listener
+recorded nothing either, and a click on empty screen did not close the menu
+that a tap outside is supposed to close. Tried on a second, freshly created
+tab: also hidden.
+
+So it is not a key-versus-click thing. **Screenshots and `javascript_tool`
+work on a hidden tab; `computer` clicks and keys do not.** Two ways to test
+a screen from here:
+
+1. Bring the Chrome window to the front first, then drive it normally.
+2. Leave it as it is and drive through `javascript_tool` — call the page's
+   own handlers, and dispatch a real `KeyboardEvent` for a shortcut. That
+   is how every check in this session was run.
+
+Nothing about Escape needs fixing in the app, and nothing in this repo can
+fix the input path. The extension is not our code.
 
 ### crew-words.md
 
