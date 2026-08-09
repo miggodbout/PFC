@@ -529,3 +529,164 @@ updated, per sessions 1 to 4. Everything from step 3 onward.
   `.details-edit` unused, the Tracker row 5 wrap, and PLAN CALL 3 at step 4.
 
 **Next:** unchanged — start step 3.
+
+---
+
+## Session 6 — 2026-08-08 into 2026-08-09
+
+**Step:** 3, code complete on every item of the list. **Not smoke checked in a
+browser** — see Not landed. Step 3 is NOT done yet.
+**Branch:** `0.2` at `bb549e0`.
+**Deployed:** yes — script version 8, description `0.2 step 3 fix 1`. Same
+deployment id, same URL.
+**Merged to main:** yes, `b0090bf`. Both branches pushed.
+**CACHE_NAME:** raised to `pfc-control-0.2-step3`. Every front-end file
+changed and there is a new one, so a phone must re-download the shell.
+
+**Landed:** everything on the step 3 list.
+
+- **`save-batch` on the server.** One call takes the whole outbox, of both
+  job kinds, takes the script lock **once**, and answers **one result per
+  job**. Every failed result carries `retry:true` or `retry:false`. Jobs are
+  grouped by building so each Sheet opens once. It ends with the
+  `list-projects` cache clear.
+- **One cell at a time, on purpose.** Reading a unit's whole row and writing
+  it back would be fewer calls, and it would also write back every other item
+  in that row — undoing anything a person changed in the Sheet between the
+  read and the write. The comment on `writeItemJob` says so. **One date stamp
+  per unit that changed**, not one per item.
+- **The record path is built too**, though nothing calls it until Logger lands
+  in step 4. Id found, overwrite that row. Id new, append. That is what makes
+  a retry after a timeout land on the same row instead of making a twin, and
+  it was tested live.
+- **The drain**, in `common.js`. Backoff `0, 5s, 15s, 1m, then every 5m`. The
+  timer runs only while jobs wait and stops dead when the shelf empties. It
+  also wakes on app open, on pull down, on `online`, and on
+  `visibilitychange` — iOS wakes a backgrounded web app without firing
+  `online`.
+- **PLAN CALL 1 built.** `apiCall` gained one option, `noFallback`, so the
+  drain takes the JSONP fallback over itself instead of letting the whole
+  payload go into one address. Five jobs per slice, the address **measured**
+  before each slice, halved until it fits under 6,000 characters. A single
+  job that still will not fit is held with `retry:false` and its own reason,
+  and it sends normally the next time a POST works.
+- **The hold rules.** `retry:false` holds at once. Ten burned tries hold.
+  **A job never leaves the shelf except on `ok:true` or on Miguel tapping
+  Drop.**
+- **The sync bar**, on Buildings, Building and Unit. Three states, and the
+  count lives there and nowhere else. `Outbox ›` on the right edge.
+- **The Unit marks.** A turning ring on the item, and the same ring one size
+  down on the phase header and the unit pill. A held edit greys the item
+  name, turns the ring into a still red dot, and opens the red card: why, what
+  was lost (`You tapped Complete. The Sheet still says Not Started.`), and
+  **Try again** / **Drop the edit**.
+- **The greyed Complete.** It stays in the dropdown, dimmed to 45%, not
+  tappable while an open flag sits on the item, with the line
+  `Fix the open flag first. Then Complete comes back.` under the panel.
+- **`control/tracker/outbox.html`**, a new window. Held rows first, each
+  naming the building, the unit and the item, with Retry and Drop. Waiting
+  rows below with no buttons. Added to `sw.js` SHELL. **PLAN CALL 2 held: a
+  row does not tap through to its unit.**
+- **`localOnlyNote()` deleted**, per plan 5.1.
+- **The floor drawer animates**, which is Miguel's item from session 5.
+
+**Four calls made during the build:**
+
+1. **`apiCall` gained an option.** Plan 5.1 says it survives as written. It
+   does, for every existing caller — `noFallback` is additive and only the
+   drain passes it. Without it PLAN CALL 1 cannot be built at all: the
+   function's own fallback fires first and puts every queued job into one web
+   address, which is the exact silent failure the plan call exists to stop.
+2. **Offline and timeout do not burn a try.** The plan says an *unnamed* error
+   holds after ten tries. The rule in the code is: **a try is burned when the
+   phone reached the server and the job still did not land.** Offline burns
+   nothing — nothing was attempted — so a phone in a dead zone all afternoon
+   never holds a single edit. A timeout burns nothing either: the write may
+   have landed and the job is idempotent. A busy server does burn one, because
+   the phone did reach it. `classifyCallFailure` carries the comment.
+3. **The sync bar has a fourth wording.** Plan 5.5 gives `Offline · 3 edits
+   wait` for the waiting state. Online but between retries is a real state and
+   `Offline` there would be a lie, so it reads `3 edits wait` with the same
+   grey slab. One word dropped, no new state.
+4. **The floor drawer needed `toggleFloor` to stop redrawing.** Session 5
+   predicted this and it was right. Every floor's chips are now always in the
+   page, the drawer grows its grid row from `0fr` to `1fr`, and the header's
+   marks come off by a CSS rule instead of by being left out of the HTML.
+   `toggleFloor` moves a class and draws nothing. The dead `.caret` transition
+   from session 4 works now for the same reason.
+
+**Tested:** by me, not by Miguel. Two rounds, no browser.
+
+- **A node dry run, 42 assertions, all pass.** The shelf and one-key-one-job;
+  oldest first; `ok:true` leaves and everything else stays; `retry:false`
+  holding on the first failure; nine tries waiting and the tenth holding;
+  **forty offline attempts burning nothing**; every branch of
+  `classifyCallFailure`; a retap while the call is in the air keeping its own
+  value and not inheriting the failure; a held edit not painting and a waiting
+  one painting; the eleventh building dropping one and the one with an unsent
+  edit surviving; the JSONP slice measurement in both directions; and all four
+  sync bar states including both together.
+  Kept at `scratchpad/drain-test.js` — it is not in the repo.
+- **Against the live web app**, on a fresh project `ZZ 0.2 Step 3 Test`: a
+  seven-job batch holding three good item jobs, a dead unit, a dead item, a
+  bad Sheet id and a record. Three wrote. The dead unit and the dead item both
+  came back **hold**. The bad Sheet id came back **retry**. The record wrote.
+  Then verified from `get-project`: the three statuses landed, **unit 102 was
+  untouched**, Last Updated was stamped on exactly the two units that changed,
+  and re-sending the same record id **updated the row instead of making a
+  twin** (quantity 1 became 2, still one record). `list-projects` answered
+  `deficiencies:1` immediately, so the cache clear ran.
+
+**One real defect found and fixed live: a record's date shifted a day back.**
+
+`new Date('2026-08-08')` reads a date-only string as **UTC midnight**. The
+script runs on Atlantic time, so the cell stored 2026-08-07 9:00 PM and
+printed **2026-08-07**. A record logged this morning would be dated yesterday,
+in the tab a supplier claim gets built from. `dayValue()` parses `yyyy-mm-dd`
+into local midnight instead. Fixed, redeployed as version 8, retested: the
+same record now reads `created: 2026-08-08`.
+
+**Not landed:**
+
+- **No browser smoke check. This is the one thing step 3 still needs before it
+  counts as done.** The session ran out of budget after the live server round.
+  Nothing has drawn the sync bar, the ring, the red card, the greyed Complete,
+  the Outbox window or the floor animation on a real screen. Every one of them
+  parses and every rule under them is asserted, but **none of them has been
+  looked at**. Do that first next session, before the test round proper.
+- **`reference/PFC_Master_Template.xlsx` is still not updated**, and neither is
+  the live copy in Drive (`1QIF5TCJ0iekpNGHEjce1PSoFXRFhucmF-ednTSYHT-M`).
+  Plan 1.7. Unchanged since session 1. No code reads it.
+- Everything from step 4 onward.
+
+**Open:**
+
+- **Two test Sheets for Miguel to trash, both named `ZZ 0.2 Step 3 Test`.**
+  `1-Fa_75qo-Eh4AyHsNerjdWluUgAN2m5pbNxxVFqp148` holds the test data.
+  `12w2aZm-r1Z-AA3hN73kGCJwJRKUijbs6O1lv8t5utRg` is an empty twin — a create
+  call went through twice while I was working out how to drive the backend
+  from the command line.
+- **A POST to the `/exec` address over a redirect drops the body.** `curl -L`
+  answers `411 Length Required`, because the redirect re-sends without the
+  length header. Use the GET path with a `payload` parameter to drive the
+  backend from a shell. Not a defect — the app POSTs from a browser, where
+  this does not happen.
+- **The `.floor-body` grid-row animation needs iOS Safari 16.** `0fr` to `1fr`
+  on `grid-template-rows` is the only way to animate to a height nobody
+  measured. Safari 16 shipped in 2022. Worth one look on his phone; if it does
+  not animate there it simply snaps, which is what it did before.
+- Everything still open from session 5: nothing may move a control on
+  `:active`, the `ZZ 0.2 Step 2 Test` Sheet to trash, `My Drive/Projects/`
+  (`14dnEMxAXBdeIXOTlrWcLrHmhhavMvyje`) with the old test projects, the chip
+  bar looking long on a desktop window, `.details-btn` / `.details-edit`
+  unused, the Tracker row 5 wrap, and PLAN CALL 3 at step 4.
+- The greyed Complete still cannot be reached by tapping alone: no screen
+  creates a record until Logger lands in step 4. To see it, add an `Open` row
+  to the Deficiencies tab by hand.
+
+**Next:** smoke check step 3 in Chrome — the sync bar in all three states, a
+tap that lands, a tap that holds and its red card, the Outbox window's Retry
+and Drop, the greyed Complete with a hand-written record, and the floor
+animation. **Then run the full step 3 test round from plan section 6. It is
+the first of the two rounds and it is the gate: do not start step 5 before it
+reports back.** It includes the 40-job JSONP slicing test of PLAN CALL 1.
