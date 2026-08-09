@@ -345,7 +345,20 @@ button {
 }
 .floor.open > .floor-drawer { grid-template-rows: 1fr; }
 
-.floor-drawer > .floor-body { overflow: hidden; min-height: 0; }
+/* OVERFLOW CLIPS AT THE PADDING BOX, NOT THE CONTENT BOX. The row track
+   collapses the CONTENT to nothing, but .floor-body's own 2px/14px of
+   vertical padding stays, and the chips draw straight through it — a closed
+   floor showed a 14px strip of the row underneath it. So the padding comes
+   off while it is closed and grows back with the row. Keep the two
+   transitions on the same 220ms or the strip reappears mid-slide. */
+.floor-drawer > .floor-body {
+  overflow: hidden;
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transition: padding 220ms ease;
+}
+.floor.open > .floor-drawer > .floor-body { padding-top: 2px; padding-bottom: 14px; }
 
 /* A header reports what it hides. Open, the flagged chips are right there
    in front of you, so the counts come off the header. */

@@ -690,3 +690,48 @@ and Drop, the greyed Complete with a hand-written record, and the floor
 animation. **Then run the full step 3 test round from plan section 6. It is
 the first of the two rounds and it is the gate: do not start step 5 before it
 reports back.** It includes the 40-job JSONP slicing test of PLAN CALL 1.
+
+### Session 6 addendum — the offline path, hardened
+
+Miguel asked for offline to be bullet proof. **The retry rules were already
+the safe direction.** Offline burning no tries means a phone in a dead zone
+never holds an edit, and holding only moves a job into the Outbox — it never
+deletes one. There was nothing to loosen there.
+
+**The real hole was underneath them, and it could lose work silently.**
+
+`putJob` set its in-memory copy of the shelf **before** writing to
+`localStorage`, and nothing checked whether the write succeeded. On a full
+phone, or in Safari private mode, the screen painted the tapped value, the
+person walked away, and the edit was gone at the next app open with nothing
+to show it had ever existed. **A retry cannot help an edit that was never
+written down.** Ten building copies are about a megabyte and they are what
+fills the phone, so this was reachable in normal use.
+
+Three changes:
+
+- **The outbox outranks every building copy.** When storage refuses the
+  shelf, `Store.writeJobs` deletes copies to make room and tries again, least
+  recently opened first, and **never one belonging to a building that is
+  itself holding an unsent edit**. A copy is only a copy — the Sheet has it
+  and opening the building once brings it back. An unsent edit exists nowhere
+  else.
+- **A refused job is not kept in memory.** The shelf goes back exactly the
+  way it was, so nothing paints a value the phone did not store.
+- **`putJob` answers false and the Unit screen says so**, with a red banner:
+  `Not stored. This phone has no room to save the change. Free space on the
+  phone, then set the value again.` This is the only failure in the app that
+  no queue catches, so it is said at once, while the person still remembers
+  what they tapped.
+
+**Tested:** 12 new assertions under node, all pass, at
+`scratchpad/storage-test.js`. A copy dropped to make room; the oldest one
+chosen; a building holding an unsent edit spared while another is dropped
+instead; nothing left to drop answering false; the refused job absent from
+memory and painting nothing; and a refused **retap** leaving the value that
+was stored alone. The 42 drain assertions still pass.
+
+**Deployed:** no. Front end only, no `Code.js` change, so the script version
+stays at 8. **Merged to main** at `a674e39`. `CACHE_NAME` is already
+`pfc-control-0.2-step3` from this session's earlier merge, so the phone picks
+this up with it.
