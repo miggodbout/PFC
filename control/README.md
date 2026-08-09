@@ -174,13 +174,28 @@ iOS clears a saved copy after about seven days of no use. Daily use keeps it.
 
 ## After you change a file in control/
 
-Open `control/sw.js`. Raise the version number:
+From the repo root, run:
 
-```js
-var CACHE_NAME = 'pfc-control-0.1.2';   // raise this on every release
+```
+powershell -File tools/bump-version.ps1
 ```
 
-Phones keep serving the old copy until this number changes.
+That raises the counter in `control/sw.js`:
+
+```js
+var CACHE_NAME = 'pfc-control-0.2.0-dev.7';   // becomes dev.8
+```
+
+Phones keep serving the old copy until this string changes. **Every push that
+touches a file in `control/` needs the counter to go up.** One bump per push is
+enough, however many files changed.
+
+The counter means nothing on its own. It is a tally, not a description of the
+work. It never resets inside a milestone, and a gap in it is harmless.
+
+`-dev` says the app is on the way to 0.2.0 and is not there yet. When 0.2 ships,
+`tools/bump-version.ps1 -Release 0.2.0` drops the counter, and
+`-Dev 0.3.0` opens the next milestone at `0.3.0-dev.1`.
 
 ### If a phone still shows the old version
 

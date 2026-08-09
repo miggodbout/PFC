@@ -347,9 +347,54 @@ Use `MAJOR.MINOR.PATCH`. Never use `v1`, `v2` style names for a milestone again 
 - **PATCH** (`0.1.1` → `0.1.2`) — fixes only, inside a milestone. No new features.
 - **1.0** — reached when the crew uses PFC Control daily as the primary tool. It marks trust, not a feature count.
 
-Current: PFC Control `0.1.2`. Camera app `0.1.2`.
+Current: PFC Control `0.2.0-dev`. Camera app `0.1.2`. Last shipped Control
+release: `0.1.2`.
 
-`CACHE_NAME` in `control/sw.js` carries the version, as `pfc-control-0.1.2`. Raise it on every release. Phones keep serving old files until it changes.
+### Mid-build versions, and the counter that feeds the cache
+
+Settled by Miguel on 2026-08-09, after the cache string had grown to
+`pfc-control-0.2-step4-fix3` and nobody could say which fix round that was.
+
+Two separate things had been fused into one string:
+
+1. **The version** — what the app *is*. It changes rarely and means something.
+2. **The cache key** — what tells a phone its copy is stale. It only has to
+   differ from last time. It means nothing.
+
+Build history was being encoded into #2 because #1 had nothing to say
+mid-build. SemVer already answers that: a **pre-release** suffix.
+
+**While building a milestone, the version is `MINOR.0-dev`.** So the whole of
+the 0.2 build is `0.2.0-dev` — on the way to 0.2.0, not at it. Never write a
+bare `0.2` for work in progress.
+
+**A counter rides behind it, and it feeds the cache.** `CACHE_NAME` in
+`control/sw.js` reads `pfc-control-0.2.0-dev.7`. The number is a tally. It
+describes nothing, it never resets inside a milestone, and a gap in it is
+harmless.
+
+**The counter must go up whenever a new `CACHE_NAME` is needed** — that is,
+on every push that changes any file inside `control/`. One bump per push,
+however many files changed. Miss it and phones keep serving the old copy.
+
+**Do not hand-edit the string.** From the repo root:
+
+| Command | Result |
+|---|---|
+| `powershell -File tools/bump-version.ps1` | `0.2.0-dev.7` → `0.2.0-dev.8` |
+| `... -Release 0.2.0` | `0.2.0-dev.8` → `0.2.0`, at the ship commit |
+| `... -Dev 0.3.0` | `0.2.0` → `0.3.0-dev.1`, opening the next milestone |
+
+This is the small build tool the Technical Constraints section named as a
+known candidate. It is one PowerShell script, it edits one line, and the app
+still runs from a plain file if it is deleted.
+
+### Shipped releases are git tags
+
+Release history belongs in tags, not in a Service Worker string. Backfilled
+2026-08-09: `0.1.0` at the first PFC Control commit, `0.1.1` and `0.1.2` at
+the two patch commits. Tag every release from here on, at the commit stamped
+by `-Release`.
 
 **When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
 releases in one evening. Ship a `0.1.x` only when the defect **costs someone

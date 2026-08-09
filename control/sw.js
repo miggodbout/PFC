@@ -8,11 +8,19 @@
    network. Old status values shown as current would be worse than no
    status at all.
 
-   AFTER YOU CHANGE ANY FILE IN control/, RAISE THE VERSION NUMBER BELOW.
-   The phone keeps serving the old copy until the number changes.
+   AFTER YOU CHANGE ANY FILE IN control/, RAISE THE COUNTER BELOW.
+   The phone keeps serving the old copy until this string changes.
+
+   Do not hand-edit it. From the repo root, run:
+
+       powershell -File tools/bump-version.ps1
+
+   That raises the -dev counter by one. The counter means nothing on its
+   own. It is a tally, so that every push gets a string the phone has not
+   seen before. -dev also says this is on the way to 0.2.0, not at it.
    ===================================================================== */
 
-var CACHE_NAME = 'pfc-control-0.2-step4-fix3';
+var CACHE_NAME = 'pfc-control-0.2.0-dev.2';
 
 /** The app's own files. Everything needed to open with no signal. */
 var SHELL = [
