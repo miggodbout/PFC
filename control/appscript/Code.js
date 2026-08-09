@@ -1005,7 +1005,11 @@ function handleUpdateStructure(data) {
     // back in the wrong place, and it would cost a full grid read and a
     // redraw for a change nothing on the grid can see. These ops write the
     // config alone.
-    var listOnly = LIST_ONLY_OPS.indexOf(data.op) >= 0;
+    // A phase label moves no column either. It is not list-only, because
+    // it does show on the grid — so it skips the rebuild and writes its
+    // own two header cells instead.
+    var bandOnly = data.op === 'rename-phase';
+    var listOnly = bandOnly || LIST_ONLY_OPS.indexOf(data.op) >= 0;
 
     // Step 1 — keep the values that already exist.
     var preserved = listOnly ? null : readAllValues(ss, config);
@@ -1017,6 +1021,14 @@ function handleUpdateStructure(data) {
     // Step 3 — rebuild, unless the op only touched a list.
     if (!listOnly) {
       rebuildTracker(ss, config, preserved);
+      rebuildDashboard(ss, config);
+    }
+    // A phase label reaches two tabs. On the Tracker it is two header
+    // cells, written in place. On the Dashboard it names a summary row,
+    // and that whole tab is formulas over the Tracker with no typed value
+    // anywhere on it, so redrawing it costs nothing and risks nothing.
+    if (bandOnly) {
+      writePhaseBand(ss, config, data.phaseKey);
       rebuildDashboard(ss, config);
     }
     writeConfig(ss, config);
@@ -1142,6 +1154,32 @@ function applyStructureOp(config, data) {
     if (!renaming) return 'Item not found: ' + data.itemKey;
 
     renaming.label = itemLabel;
+    return null;
+  }
+
+  /*
+   * RENAMING A PHASE MOVES NOTHING.
+   *
+   * An item label sits on the grid in a column header, so rename-item
+   * rebuilds the tab. A phase label sits in exactly TWO cells: the merged
+   * band over the phase's item columns, and the short form above its
+   * rollup column. Neither is attached to a value. handleUpdateStructure
+   * writes those two cells itself and skips the rebuild — see
+   * writePhaseBand. Clearing 468 status cells to change one string is not
+   * a trade worth making on a building with real work logged in it.
+   *
+   * The key never changes, exactly as in rename-unit and rename-item, so
+   * every status column, every rollup formula and every record keeps
+   * pointing where it pointed.
+   */
+  if (data.op === 'rename-phase') {
+    var phaseLabel = String(data.label || '').trim();
+    if (!phaseLabel) return 'Enter a phase name.';
+
+    var renamingPhase = findByKey(config.phases, data.phaseKey);
+    if (!renamingPhase) return 'Phase not found: ' + data.phaseKey;
+
+    renamingPhase.label = phaseLabel;
     return null;
   }
 
@@ -2453,7 +2491,41 @@ function chipFor(label) {
 }
 
 
-/** "Phase 1 — Doors & Windows" becomes "PHASE 1 · DOORS & WINDOWS". */
+/**
+ * Puts a renamed phase on the grid, without a rebuild.
+ *
+ * The two cells a phase label reaches: the merged band across its item
+ * columns on row 4, and the short form above its rollup column on row 5.
+ * Setting the top-left cell of a merged range sets the whole merge, so
+ * the band needs no unmerge and no remerge.
+ *
+ * A phase holding no items draws no band, so there is nothing to write.
+ */
+function writePhaseBand(ss, config, phaseKey) {
+  var sheet = ss.getSheetByName(TRACKER_SHEET_NAME);
+  if (!sheet) return;
+
+  var phases = activePhases(config);
+  var layout = computeLayout(config);
+
+  phases.forEach(function (phase, index) {
+    if (phase.key !== phaseKey) return;
+
+    sheet.getRange(4, layout.statusCol[phase.items[0].key])
+         .setValue(bandLabel(phase.label));
+    sheet.getRange(5, layout.rollupCol[phase.key])
+         .setValue(shortPhaseLabel(phase.label, index));
+  });
+}
+
+
+/**
+ * "Phase 1 — Doors & Windows" becomes "PHASE 1 · DOORS & WINDOWS".
+ *
+ * A label carries no tag after the dash any more, so this now usually
+ * just uppercases "Phase 1". The split stays: buildings created before
+ * 2026-08-09 still hold a tagged label until somebody renames the phase.
+ */
 function bandLabel(label) {
   return String(label).replace(/\s*[—–-]\s*/, '  ·  ').toUpperCase();
 }

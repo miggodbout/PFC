@@ -324,14 +324,15 @@ function phaseLabel() {
 
 
 /**
- * The phase label with its own `Phase 1 —` dropped.
+ * The phase label with a tag after the dash dropped, if it has one.
  *
- * The stored label already carries a number and a dash, so
- * `Whole phase — ` + the label read `Whole phase — Phase 1 — Doors &
- * Windows`. Two dashes in one line, and the second one says nothing.
- * crew-words.md writes that row as `Whole phase — Doors & Windows`.
+ * A label is now just `Phase 1`, so this usually returns what it was
+ * given and the row reads `Whole phase — Phase 1`.
  *
- * The place bar keeps the full label. There the number is the useful part.
+ * IT STAYS FOR THE OLD BUILDINGS. A building created before 2026-08-09
+ * holds `Phase 1 — Doors & Windows` until somebody renames the phase,
+ * and `Whole phase — ` in front of that reads with two dashes, the second
+ * of which says nothing.
  */
 function phaseName() {
   var label = phaseLabel();

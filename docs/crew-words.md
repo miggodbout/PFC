@@ -194,7 +194,7 @@ draws is listed here. **Six field names come straight from the build plan**
 |---|---|---|
 | `Issue`, `Item`, `Type`, `Needed`, `Count`, `Reason` | the six field labels | **Settled.** Four came from plan 5.7 unchanged. `Issue` and `Type` were `Type` and `Subtype` until 2026-08-09, when the open row closed — see the section above |
 | `Deficiency` / `Waiting` | the two Issue buttons | **Settled** above. They are the two kinds of issue |
-| `Whole phase — Doors & Windows` | the first Item row, on a Waiting record | **Settled** in plan 5.7 |
+| `Whole phase — Phase 1` | the first Item row, on a Waiting record | **Settled** in plan 5.7. It read `Whole phase — Doors & Windows` until 2026-08-09, when the phase tags were removed — a phase is named by its number alone |
 | `Choose an item`, `Choose a type`, `Choose a reason` | the empty row of each dropdown | Plain, active, names the action. `Choose a type` needed no change in the rename — it was already right, and it is what showed the label above it was wrong |
 | `Where are you?` | the sheet that sets Building, Unit and Phase | Plain question. It is the one thing that sheet asks |
 | `set unit` / `change` | the button on the place bar | `set unit` while the unit is blank, `change` after |
