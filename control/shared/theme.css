@@ -1377,10 +1377,10 @@ select.input {
 /*
    THE PINNED SAVE BAR.
 
-   position: fixed alone does not track the iOS software keyboard — the bar
-   ends up under it, or floating in the middle of the screen. The bottom is
-   set from window.visualViewport instead, on its resize and scroll events.
-   See setSaveBarBottom() in logging/index.html.
+   It sits on the bottom edge of the screen and the form scrolls behind it.
+   The software keyboard covers it while a box is focused, by choice — an
+   earlier version tracked window.visualViewport and rode above the
+   keyboard. Miguel reversed that on 2026-08-09. Keep this bar at bottom: 0.
 */
 .save-bar {
   position: fixed;

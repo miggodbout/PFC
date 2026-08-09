@@ -2479,3 +2479,53 @@ release made wrong. Then plan section 6 in full, and the release: `-Release
 **Step 6's comment sweep now has a known target.** This session renamed a field
 across two screens and a backend, and fixed the comments it could see. Anything
 still saying "the Subtype dropdown" is stale.
+
+---
+
+## Session 20 — 2026-08-09
+
+**The Save bar stops following the keyboard.** One change, asked for by
+Miguel and made in five minutes. Not a build step.
+
+### What Miguel decided
+
+PLAN CALL 3 had the Logger's Save bar ride above the iOS software keyboard,
+so Save was reachable while a box was focused. Miguel reversed it. The bar
+now sits at `bottom: 0` and the keyboard covers it. Close the keyboard to
+reach Save.
+
+He was offered the other reading of "static" — the bar dropped into the page
+flow, after the last field, scrolling away with the form — and chose against
+it. **Save stays pinned to the bottom edge of the screen.** Only the keyboard
+tracking is gone.
+
+### What changed
+
+- **`control/logging/index.html`** — `setSaveBarBottom()` deleted, with the
+  two `window.visualViewport` listeners and both call sites: the one at the
+  end of `render()` and the one at the end of `paintSaveState()`. The comment
+  block at the foot of the file now records the reversal instead.
+- **`control/shared/theme.css`** — `.save-bar` is unchanged code. Its comment
+  said the bar is sized off `visualViewport`, which was the only reason a
+  reader would have kept the JavaScript alive. Rewritten.
+
+`.save-space`, the 116px of room under the form, stays. The bar still covers
+the last control without it.
+
+### Worth knowing
+
+**`BUILD-PLAN.md` lines 1089 and 1454 still say to size the bar off
+`visualViewport`.** The plan is LOCKED and was not edited. This entry is the
+supersession — a build session that reads the plan and rebuilds the tracking
+is undoing a decision Miguel made on purpose.
+
+### Not tested
+
+**No browser check.** Deleting the handler cannot move the bar off
+`bottom: 0`, which is where CSS already put it, but nothing was opened to
+confirm it.
+
+### Closed
+
+- The phone check session 16 left open, **"the pinned Save with the keyboard
+  up"**, is closed by deletion. There is no keyboard behaviour left to check.
