@@ -28,7 +28,6 @@
 </header>
 
 <main id="screen"></main>
-<div id="sheet-slot"></div>
 
 <script src="../shared/common.js"></script>
 <script>
@@ -44,17 +43,29 @@
    marking a record Fixed. Eighteen items would otherwise mean eighteen
    runs of this form.
 
-   IT NEVER CALLS THE BACKEND. A save puts a record on the queue shelf and
-   the drain in common.js sends it, so a basement with no signal costs
+   A SAVE NEVER CALLS THE BACKEND. A save puts a record on the queue shelf
+   and the drain in common.js sends it, so a basement with no signal costs
    nothing but a ring on the row.
+
+   IT DOES READ. It used to do neither, and that cost two reports in the
+   step 4 round: a building deleted weeks ago still sat in the dropdown,
+   and a real unit came back "not in this building" because the copy on the
+   phone predated the floor it was on. Logging draws its item, subtype and
+   reason lists out of the stored copy, so a stale copy is a wrong form.
+   Now it draws the copy at once and refreshes behind it, the same way
+   every Tracker screen does.
 
    THE PHONE REMEMBERS THE BUILDING AND THE PHASE, AND NEVER THE UNIT. A
    building lasts weeks and a phase lasts days; the unit changes every few
    minutes, and a wrong unit writes a real door against the wrong door.
+
+   ALL THREE ARE FIELDS IN THE FORM. They were behind a bottom sheet and a
+   "change" button, which hid the two that move most. Building is
+   remembered and usually right; Unit and Phase are the ones you are about
+   to change, so they sit in front of you.
    ===================================================================== */
 
 var screen = document.getElementById('screen');
-var slot   = document.getElementById('sheet-slot');
 
 /* Where we are. projectId and phaseKey survive the app closing. unitKey
    never does — see the header comment. */
@@ -81,8 +92,7 @@ var reasonOther = '';
    typo is caught before the person leaves the room. */
 var loggedHere = [];
 
-var placeSheet = false;   // the change-place sheet is open
-var unitTyped  = '';      // what is in the unit box, before it matches
+var unitTyped  = '';      // what is in the unit box, matched or not
 var askLine    = null;    // the near-match prompt: { typed, stored }
 var savedStrip = false;   // the strip that confirms one save
 var storageRefused = false;
@@ -90,34 +100,97 @@ var storageRefused = false;
 
 /* ── START ────────────────────────────────────────────────────────── */
 
-projects = (Store.list() || {}).projects || [];
-
-/* Every building the phone has a COPY of can be logged against. The list
-   answer alone is not enough: Logging draws its item, subtype and reason
-   lists out of the copy, and there is no fetch on this screen. */
-var withCopies = Store.projectIds();
-projects = projects.filter(function (project) {
-  return withCopies.indexOf(project.id) >= 0;
-});
-
-if (projectId && withCopies.indexOf(projectId) < 0) projectId = '';
-if (!projectId && projects.length === 1) projectId = projects[0].id;
-
+readProjects();
 loadCopy();
 render();
 mountSyncBar('../tracker/queue.html');
 Queue.onChange(render);
 
+refresh();
+enablePullToRefresh(function () {
+  // Send first, then ask. A pull is the one gesture that means "catch up".
+  return Queue.wake().then(refresh, refresh);
+});
+
+
+/**
+ * The buildings this screen may log against, out of what is stored.
+ *
+ * TWO TESTS, NOT ONE. The list answer says which buildings exist; the
+ * copies say which ones this phone can draw a form for. A building must
+ * pass both — Logging reads its item, subtype and reason lists out of the
+ * copy, so one without a copy would draw an empty form.
+ *
+ * A COPY WITH NO LIST ENTRY IS A GHOST. That is the `ZZ 02 Step 3 Test`
+ * report: the building was deleted on the server, the phone kept both its
+ * stale list and its copy, and it went on being offered for weeks. It goes
+ * as soon as a fetch lands, because the fresh list no longer names it.
+ */
+function readProjects() {
+  var all = (Store.list() || {}).projects || [];
+  var withCopies = Store.projectIds();
+
+  projects = all.filter(function (project) {
+    return withCopies.indexOf(project.id) >= 0;
+  });
+
+  if (projectId && !listed(projectId)) projectId = '';
+  if (!projectId && projects.length === 1) projectId = projects[0].id;
+}
+
+
+function listed(id) {
+  var found = false;
+  projects.forEach(function (project) { if (project.id === id) found = true; });
+  return found;
+}
+
+
+/**
+ * Refreshes the list and the open building's copy, behind the drawn form.
+ *
+ * The form is already on the screen from the stored copy, so nothing here
+ * blocks a person from logging. With no signal both calls fail, the age of
+ * the copy goes on the sync bar, and the form carries on working.
+ */
+function refresh() {
+  return fetchProjects().then(function (result) {
+    if (result.source !== 'error') {
+      readProjects();
+      loadCopy();
+      render();
+    }
+    // No building chosen means no copy, and no copy cannot be stale. The
+    // stale line on the sync bar is about the age of a copy on screen.
+    if (!projectId) return;
+
+    return fetchProject(projectId).then(function (got) {
+      if (got.source === 'error') {
+        markStale(Store.projectFetchedAt(projectId));
+        return;
+      }
+      markFresh();
+      loadCopy();
+      render();
+    });
+  });
+}
+
 
 function loadCopy() {
   copy = projectId ? Store.project(projectId) : null;
-  if (!copy) { phaseKey = ''; return; }
+  if (!copy) { phaseKey = ''; unitKey = ''; return; }
 
   // A phase the building does not hold is not a phase. It can happen when
-  // the remembered building changes.
+  // the remembered building changes, and it can happen when a refresh
+  // brings back a building somebody restructured.
   var found = false;
   (copy.phases || []).forEach(function (phase) { if (phase.key === phaseKey) found = true; });
   if (!found) phaseKey = (copy.phases && copy.phases[0]) ? copy.phases[0].key : '';
+
+  // The unit is held as typed text, so a fresh copy re-matches it. A unit
+  // added on the server this morning starts matching without a retype.
+  matchTypedUnit();
 }
 
 
@@ -139,13 +212,16 @@ function rememberPlace() {
  */
 function render() {
   var focused = document.activeElement;
-  var wasNeeded = !!(focused && focused.id === 'needed');
-  var caret = wasNeeded ? focused.selectionStart : 0;
+  var isBox   = !!(focused && focused.tagName === 'INPUT' && focused.id);
+  var id      = isBox ? focused.id : '';
+  var caret   = 0;
+
+  if (isBox) { try { caret = focused.selectionStart; } catch (e) {} }
 
   draw();
 
-  if (wasNeeded) {
-    var box = document.getElementById('needed');
+  if (id) {
+    var box = document.getElementById(id);
     if (box) {
       box.focus();
       try { box.setSelectionRange(caret, caret); } catch (e) {}
@@ -174,9 +250,9 @@ function draw() {
     '<div class="body">' +
       (savedStrip ? '<div class="saved-strip">Saved · waiting to send</div>' : '') +
       (storageRefused ? storageFullHtml() : '') +
-      placeBarHtml() +
+      '<div class="log-form">' + placeFieldsHtml() + '</div>' +
       (askLine ? askCardHtml() : '') +
-      '<div class="log-form' + (ready ? '' : ' log-form--off') + '">' +
+      '<div class="log-form log-form--rec' + (ready ? '' : ' log-form--off') + '">' +
         typeFieldHtml() +
         itemFieldHtml() +
         subtypeFieldHtml() +
@@ -193,34 +269,49 @@ function draw() {
               (missing ? 'disabled ' : '') + 'onclick="save()">Save</button>' +
     '</div>';
 
-  slot.innerHTML = placeSheet ? placeSheetHtml() : '';
   setSaveBarBottom();
 }
 
 
 /**
- * THE PLACE BAR IS TWO LINES, always.
+ * BUILDING, UNIT AND PHASE, AT THE TOP OF THE FORM.
  *
- * One line wrapped on a phone, and the wrap pushed the whole form down a
- * row. Two fixed lines cost the same height every time.
+ * They were a two-line bar and a bottom sheet. The bar read well and the
+ * sheet cost a tap to open, a tap to close, and it hid the two fields that
+ * change most: you walk from 301 to 302 far more often than you change
+ * building.
+ *
+ * BUILDING IS A DROPDOWN AND IS REMEMBERED. UNIT IS A BOX AND IS NEVER
+ * REMEMBERED — a remembered unit writes a real door against the wrong
+ * door. The note under the box is what tells you the number matched.
  */
-function placeBarHtml() {
-  var name  = copy ? copy.name : 'No building';
-  var found = (copy && unitKey) ? findUnit(copy, unitKey) : null;
+function placeFieldsHtml() {
+  var buildings = option('', 'Choose a building', projectId === '') +
+    projects.map(function (project) {
+      return option(project.id, project.name, project.id === projectId);
+    }).join('');
 
-  var line1 = escapeHtml(name) + ' · ' + (found ? escapeHtml(found.unit.label) : '____');
-  var line2 = copy
-    ? escapeHtml(phaseLabel()) + (found && found.group.label ? ' · ' + escapeHtml(found.group.label) : '')
-    : 'Choose a building';
+  var phases = copy ? (copy.phases || []).map(function (phase) {
+    return option(phase.key, phase.label, phase.key === phaseKey);
+  }).join('') : '';
 
-  return '<div class="place-bar">' +
-           '<div class="place-lines">' +
-             '<div class="place-1">' + line1 + '</div>' +
-             '<div class="place-2">' + line2 + '</div>' +
-           '</div>' +
-           '<button type="button" class="btn btn-small btn-ghost press place-set" onclick="openPlace()">' +
-             (unitKey ? 'change' : 'set unit') +
-           '</button>' +
+  return '<div class="field">' +
+           '<div class="field-label">Building</div>' +
+           '<select class="input input--sm" onchange="setProject(this.value)">' + buildings + '</select>' +
+         '</div>' +
+
+         '<div class="field">' +
+           '<div class="field-label">Unit</div>' +
+           '<input class="input input--sm" id="unit-box" type="text" inputmode="text" ' +
+                  'autocomplete="off" placeholder="204" ' +
+                  'value="' + escapeHtml(unitTyped) + '" oninput="typeUnit(this.value)">' +
+           '<div class="field-note" id="unit-note">' + unitNote() + '</div>' +
+         '</div>' +
+
+         '<div class="field">' +
+           '<div class="field-label">Phase</div>' +
+           '<select class="input input--sm"' + (copy ? '' : ' disabled') +
+                  ' onchange="setPhase(this.value)">' + phases + '</select>' +
          '</div>';
 }
 
@@ -356,12 +447,7 @@ function neededFieldHtml() {
   var item = currentItem();
   var hint = (item && item.hint) ? item.hint : 'What is needed';
 
-  var chips = chipsFor(currentGroup(), needed).map(function (line) {
-    return '<button type="button" class="suggest-chip press" ' +
-                   'onclick="useChip(' + escapeHtml(JSON.stringify(line)) + ')">' +
-             escapeHtml(line) +
-           '</button>';
-  }).join('');
+  var chips = chipRowHtml();
 
   return '<div class="field">' +
            '<div class="field-label">Needed</div>' +
@@ -370,6 +456,34 @@ function neededFieldHtml() {
                   'value="' + escapeHtml(needed) + '" oninput="typeNeeded(this.value)">' +
            (chips ? '<div class="suggest">' + chips + '</div>' : '') +
          '</div>';
+}
+
+
+/**
+ * The suggestion chips, each one a pair: the line, and an x that stops it
+ * being offered again.
+ *
+ * A CHIP IS EARNED, NOT WRITTEN, so a typo saved three times becomes a
+ * suggestion and there was no way to take it back. `painters to finish`
+ * is Miguel's example. The x hides it on this phone; the records that fed
+ * it are not touched.
+ *
+ * TWO TARGETS IN ONE OUTLINE, not two separate chips. The line is the
+ * thing you tap and it keeps the whole width it had; the x is a narrow
+ * strip on its end with a divider, so a gloved thumb aiming at the line
+ * cannot land on the x.
+ */
+function chipRowHtml() {
+  return chipsFor(currentGroup(), needed).map(function (line) {
+    var arg = escapeHtml(JSON.stringify(line));
+    return '<span class="suggest-chip">' +
+             '<button type="button" class="suggest-use press" ' +
+                     'onclick="useChip(' + arg + ')">' + escapeHtml(line) + '</button>' +
+             '<button type="button" class="suggest-x press" ' +
+                     'aria-label="Do not suggest ' + escapeHtml(line) + ' again" ' +
+                     'onclick="dropChip(' + arg + ')">' + ICON.close + '</button>' +
+           '</span>';
+  }).join('');
 }
 
 
@@ -483,49 +597,6 @@ function loggedHtml() {
 }
 
 
-/* ── THE PLACE SHEET ──────────────────────────────────────────────── */
-/*
-   Building, Unit and Phase together, in one sheet from the bottom. They
-   change together far more often than one at a time.
-*/
-
-function placeSheetHtml() {
-  var buildings = projects.map(function (project) {
-    return option(project.id, project.name, project.id === projectId);
-  }).join('');
-
-  var phases = copy ? (copy.phases || []).map(function (phase) {
-    return option(phase.key, phase.label, phase.key === phaseKey);
-  }).join('') : '';
-
-  return '<div class="sheet-back" onclick="closePlace(event)">' +
-           '<div class="sheet" onclick="event.stopPropagation()">' +
-             '<div class="sheet-title">Where are you?</div>' +
-
-             '<div class="field">' +
-               '<div class="field-label">Building</div>' +
-               '<select class="input input--sm" onchange="setProject(this.value)">' + buildings + '</select>' +
-             '</div>' +
-
-             '<div class="field">' +
-               '<div class="field-label">Unit</div>' +
-               '<input class="input input--sm" id="unit-box" type="text" inputmode="text" ' +
-                      'placeholder="204" value="' + escapeHtml(unitTyped) + '" ' +
-                      'oninput="typeUnit(this.value)">' +
-               '<div class="field-note">' + unitNote() + '</div>' +
-             '</div>' +
-
-             '<div class="field">' +
-               '<div class="field-label">Phase</div>' +
-               '<select class="input input--sm" onchange="setPhase(this.value)">' + phases + '</select>' +
-             '</div>' +
-
-             '<button type="button" class="btn btn-primary press" onclick="closePlace()">Done</button>' +
-           '</div>' +
-         '</div>';
-}
-
-
 /**
  * THE UNIT BOX NEVER ASSUMES THE FIRST DIGIT IS THE FLOOR.
  *
@@ -562,20 +633,6 @@ function matchUnit(text) {
 
 /* ── HANDLERS ─────────────────────────────────────────────────────── */
 
-function openPlace() {
-  placeSheet = true;
-  var found = unitKey ? findUnit(copy, unitKey) : null;
-  unitTyped = found ? found.unit.label : '';
-  render();
-}
-
-function closePlace(event) {
-  if (event) event.stopPropagation();
-  placeSheet = false;
-  rememberPlace();
-  render();
-}
-
 function setProject(id) {
   projectId = id;
   unitKey   = '';
@@ -584,18 +641,45 @@ function setProject(id) {
   subtype   = '';
   reason    = '';
   loadCopy();
+  rememberPlace();
   render();
+
+  // The copy on the phone may be weeks old. Ask for a fresh one now rather
+  // than at the moment somebody types a unit number that will not match.
+  if (projectId) fetchProject(projectId).then(function (got) {
+    if (got.source === 'error') return;
+    loadCopy();
+    render();
+  });
 }
 
+
+/** Re-reads unitKey from whatever is in the box. */
+function matchTypedUnit() {
+  var found = (copy && unitTyped) ? matchUnit(unitTyped) : null;
+  unitKey = found ? found.unit.key : '';
+}
+
+
+/**
+ * A KEYSTROKE IN THE UNIT BOX NEVER REDRAWS THE FORM. The redraw would
+ * take the keyboard down mid-number.
+ *
+ * The unit changes exactly three things on the screen: the note under the
+ * box, whether the record fields below are live, and the Save bar. Each
+ * one is moved in place.
+ */
 function typeUnit(text) {
   unitTyped = text;
-  var found = copy ? matchUnit(text) : null;
-  unitKey = found ? found.unit.key : '';
+  matchTypedUnit();
 
-  // Only the note and the place bar change, so the box keeps its focus and
-  // the keyboard stays up.
-  var note = document.querySelector('.sheet .field-note');
+  var note = document.getElementById('unit-note');
   if (note) note.innerHTML = unitNote();
+
+  var form = document.querySelector('.log-form--rec');
+  if (form) form.classList.toggle('log-form--off', !(copy && unitKey));
+
+  paintSaveState();
 }
 
 function setPhase(key) {
@@ -603,6 +687,7 @@ function setPhase(key) {
   itemKey  = '';
   subtype  = '';
   reason   = '';
+  rememberPlace();
   render();
 }
 
@@ -640,13 +725,8 @@ function typeNeeded(text) {
 
   // Redrawing the whole form here would take the keyboard down on every
   // keystroke. Only the chip row moves.
-  var row = document.querySelector('.suggest');
-  var chips = chipsFor(currentGroup(), needed).map(function (line) {
-    return '<button type="button" class="suggest-chip press" ' +
-                   'onclick="useChip(' + escapeHtml(JSON.stringify(line)) + ')">' +
-             escapeHtml(line) +
-           '</button>';
-  }).join('');
+  var row   = document.querySelector('.suggest');
+  var chips = chipRowHtml();
 
   if (row) { row.innerHTML = chips; return; }
   if (chips) render();
@@ -697,6 +777,23 @@ function paintSaveState() {
 function useChip(line) {
   needed = line;
   render();
+}
+
+
+/**
+ * The x on a chip. It stops the line being suggested, on this phone, in
+ * this group. It deletes nothing.
+ *
+ * Only the chip row is redrawn, for the same reason a keystroke does not
+ * redraw: the Needed box may well have the keyboard up when somebody
+ * clears a chip under it.
+ */
+function dropChip(line) {
+  hideChip(currentGroup(), line);
+
+  var row = document.querySelector('.suggest');
+  if (row) row.innerHTML = chipRowHtml();
+  else render();
 }
 
 function bump(by) {

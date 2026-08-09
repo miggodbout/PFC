@@ -98,7 +98,17 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-html { background: var(--bg); }
+/* NO RUBBER BAND AT THE ENDS OF THE PAGE.
+
+   Every screen has its own pull to refresh, which reads the finger and
+   moves its own ring — it never needed the browser's bounce, and the
+   bounce was doing damage: on Logging, pulling down slid the whole form
+   into the pinned Save bar and the two overlapped. The custom ring still
+   works, because it fires off touch positions and a scrollY of 0. */
+html {
+  background: var(--bg);
+  overscroll-behavior-y: none;
+}
 
 body {
   background: var(--bg);
@@ -107,6 +117,7 @@ body {
   min-height: 100%;
   padding-top: var(--top-safe);
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -358,7 +369,12 @@ button {
   padding-bottom: 0;
   transition: padding 220ms ease;
 }
-.floor.open > .floor-drawer > .floor-body { padding-top: 2px; padding-bottom: 14px; }
+/* 9px of top padding, not 2px, AND IT IS NOT A LOOKS DECISION. The drawer
+   clips at its padding box, and a chip's corner badges hang 5px above the
+   chip — so on the top row, 101 through 104, the offline badge was sliced
+   in half by the floor header above it. The badge needs its 5px back plus
+   the 2px the row already had, and 9px leaves a hair. */
+.floor.open > .floor-drawer > .floor-body { padding-top: 9px; padding-bottom: 14px; }
 
 /* A header reports what it hides. Open, the flagged chips are right there
    in front of you, so the counts come off the header. */
@@ -479,9 +495,15 @@ button {
 }
 .unit-chip .not-saved-txt { display: none; }
 
-/* The queued-edit mark. Blue, not red — red means a refusal, and a queued
-   edit has not been refused. Same shape as not-saved so the two badges
-   read as a pair, never as the same mark twice. */
+/* The queued-edit mark.
+
+   GREY, NOT BLUE, AND NOT RED. Red means a refusal, and a queued edit has
+   not been refused. Blue was worse: blue is Waiting's colour everywhere
+   else in the app, so a chip about signal was wearing the colour of a chip
+   about painters. Grey belongs to nothing else.
+
+   Same shape as not-saved so the two badges read as a pair, never as the
+   same mark twice. */
 .queued {
   display: inline-flex;
   align-items: center;
@@ -491,12 +513,12 @@ button {
 .queued-mark {
   display: inline-flex;
   align-items: center; justify-content: center;
-  width: 14px; height: 14px;
+  width: 15px; height: 15px;
   border-radius: 50%;
-  background: #6C9CFF;
+  background: rgba(255,255,255,0.45);
   color: #0D0D0D;
 }
-.queued-txt { font-size: 11px; font-weight: 700; color: #8CB0FF; }
+.queued-txt { font-size: 11px; font-weight: 700; color: var(--fg-5); }
 
 /* On a chip it hangs off the opposite corner from not-saved, so a chip
    with both a refusal and a queued edit can show both at once. */
@@ -510,8 +532,11 @@ button {
    A hairline, coloured by Progress. A group with nothing done draws no
    bar at all, not an empty track. */
 
+/* A ROW, because the fill is now one run per phase laid end to end. With
+   one phase, or with a stored list too old to carry the breakdown, it is a
+   row of one and draws exactly as it always did. */
 .bar {
-  display: block;
+  display: flex;
   width: 60px;
   height: 3px;
   border-radius: 2px;
@@ -519,10 +544,15 @@ button {
   overflow: hidden;
   flex-shrink: 0;
 }
+
+/* NO RADIUS ON A RUN. Rounding each run's ends puts a notch at every
+   join, and the joins are exactly what must not be visible — two amber
+   phases in a row have to read as one bar. The rounded outer end comes
+   from .bar clipping it. */
 .bar-fill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  flex-shrink: 0;
   background: var(--dot);
 }
 
@@ -717,8 +747,12 @@ button {
   border: 2px solid var(--accent);
   border-top-color: transparent;
 }
+/* Where the ring rests while it turns. It starts 26px ABOVE the safe area,
+   so 30px puts it just inside the top of the screen, level with the top of
+   the header. It used to be 60px, which parked it across the middle of the
+   header title — Miguel's "too low". */
 .ptr.spin {
-  transform: translateY(60px) !important;
+  transform: translateY(30px) !important;
 }
 .ptr.spin .ptr-ring { animation: ptr-spin 700ms linear infinite; }
 
@@ -736,8 +770,12 @@ button {
   padding: 8px 2px 10px;
   border-bottom: 1px solid var(--accent-2-line);
 }
+/* NOT flex:1. The gap after the flag takes the leftover width instead, so
+   the flag button sits against the phase name. See .head-gap. */
 .phase-label {
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 13.5px; font-weight: 700;
   color: var(--accent-2);
   text-transform: uppercase;
@@ -756,8 +794,11 @@ button {
   align-items: center;
   gap: 10px;
 }
+/* Same rule as .phase-label: the name takes only the width it needs, so a
+   flag button lands beside the words instead of beside the status. */
 .item-name {
-  flex: 1; min-width: 0;
+  flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 15px; font-weight: 500;
   color: var(--fg-3);
 }
@@ -1130,24 +1171,43 @@ select.input {
 .card .item { padding-left: 12px; padding-right: 12px; }
 
 /* The flag chip, as a button. Tap it and the records under it open.
-   One rule, no exception: records stay shut until the flag is tapped. */
+   One rule, no exception: records stay shut until the flag is tapped.
+
+   IT CARRIES ITS OWN ROUND BACKGROUND, in the flag's colour. A bare glyph
+   sitting beside a name reads as a label about the item, not as something
+   to press — which is exactly what Miguel reported. The disc is what says
+   press me.
+
+   Fully rounded rather than a fixed circle: one open issue is the common
+   case and draws round, and a count of 12 grows sideways instead of
+   spilling out of a 30px box. */
 .flag-btn {
-  background: none;
-  border: 0;
-  padding: 2px 4px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
   margin: 0;
-  border-radius: 8px;
+  border: 1px solid var(--flag-line);
+  border-radius: 999px;
+  background: var(--flag-fill);
   cursor: pointer;
 }
-.flag-btn[aria-expanded="true"] { background: rgba(255,255,255,0.07); }
+.flag-btn--deficiency { --flag-fill: rgba(232,92,92,0.14);  --flag-line: rgba(232,92,92,0.34); }
+.flag-btn--waiting    { --flag-fill: rgba(108,156,255,0.14); --flag-line: rgba(108,156,255,0.34); }
 
-/* The row of flag chips under an item name, or on a phase header. */
-.flag-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* Open, it inverts: the disc fills and the border goes solid, so the flag
+   you are looking at the records of is obvious with the list scrolled. */
+.flag-btn[aria-expanded="true"] { background: var(--flag-line); }
+
+/* The eater of leftover width on a phase header and an item row. It is
+   what puts the flag against the NAME and leaves the pill on the right
+   edge — the label used to take the space itself, which pushed the flag
+   over beside the status and made it read as one. */
+.head-gap { flex: 1 1 auto; min-width: 0; }
+
 
 /* The record list, open under its item. */
 .recs {
@@ -1228,28 +1288,19 @@ select.input {
 
 /* ── STEP 4 — LOGGING ────────────────────────────────────────────── */
 
-/* The place bar. Two lines, always: one line wrapped on a phone and the
-   wrap pushed the whole form down a row. */
-.place-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line-soft);
-  background: rgba(255,255,255,0.04);
-}
-.place-lines { flex: 1; min-width: 0; }
-.place-1 {
-  font-size: 15px; font-weight: 700;
-  color: var(--fg-2);
-  word-break: break-word;
-}
-.place-2 { font-size: 12.5px; color: var(--fg-6); margin-top: 2px; }
-.place-set { flex-shrink: 0; }
+/* The form scrolls behind the pinned Save bar.
 
-/* The form scrolls behind the pinned Save bar. */
+   TWO BLOCKS, NOT ONE. The first holds Building, Unit and Phase; the
+   second holds the record. The rule under the first is the divider, and it
+   is what lets the record half dim on its own while the place half stays
+   live. The place bar and its bottom sheet were deleted for these: they
+   hid the two fields that change most. */
 .log-form { display: flex; flex-direction: column; gap: 16px; }
+.log-form--rec {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
 .log-form--off { opacity: 0.4; pointer-events: none; }
 
 /* The Needed box is the hero field, and the only one at full height. */
@@ -1258,20 +1309,38 @@ select.input {
   font-size: 17px;
 }
 
-/* The three suggestion chips. Four wrap the row. */
+/* The three suggestion chips. Four wrap the row.
+
+   ONE OUTLINE, TWO TARGETS. The line fills the chip and the x is a narrow
+   strip on the end behind a divider, so a thumb aiming at the line cannot
+   take the chip away by mistake. Both are 38px tall, which is the whole
+   chip — there is no small target here. */
 .suggest {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 .suggest-chip {
+  display: inline-flex;
+  align-items: stretch;
   min-height: 38px;
-  padding: 0 12px;
   border-radius: 10px;
   border: 1px solid var(--accent-line);
   background: rgba(222,116,82,0.10);
+  overflow: hidden;
+}
+.suggest-use {
+  padding: 0 12px;
   color: var(--fg-3);
   font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.suggest-x {
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--accent-line);
   cursor: pointer;
 }
 
@@ -1349,29 +1418,6 @@ select.input {
 }
 .logged-line { flex: 1; min-width: 0; font-size: 13.5px; color: var(--fg-4); }
 .logged-row--gone .logged-line { opacity: 0.45; text-decoration: line-through; }
-
-/* The sheet that opens from the bottom to change the place. */
-.sheet-back {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 50;
-  display: flex;
-  align-items: flex-end;
-}
-.sheet {
-  width: 100%;
-  max-height: 88vh;
-  overflow-y: auto;
-  padding: 18px 20px calc(24px + var(--btm-safe));
-  border-radius: 18px 18px 0 0;
-  background: #161616;
-  border-top: 1px solid var(--line-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.sheet-title { font-size: 17px; font-weight: 700; color: var(--fg-1); }
 
 /* The near-match prompt. It fires on Save, never while typing. */
 .ask-card {

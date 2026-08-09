@@ -323,6 +323,12 @@ function handleListProjects(fresh) {
         itemsDone:    items.done,
         itemsTotal:   items.total,
 
+        // The eighth, added in the step 4 fix round. FEEDS THE BAR AND
+        // NOTHING ELSE, same as the two above: [ { key, done, total } ] in
+        // phase order, so the Tracking row can colour its bar by phase the
+        // way the Building and Unit screens do off the whole copy.
+        phaseCounts:  items.phases,
+
         deficiencies: flags.deficiencies,
         waiting:      flags.waiting
       });
@@ -1887,7 +1893,7 @@ function readOverallColumn(ss, layout, unitCount) {
  * where the difference matters, computes its own.
  */
 function countItemCells(ss, layout, unitCount) {
-  var out = { done: 0, total: 0 };
+  var out = { done: 0, total: 0, phases: [] };
   if (unitCount === 0 || layout.itemCount === 0) return out;
 
   // Taken from the layout rather than hardcoded, so this follows if the
@@ -1897,11 +1903,39 @@ function countItemCells(ss, layout, unitCount) {
   var sheet  = ss.getSheetByName(TRACKER_SHEET_NAME);
   var values = sheet.getRange(FIRST_DATA_ROW, firstCol, unitCount, layout.itemCount).getValues();
 
+  /*
+     THE SAME READ, ALSO COUNTED PHASE BY PHASE.
+     The bar on every screen is now cut into one run per phase, so a floor
+     with Phase 1 finished shows a solid green start instead of one amber
+     bar that says nothing about which third is closed. The item columns
+     sit in phase order — see computeLayout — so each phase owns a slice of
+     the block already in memory. No second read of the Sheet.
+  */
+  var at = 0;
+  var slices = layout.phases.map(function (phase) {
+    var slice = { key: phase.key, from: at, to: at + phase.items.length, done: 0, total: 0 };
+    at += phase.items.length;
+    return slice;
+  });
+
   values.forEach(function (row) {
-    row.forEach(function (cell) {
+    row.forEach(function (cell, index) {
+      var done = (statusKey(cell) === 'complete');
       out.total += 1;
-      if (statusKey(cell) === 'complete') out.done += 1;
+      if (done) out.done += 1;
+
+      for (var i = 0; i < slices.length; i++) {
+        if (index >= slices[i].from && index < slices[i].to) {
+          slices[i].total += 1;
+          if (done) slices[i].done += 1;
+          break;
+        }
+      }
     });
+  });
+
+  out.phases = slices.map(function (slice) {
+    return { key: slice.key, done: slice.done, total: slice.total };
   });
 
   return out;

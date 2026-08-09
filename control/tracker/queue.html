@@ -122,6 +122,9 @@ function jobHtml(job, canAct) {
   return '<div class="item">' +
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(place.what) + '</span>' +
+             // .item-name no longer grows on its own — see theme.css — so
+             // the ring needs this to stay on the right edge.
+             '<span class="head-gap"></span>' +
              queuedRingHtml(canAct) +
            '</div>' +
            '<div class="item-details">' + escapeHtml(place.where) + '</div>' +

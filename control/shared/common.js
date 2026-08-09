@@ -153,12 +153,23 @@ function rollup(counts, flags) {
   var itemsTotal = (counts && counts.itemsTotal !== undefined) ? counts.itemsTotal : total;
   var itemsDone  = (counts && counts.itemsDone  !== undefined) ? counts.itemsDone  : complete;
 
+  /*
+   * THE PHASE BREAKDOWN, for the bar and for nothing else.
+   *
+   * [ { key, done, total } ], in phase order. It is optional the whole way
+   * through: a caller with none gives none, and barHtml falls back to the
+   * one-colour bar. That matters because a phone can be holding a list
+   * answer from before the backend sent these.
+   */
+  var phases = (counts && counts.phases) ? counts.phases : null;
+
   return {
     status:     status,
     done:       complete,
     total:      total,
     itemsDone:  itemsDone,
     itemsTotal: itemsTotal,
+    phases:     phases,
     deficiency: deficiency,
     waiting:    waiting
   };
@@ -1105,6 +1116,44 @@ function itemTypes(copy, itemKey) {
 }
 
 
+/**
+ * THE HIDDEN LINES — chips this phone has been told to stop offering.
+ *
+ * A chip is not a list somebody wrote. It is a line that got typed into a
+ * record often enough to be worth offering again, so a typo that got saved
+ * three times becomes a suggestion, and there was no way to take it back
+ * short of finding and cancelling every record that fed it.
+ *
+ * SO HIDING IS ITS OWN LIST, AND IT NEVER TOUCHES A RECORD. `painters to
+ * finish` stays exactly as it was written on the eleven records that hold
+ * it — that is history, and history does not get edited to tidy a
+ * dropdown. It just stops being suggested.
+ *
+ * It is stored NORMALISED, so `32 6 RH` and `32" 6" RH` hide together.
+ * That is the same rule the chip row and the near-match prompt already
+ * treat as one line, and hiding one while the other kept appearing would
+ * read as the x button not working.
+ *
+ * PER PHONE, and per group. There is no server column for it, and 0.3 is
+ * where a shared list would belong if one is ever wanted.
+ */
+function hiddenChips() {
+  var held = Store.read('chips.hidden', null);
+  return (held && held.groups) ? held : { groups: {} };
+}
+
+function hideChip(group, line) {
+  var norm = normaliseNeeded(line);
+  if (!norm) return;
+
+  var held = hiddenChips();
+  var rows = held.groups[group] || [];
+  if (rows.indexOf(norm) < 0) rows.push(norm);
+  held.groups[group] = rows;
+
+  Store.write('chips.hidden', held);
+}
+
 /** The stored history index: { groups: { groupKey: [ {n, c, t} ] } }. */
 function chipIndex() {
   var held = Store.read('chips', null);
@@ -1199,6 +1248,7 @@ function pruneChipIndex(index, now) {
 function chipRows(group) {
   var rows = {};      // normalised line -> { n, c, t }
   var now  = Date.now();
+  var hide = hiddenChips().groups[group] || [];
 
   function add(into, text, at) {
     var norm = normaliseNeeded(text);
@@ -1234,7 +1284,12 @@ function chipRows(group) {
     }
   });
 
-  return Object.keys(rows).map(function (key) { return rows[key]; })
+  // 3 — the hidden ones come out LAST, after both sources have been read.
+  // Filtering earlier would let the history index put a line back that the
+  // live records had already had removed.
+  return Object.keys(rows)
+    .filter(function (key) { return hide.indexOf(key) < 0; })
+    .map(function (key) { return rows[key]; })
     .sort(function (a, b) {
       if (b.c !== a.c) return b.c - a.c;      // most used first
       return (b.t || 0) - (a.t || 0);          // ties to the newest
@@ -1727,13 +1782,18 @@ function settleJob(job, retry, error, burn) {
 
 /** Fetches the Buildings list and stores it. */
 function fetchProjects() {
+  startRefreshRing();
   return apiCall('list-projects', {}, 'GET').then(function (result) {
+    stopRefreshRing();
     if (!result.ok) {
       return { source: 'error', reason: result.reason, detail: result.detail };
     }
     var projects = result.data.projects || [];
     Store.setList(projects);
     return { source: 'live', projects: projects };
+  }, function (error) {
+    stopRefreshRing();
+    throw error;
   });
 }
 
@@ -1746,12 +1806,17 @@ function fetchProjects() {
  * screen and every Unit screen inside it are drawn from this one copy.
  */
 function fetchProject(projectId) {
+  startRefreshRing();
   return apiCall('get-project', { id: projectId }, 'GET').then(function (result) {
+    stopRefreshRing();
     if (!result.ok) {
       return { source: 'error', reason: result.reason, detail: result.detail };
     }
     Store.setProject(projectId, result.data);
     return { source: 'live', data: result.data };
+  }, function (error) {
+    stopRefreshRing();
+    throw error;
   });
 }
 
@@ -1777,9 +1842,14 @@ function loadProjects() {
  * needs it fresh from the server rather than from a phone copy.
  */
 function loadStructure(projectId) {
+  startRefreshRing();
   return apiCall('get-structure', { id: projectId }, 'GET').then(function (result) {
+    stopRefreshRing();
     if (!result.ok) return { source: 'error', reason: result.reason, detail: result.detail };
     return { source: 'live', data: result.data };
+  }, function (error) {
+    stopRefreshRing();
+    throw error;
   });
 }
 
@@ -1879,9 +1949,50 @@ function unitItemStatuses(copy, unitKey) {
 }
 
 
+/** The same items, counted phase by phase, for the bar. */
+function unitPhaseCounts(copy, unitKey) {
+  return (copy.phases || []).map(function (phase) {
+    var done = 0;
+    phase.items.forEach(function (item) {
+      if (itemStatus(copy, unitKey, item.key) === 'complete') done += 1;
+    });
+    return { key: phase.key, done: done, total: phase.items.length };
+  });
+}
+
+
 /** One unit's rollup. It counts ITEMS. */
 function unitRollup(copy, unitKey) {
-  return rollupOf(unitItemStatuses(copy, unitKey), countFlags(copy, { unit: unitKey }));
+  var roll = rollupOf(unitItemStatuses(copy, unitKey), countFlags(copy, { unit: unitKey }));
+  roll.phases = unitPhaseCounts(copy, unitKey);
+  return roll;
+}
+
+
+/**
+ * Adds up phase breakdowns from a list of rollups, phase by phase.
+ *
+ * Used at every level above the unit. Order comes from the first rollup
+ * that has one, so the bar reads left to right in phase order whatever the
+ * units happen to hold.
+ */
+function sumPhaseCounts(rolls) {
+  var order = [];
+  var byKey = {};
+
+  rolls.forEach(function (roll) {
+    if (!roll || !roll.phases) return;
+    roll.phases.forEach(function (phase) {
+      if (!byKey[phase.key]) {
+        byKey[phase.key] = { key: phase.key, done: 0, total: 0 };
+        order.push(phase.key);
+      }
+      byKey[phase.key].done  += phase.done;
+      byKey[phase.key].total += phase.total;
+    });
+  });
+
+  return order.length ? order.map(function (key) { return byKey[key]; }) : null;
 }
 
 
@@ -1938,7 +2049,8 @@ function groupRollup(group, rolls) {
     complete:   complete,
     notStarted: notStarted,
     itemsDone:  itemsDone,
-    itemsTotal: itemsTotal
+    itemsTotal: itemsTotal,
+    phases:     sumPhaseCounts(group.units.map(function (unit) { return rolls[unit.key]; }))
   }, flags);
 }
 
@@ -1963,7 +2075,12 @@ function projectRollup(project) {
     complete:   project.unitsDone  || 0,
     notStarted: project.unitsNotStarted || 0,
     itemsDone:  project.itemsDone,
-    itemsTotal: project.itemsTotal
+    itemsTotal: project.itemsTotal,
+
+    // The eighth number, added for the phase-coloured bar. Passed straight
+    // through, undefined included: a stored list from before the backend
+    // sent it draws the plain one-colour bar rather than no bar at all.
+    phases:     project.phaseCounts
   }, {
     deficiency: project.deficiencies || 0,
     waiting:    project.waiting || 0
@@ -2061,9 +2178,60 @@ function dotHtml(roll) {
  */
 function barHtml(roll) {
   if (!roll || !roll.itemsTotal || !roll.itemsDone) return '';
+
+  var runs = phaseRunsHtml(roll);
+  if (runs) return '<span class="bar">' + runs + '</span>';
+
+  // No breakdown to draw with — a stored list from before the backend sent
+  // one. One fill, one colour, exactly as it was.
   var pct = Math.round((roll.itemsDone / roll.itemsTotal) * 100);
   return '<span class="bar"><span class="bar-fill s-' + safeStatus(roll.status) + '" ' +
          'style="width:' + pct + '%"></span></span>';
+}
+
+
+/**
+ * THE FILL, CUT INTO ONE RUN PER PHASE, LAID END TO END.
+ *
+ * Miguel's report: a unit with Phase 1 entirely finished still drew one
+ * amber bar part way along, which says "some work is done" and hides the
+ * fact that a whole phase is closed. A bar cannot say which third is
+ * finished when it only has one colour.
+ *
+ * SO EVERY PHASE CONTRIBUTES A RUN AS LONG AS THE ITEMS IT HAS FINISHED,
+ * and the runs BUTT UP AGAINST EACH OTHER. There are no slots and no gaps:
+ * a phase that is half done does not leave the other half as a hole for
+ * the next phase to start after. Miguel set that rule himself — "if P3 has
+ * data logged that third should stick at the tail end of P2" — and it is
+ * what keeps the thing reading as one bar. Two amber phases in a row are
+ * indistinguishable from one longer amber run, which is the point.
+ *
+ * A run is GREEN when its phase is wholly complete and AMBER while it is
+ * part way. So the finished phases are a solid green block on the left,
+ * and everything still moving is the amber that follows.
+ *
+ * The total filled width is unchanged: the runs add up to itemsDone, which
+ * is what the single fill was. Only the colouring is new.
+ *
+ * Answers '' when there is no breakdown, or when it is a single phase — at
+ * one phase this is the old bar with extra markup.
+ */
+function phaseRunsHtml(roll) {
+  var phases = roll.phases || [];
+  if (phases.length < 2) return '';
+
+  var out = '';
+  phases.forEach(function (phase) {
+    if (!phase.done) return;      // a phase with nothing done draws nothing
+
+    var pct  = (phase.done / roll.itemsTotal) * 100;
+    var full = (phase.total > 0 && phase.done === phase.total);
+
+    out += '<span class="bar-fill s-' + (full ? 'complete' : 'in_progress') + '" ' +
+                 'style="width:' + pct.toFixed(3) + '%"></span>';
+  });
+
+  return out;
 }
 
 
@@ -2219,9 +2387,19 @@ var ICON = {
   /* The same flag at Hub-card size, for the Logging card. */
   flagBig: '<svg width="15" height="17" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
 
-  /* Signal bars, slashed — the queued-edit mark. currentColor, so the
-     badge's own background sets the colour. */
-  offline: '<svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true"><rect x="1" y="6" width="2" height="3" rx="0.5" fill="currentColor"/><rect x="4" y="4" width="2" height="5" rx="0.5" fill="currentColor"/><rect x="7" y="1" width="2" height="8" rx="0.5" fill="currentColor"/><path d="M0.5 0.5l9 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
+  /* A wifi symbol with a slash — the queued-edit mark. currentColor, so
+     the badge's own background sets the colour.
+
+     It was signal bars with a dash across them, and Miguel read it as
+     "weird": three bars is a strength meter, so a full-height bar next to
+     a slash says two things at once. Arcs and a dot is the shape a phone
+     already uses for this, and the slash is the half that means none. */
+  offline: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">' +
+             '<path d="M0.9 3.7a6 6 0 0 1 8.2 0" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/>' +
+             '<path d="M2.7 5.6a3.4 3.4 0 0 1 4.6 0" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/>' +
+             '<circle cx="5" cy="8" r="1.05" fill="currentColor"/>' +
+             '<path d="M1.2 1.2l7.6 7.6" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/>' +
+           '</svg>'
 };
 
 /** The back button in a screen header. */
@@ -2351,14 +2529,55 @@ function noCopyHtml() {
  *
  * onRefresh returns a Promise. The arrow turns while it runs.
  */
+/* ── THE REFRESH RING ─────────────────────────────────────────────────
+   ONE RING, AND TWO THINGS START IT: a pull, and a fetch the screen
+   started by itself.
+
+   The second one is the point. Every screen draws its stored copy at once
+   and asks the server behind it, and until now nothing said the asking
+   was happening. Old numbers sitting still, with no sign anything is
+   working, reads as an app that has stopped — which is exactly what
+   Miguel reported after the step 4 round.
+
+   IT COUNTS, IT DOES NOT FLAG. Buildings can be fetching its list while a
+   pull is draining the queue, and the first one to finish must not stop
+   the ring the other one is still using.
+
+   IT IS BUILT ON DEMAND. A screen that never fetches and never enables the
+   pull never grows the element.
+*/
+var refreshRing  = null;
+var refreshCount = 0;
+
+function refreshIndicator() {
+  if (!refreshRing) {
+    refreshRing = document.createElement('div');
+    refreshRing.className = 'ptr';
+    refreshRing.innerHTML = '<span class="ptr-ring"></span>';
+    document.body.appendChild(refreshRing);
+  }
+  return refreshRing;
+}
+
+function startRefreshRing() {
+  refreshCount += 1;
+  var ring = refreshIndicator();
+  ring.style.transform = '';         // drop any leftover finger offset
+  ring.classList.add('on', 'spin');
+}
+
+function stopRefreshRing() {
+  refreshCount = Math.max(0, refreshCount - 1);
+  if (refreshCount) return;
+  refreshIndicator().classList.remove('on', 'spin');
+}
+
+
 function enablePullToRefresh(onRefresh) {
   var TRIGGER = 70;      // how far down to pull, in pixels
   var MAX     = 110;     // how far the screen follows the finger
 
-  var indicator = document.createElement('div');
-  indicator.className = 'ptr';
-  indicator.innerHTML = '<span class="ptr-ring"></span>';
-  document.body.appendChild(indicator);
+  var indicator = refreshIndicator();
 
   var startY  = 0;
   var pulling = false;
@@ -2389,16 +2608,13 @@ function enablePullToRefresh(onRefresh) {
 
     if (pulled < TRIGGER) { indicator.classList.remove('on'); return; }
 
+    // The pull holds a count of its own on the shared ring, so a fetch
+    // that finishes mid-pull cannot stop it early.
     running = true;
-    indicator.classList.add('on', 'spin');
+    startRefreshRing();
 
-    Promise.resolve(onRefresh()).then(function () {
-      running = false;
-      indicator.classList.remove('on', 'spin');
-    }, function () {
-      running = false;
-      indicator.classList.remove('on', 'spin');
-    });
+    function done() { running = false; stopRefreshRing(); }
+    Promise.resolve(onRefresh()).then(done, done);
   });
 }
 
