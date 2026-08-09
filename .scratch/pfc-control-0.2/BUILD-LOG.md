@@ -1753,3 +1753,127 @@ reload, not a lost record. `0.2` merged to `main` and pushed at `03bd7a4`.
 `CACHE_NAME` was already `pfc-control-0.2-step4`. `Code.js` was not touched,
 so no clasp push — the backend stays at version 9. The line above reading
 **Merged to main: no** is what was true before this update.
+
+## Session 15 — 2026-08-09
+
+**Step:** 4 — the fix round for what session 14 found.
+**Branch:** `0.2` at `4779e3f`, merged to `main` and pushed.
+**Deployed:** nothing. `Code.js` was not touched, so the backend stays at
+Apps Script version 9. Every fix in this session is front end.
+**Merged to main:** **yes.** `CACHE_NAME` is now `pfc-control-0.2-step4-fix1`.
+
+### The defect — fixed, and re-checked on all three faces
+
+`applyOutcome` in `common.js` emptied the shelf before it folded the landed
+jobs into the building copy. `Store.removeJob` fires `Queue.changed()`, so
+every screen redrew from the copy as it stood *before* the fold, and the
+record that had just landed painted as though it never existed.
+
+**Fixed twice over, on purpose.** Either change alone closes it; both
+together mean no future caller can reopen it by accident.
+
+1. `applyOutcome` now runs in three passes: file the results, fold every
+   landed job into its copy, **then** take the landed jobs off the shelf.
+   That is the order the function's own doc comment always claimed.
+2. `Store.foldLanded` moves `jobsRev` when it writes. That counter is the
+   only thing `paintedRecords`' memo watches, and `Store.write` moves it
+   for the queue shelf alone — so the memo went on serving the pre-fold
+   list even after the copy was right.
+
+**All three faces re-checked in Chrome**, on the local `0.2` files, against
+the ZZ copy already on this browser. A landing was simulated by calling
+`applyOutcome` with `ok: true` — exactly what a drain does — with `fetch`
+blocked, so nothing reached a Sheet.
+
+| Face | Before | Now |
+|---|---|---|
+| The chip count | dropped when the record landed | queued `4` and `1`, landed `4` and `1`, shelf empty |
+| `Fix all` | left a row drawn open with its own `Fixed` button | `Fix all 5` closed five; every row reads `Fixed · Undo` |
+| The cancelled line | stayed in the Logging chip pool | chip appears on save, gone on cancel, gone after the cancellation lands |
+
+The `Fix all` check was run with **no extra `Queue.changed()`** afterwards,
+so the redraw it proves is `removeJob`'s own — not the one `drain` fires at
+the end of the batch.
+
+### The small things
+
+- **The queued ring no longer spins for ever.** `queuedRingHtml` in
+  `common.js` draws it still unless `Queue.sending()` is true. Three call
+  sites take it: the Unit row, the Queue row and `Logged here`. Verified
+  offline: `class="ring ring--wait"`, computed `animation-name: none`.
+- **The sync bar draws the offline glyph, not the grey slab.** The slab
+  still marks `1 edit queued` on a phone that *has* signal — there the word
+  is "waiting", and the slab is right. `.sync-off` is the new class.
+- **`Whole phase — Doors & Windows` reads with one dash.** `phaseName()`
+  drops the label's own `Phase 1 — ` prefix. **The place bar keeps the full
+  label** — there the phase number is the useful part. Plan section 5.7
+  draws the place bar as `Doors & Windows · Floor 2`, so the two differ;
+  nobody has flagged the bar, so it was left alone.
+- **Save names the one field it still needs.** `missingLine()` returns the
+  highest empty field, top to bottom, and the line sits over the dimmed
+  button. Walked the whole ladder in the browser: `Set the unit.` →
+  `Choose an item.` → `Choose a type.` → `Fill in the Subtype box.` →
+  `Type what is needed.` → `Choose a reason.` → `Fill in the Reason box.` →
+  no note, Save live.
+  - **This makes Save refuse what it used to accept.** It only checked the
+    building and the unit, so an empty form saved a blank record. Needed is
+    now required on a Waiting record too. **Miguel's to veto** — it is one
+    line in `missingLine()`.
+  - The Needed box and the two `Other` boxes move the bar through
+    `paintSaveState()`, which edits the bar in place. A `render()` on a
+    keystroke takes the keyboard down mid-word.
+- **The green card reads `Every issue on …`**, not `Every record on …`.
+  Writing the sentence into `crew-words.md` is what caught it: `record` is
+  a code word and `issue` is the settled umbrella. One thing, one word.
+
+### Escape — there was never a defect
+
+Session 14 reported that Escape does not close the status menu. **The app is
+fine and always has been.** `git log -S` shows the handler in `unit.html`
+unchanged since the first commit, and a real `keydown` closes the menu:
+`openMenu` goes to `null`.
+
+What fails is the **browser extension's key press**. Same menu, same page:
+a dispatched `KeyboardEvent` closes it; `computer` `key: Escape` leaves it
+open. No code was changed. **Do not test a keyboard shortcut with the
+extension's key action** — dispatch the event instead.
+
+### crew-words.md
+
+The two missing sentences are in, plus the Save lines this session added:
+
+- `This phone already has 32 6 RH. You typed 32" 6" RH.`
+- `Every issue on Interior Doors is fixed. Set it to Complete?`
+- The five Save lines.
+
+A note at the bottom says why they were missed: **both of their buttons were
+already listed.** A button reads as a string; a sentence inside a card reads
+as prose and gets skipped. Check the sentences too.
+
+### Worth knowing
+
+- **Two test edits reached the live ZZ Sheet.** Loading a page drains the
+  shelf before any block can be set, and two edits went out. The ZZ Sheet is
+  junk and already on the trash list. Block `fetch` *before* putting
+  anything on the shelf.
+- **The Service Worker served a stale `logging/index.html`** in the middle of
+  the round, and the first test result was against the old file. Caught by a
+  `missingLine is not defined`. `CACHE_NAME` was bumped and the caches
+  cleared. Bump it before testing, not after.
+- The ZZ building has left the server's Buildings list, so Logging filtered
+  it out — Logging only offers a building the phone holds a copy of *and*
+  the list names. Put back on the phone's stored list for the round; the
+  next real fetch overwrites it.
+
+### Open
+
+- The two OPEN words, `Subtype` and `Needed`, are still open. They block
+  shipping 0.2, not building it.
+- Still unproven, and a browser cannot do them: **the pinned Save on a real
+  phone** with the keyboard up (PLAN CALL 3), the chips and the red `!` at
+  chip size, and real airplane mode on site.
+- The Save change above, if Miguel wants Needed optional.
+
+### Next
+
+Step 5 — Admin, and test points 14 and 15.
