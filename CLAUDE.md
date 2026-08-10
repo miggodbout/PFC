@@ -442,11 +442,55 @@ Two exceptions, both deliberate:
 
 - 0.1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
 - 0.2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from 0.3.
-- 0.3: Crew access — Google login, who changed what, and a lock per project instead of one lock for the whole script. **Plus the Archive window**, which `14` moved here on 2026-08-08.
+- 0.3: **The Archive release.** The history door, and the closed-job work that sits behind it. Decided by Miguel on 2026-08-09 — see below.
   - **Scoping rule, stated by Miguel on 2026-08-08:** anything about a **closed job** belongs to the Archive, and the Archive is 0.3 — "while still leaving openings in 0.2 for them." Four items landed in 0.3 under this one rule: the Archive window, the GC punch list, an abandoned job that never leaves Tracking, and rebuilding the chip history on a new phone. Settle the next one with the rule, not a fresh argument.
-  - **The second half binds 0.2.** Leaving the openings is work. The short version: **the server keeps answering with everything, and the phone does the hiding.** Trimming a payload because 0.2 does not draw it takes away the Archive's way in.
+  - **The second half bound 0.2, and 0.2 paid it.** The short version: **the server answers with everything, and the phone does the hiding.** Verified in the shipped code — `handleGetProject` sends every record state, `handleListProjects` sends finished buildings, the Hub carries the greyed card. Do not trim any of those.
 - 0.4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
 - 0.5: PDF export, material order summaries.
+
+### 0.3 is the Archive. Crew access is out of it.
+
+Decided by Miguel on 2026-08-09, the day 0.2.0 shipped. His words: "Its decided,
+0.3 will be archive."
+
+0.3 used to hold two clusters that had nothing to do with each other — the
+closed-job work above, and crew access (Google login, an author column, a lock
+per project, a rule for two phones on one unit). **Only the first cluster is
+0.3 now.**
+
+**Why crew access left.** It pays out on the day somebody other than Miguel
+edits, and not one hour before. The standing note at the top of this file says
+the crew is not on this app until 0.4 at the earliest. So every hour spent on
+login before then buys nothing, while the Archive answers a question Miguel has
+standing in a unit today: was this door already reported.
+
+**Where crew access went is NOT decided.** It was proposed for 0.4, beside the
+QR menu that actually brings other people in, and Miguel has not ruled on that.
+Do not write it into 0.4 until he does. The three items stay in
+`.scratch/0.3-backlog.md` under their own heading, unassigned.
+
+**What is inside 0.3 is not charted yet.** The release is named, not scoped.
+The recommendation on the table, not yet ruled on:
+
+- **The read-only Archive window alone.** One window, and it needs **no backend
+  change at all** — every seam 0.2 promised was checked in the shipped code. The
+  three new screens are the Tracker screens with the item grid swapped for a
+  record list, and read-only, so they are smaller than the originals.
+- **The other three ride later, each on its own merit.** Each is bigger than the
+  window. The close/reopen switch raises `_Config` to version 3 and migrates
+  every live Sheet. The GC punch list may add columns to the Deficiencies tab,
+  which migrates every live Sheet again. `rebuild-suggestions` runs one tab read
+  per Sheet against the 6 minute Apps Script limit.
+- **One conflict is already known and must be settled when 0.3 charts.**
+  `dropFinishedCopies` in `control/tracker/index.html` deletes a finished
+  building's local copy every time the Tracking list loads. Archive downloads it
+  back, and Tracking throws it away again. Archive also cannot promise offline
+  for a closed building, because 0.2 dropped that copy on purpose. It must say so
+  rather than fail blank.
+
+**Charting waits on the 0.2 test week**, which started 2026-08-09. Archive draws
+the record data 0.2 writes. If testing changes the record shape or the Fixed and
+Undo behaviour, anything built on top of it now gets built twice.
 
 Two scope moves were made on 2026-08-06, both for the same reason: building the
 save path around free text first means building it twice.
