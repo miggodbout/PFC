@@ -26,7 +26,14 @@ backend contract. Anything that adds a control, a record kind, or a column is a
 
 ---
 
-## 0.2.1 — the patch, 12 items
+## 0.2.1 — the patch
+
+> **The build list is `.scratch/0.2.1-plan.md`.** It was settled with Miguel on
+> 2026-08-15, screen by screen, and it holds the exact strings and the reasoning.
+> It grew to fourteen items, and three of them turned out to share one root
+> cause. **Build from that file, not from the summary below.**
+
+The summary as first sorted, 12 items:
 
 Ships before the 0.3 build starts. Reason: four of these are in screens 0.3 will
 edit, and a fix buried in a feature diff is a fix nobody can find later. It also
