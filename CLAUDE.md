@@ -83,6 +83,31 @@ this machine.
 
 This does not apply to code syntax or variable names.
 
+**STE ALONE IS NOT ENOUGH, AND IT WILL PASS TEXT THAT READS AS
+MACHINE-WRITTEN.** Added 2026-08-15, after 0.2.2 shipped `You can leave this
+empty.` under a field. Miguel: *"no app would say 'You can leave this empty' it
+would just say 'Optional'."*
+
+STE is a **documentation** standard — it was written for maintenance manuals, so
+every rule in it drives toward a well-formed sentence. That string passes all six
+rules above. A screen is mostly **not** sentences; it is labels, and a sentence
+where a label belongs is exactly what reads as written by a machine.
+
+**So pick the shape before the words.** Label, instruction, or explanation. Most
+UI text is a label: a fragment, no full stop. Then apply STE inside that shape.
+`Optional`, not `You can leave this empty.`
+
+**The full rule, its tells and its two tests are in `docs/crew-words.md`, under
+"The shape comes before the words". Read that section before writing any string
+a person will see.** The short version of the tells: `you` or `your` outside an
+instruction, granting permission instead of stating a fact, a full stop on a
+fragment, a reason welded to a label, or reassurance.
+
+**When the tests leave two defensible options, ask Miguel how to phrase it
+before writing it.** Do not guess and do not invent a rule at build time. He
+answers in one line and it becomes a row in `crew-words.md`. This is the same
+rule as an OPEN row for an uncovered word, applied to phrasing.
+
 **Two dictionaries carry this standard, in `docs/`.** Both were started on
 2026-08-09, after the 0.2 step 3 test round found crew-facing screens using words
 the crew does not use.

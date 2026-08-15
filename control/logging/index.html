@@ -244,7 +244,7 @@ function draw() {
       '<div class="body">' +
         '<div class="state">' +
           '<div class="state-title">No building on this phone</div>' +
-          '<div class="state-text">Open a building in Tracking once. Then you can log against it here, with or without signal.</div>' +
+          '<div class="state-text">Open a building in Tracking once. Then log against it here, with or without signal.</div>' +
           '<a class="btn btn-primary press" href="../tracker/index.html">Go to Tracking</a>' +
         '</div>' +
       '</div>';
@@ -477,6 +477,17 @@ function subtypeFieldHtml() {
  * order still reads a bare label as something to fill. The note sits ABOVE
  * the box, not under it, because under it is where the suggestion chips
  * are — a line below them reads as being about the chips.
+ *
+ * ONE WORD, NOT A SENTENCE. This first shipped as "You can leave this
+ * empty." and Miguel cut it the same day: no app says that, it says
+ * Optional. See "The shape comes before the words" in crew-words.md. A
+ * rule about a field is a LABEL, and a label is a fragment with no full
+ * stop — the sentence named the reader in order to describe a field.
+ *
+ * It rides on the LABEL line, not on a line of its own. A rule about the
+ * field belongs beside the field's name; a line under the box would be
+ * read as being about the chips, which is the same reason the sentence
+ * version sat above the box.
  */
 function neededFieldHtml() {
   var item = currentItem();
@@ -485,8 +496,7 @@ function neededFieldHtml() {
   var chips = chipRowHtml();
 
   return '<div class="field">' +
-           '<div class="field-label">Needed</div>' +
-           '<div class="field-note">You can leave this empty.</div>' +
+           '<div class="field-label">Needed<span class="field-opt">Optional</span></div>' +
            '<input class="input needed-box" id="needed" type="text" ' +
                   'placeholder="' + escapeHtml(hint) + '" ' +
                   'value="' + escapeHtml(needed) + '" oninput="typeNeeded(this.value)">' +
