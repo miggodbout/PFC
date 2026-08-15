@@ -2397,26 +2397,46 @@ function weightedShare(roll) {
 
 
 /**
- * "Phase 1 76% · Phase 2 21% · Phase 3 18%" — the line under the bar.
+ * The phase split under the bar — one column per phase.
  *
- * The bar is one number now, so this is where the split went. Each phase
- * reads against ITSELF, which is the question a person actually asks:
- * Phase 1 is 76% done, not "Phase 1 supplies 23% of the building".
+ * Each phase reads against ITSELF, which is the question a person actually
+ * asks: Phase 1 is 76% done, not "Phase 1 supplies 23% of the building".
  *
  * A phase with no items is left out. It has nothing to be a percentage of.
+ *
+ * IT WAS ONE LINE OF TEXT UNTIL 0.2.2, and that was the eye strain Miguel
+ * reported: `Phase 1 76% · Phase 2 21% · Phase 3 18%`. His words: it "just
+ * looks like a string of text". He was right, and the cause is chunking —
+ * one continuous run of characters joined by `·` gives the eye no edges, so
+ * it reads the whole run as prose to find three numbers.
+ *
+ * Columns fix it without cutting anything. Three blocks are three things to
+ * look at. The label goes small and dim ABOVE a big bright number, because
+ * the number is what is read and the label only has to say which one it is.
+ *
+ * Grilled to this on 2026-08-15 against a small bar per phase and a row of
+ * chips. Bars lost because the row already carries the weighted bar and
+ * four bars compete; chips lost because the row already carries flag chips
+ * and a second chip kind reads as clutter.
  */
 function phaseLineHtml(roll, copy) {
   var phases = (roll && roll.phases) || [];
   if (phases.length < 2) return '';
 
-  var parts = phases.filter(function (phase) { return phase.total > 0; })
+  var cells = phases.filter(function (phase) { return phase.total > 0; })
     .map(function (phase) {
-      return escapeHtml(phaseTitle(phase.key, copy)) + ' ' +
-             Math.round((phase.done / phase.total) * 100) + '%';
+      return '<span class="phase-cell">' +
+               '<span class="phase-cell-label">' +
+                 escapeHtml(phaseTitle(phase.key, copy)) +
+               '</span>' +
+               '<span class="phase-cell-pct">' +
+                 Math.round((phase.done / phase.total) * 100) + '%' +
+               '</span>' +
+             '</span>';
     });
 
-  if (!parts.length) return '';
-  return '<span class="phase-line">' + parts.join(' · ') + '</span>';
+  if (!cells.length) return '';
+  return '<span class="phase-split">' + cells.join('') + '</span>';
 }
 
 
@@ -2470,25 +2490,22 @@ function countText(roll, one, many) {
 }
 
 
-/**
- * "30 of 36 units started · 0 done", for the Tracking row.
- *
- * STARTED IS THE NUMBER THAT MOVES ON A LIVE BUILDING. Elsliger 36-B has 36
- * units and none of them finished, because the last hardware goes on at the
- * very end. Every done count on that screen reads zero for months. Started
- * reads 30.
- *
- * It needs no backend change: the list answer already sends the total and
- * the not-started count, and started is what is left.
- */
-function startedText(roll) {
-  if (!roll || !roll.total) return 'No units';
+/*
+   startedText lived here — "30 of 36 units started · 0 done", the last line
+   of a Tracking row. It shipped in 0.2.1 and Miguel cut it in 0.2.2, four
+   weeks later, in the same pass that fixed the phase line: "we can just
+   remove the 30 of 36 units started line."
 
-  var started = roll.total - (roll.notStarted || 0);
-  return started + ' of ' + roll.total + ' ' +
-         (roll.total === 1 ? 'unit' : 'units') + ' started · ' +
-         roll.done + ' done';
-}
+   It is not that the number was wrong. It is that the row was carrying
+   three separate numeric readouts — the weighted %, the phase split and
+   this — and a list row is read in about a second. Two of them sat 3px
+   apart in the same size and the same colour, so the eye had nothing
+   telling it which to read.
+
+   Nothing is lost that the row does not still say. `36 units · 3 floors` is
+   already on the line under the title, and the weighted % answers how far
+   along the building is more honestly than a started count does.
+*/
 
 
 /** One flag chip: the glyph, then its own count. */

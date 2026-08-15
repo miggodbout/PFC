@@ -580,22 +580,49 @@ button {
   flex-shrink: 0;
 }
 
-/* The phase split, in words under the bar. The bar is one number now, so
-   this is the only place the three phases are told apart. */
-.phase-line {
-  display: block;
-  font-size: 12px;
-  color: var(--fg-6);
-  margin-top: 5px;
+/* THE PHASE SPLIT, ONE COLUMN PER PHASE. The bar is one number now, so this
+   is the only place the three phases are told apart.
+
+   IT WAS A SINGLE LINE OF TEXT UNTIL 0.2.2 — `Phase 1 76% · Phase 2 21% ·
+   Phase 3 18%` — and Miguel reported it as eye strain: it "just looks like
+   a string of text". One run of characters joined by `·` gives the eye no
+   edges to chunk on, so it reads as prose and every number has to be
+   hunted for.
+
+   Equal columns give it edges without a border or a separator. `1fr` each
+   rather than auto, so the columns line up down the whole building list
+   even though `Phase 1` and `Phase 2` are different widths. */
+.phase-split {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin-top: 9px;
 }
 
-/* "30 of 36 units started · 0 done", the last line of a Tracking row. */
-.row-count {
-  display: block;
-  font-size: 12px;
-  color: var(--fg-6);
-  margin-top: 3px;
+.phase-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
+
+/* Small, dim, letter-spaced. It only has to say WHICH phase. */
+.phase-cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fg-6);
+}
+
+/* The number is what gets read, so it carries the size and the brightness. */
+.phase-cell-pct {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg-3);
+}
+
+/* .row-count lived here — the "30 of 36 units started · 0 done" line under
+   the phase split. Cut in 0.2.2 with the readout it styled. */
 
 /* A unit chip used to carry a bar on its bottom edge. It does not any
    more — twelve of them under a floor header that has one too read as
