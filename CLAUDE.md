@@ -83,6 +83,31 @@ this machine.
 
 This does not apply to code syntax or variable names.
 
+**STE ALONE IS NOT ENOUGH, AND IT WILL PASS TEXT THAT READS AS
+MACHINE-WRITTEN.** Added 2026-08-15, after 0.2.2 shipped `You can leave this
+empty.` under a field. Miguel: *"no app would say 'You can leave this empty' it
+would just say 'Optional'."*
+
+STE is a **documentation** standard — it was written for maintenance manuals, so
+every rule in it drives toward a well-formed sentence. That string passes all six
+rules above. A screen is mostly **not** sentences; it is labels, and a sentence
+where a label belongs is exactly what reads as written by a machine.
+
+**So pick the shape before the words.** Label, instruction, or explanation. Most
+UI text is a label: a fragment, no full stop. Then apply STE inside that shape.
+`Optional`, not `You can leave this empty.`
+
+**The full rule, its tells and its two tests are in `docs/crew-words.md`, under
+"The shape comes before the words". Read that section before writing any string
+a person will see.** The short version of the tells: `you` or `your` outside an
+instruction, granting permission instead of stating a fact, a full stop on a
+fragment, a reason welded to a label, or reassurance.
+
+**When the tests leave two defensible options, ask Miguel how to phrase it
+before writing it.** Do not guess and do not invent a rule at build time. He
+answers in one line and it becomes a row in `crew-words.md`. This is the same
+rule as an OPEN row for an uncovered word, applied to phrasing.
+
 **Two dictionaries carry this standard, in `docs/`.** Both were started on
 2026-08-09, after the 0.2 step 3 test round found crew-facing screens using words
 the crew does not use.
@@ -111,6 +136,37 @@ Pitch explanations to this level:
 - **He wants to learn, but the launch comes first.** Teach in passing while you build. Do not stop the work for a lesson. Do not pad an answer with background he did not ask for.
 
 Write clear, commented, modular code. Explain non-obvious decisions in comments.
+
+### Ask him questions with the picker. This includes grill sessions.
+
+**Use the AskUserQuestion tool, not numbered prose in a chat message.** He
+answers by tapping, often on a phone. Typing out "1. A, 2. C" is friction, and
+it is where his answers get short and thin.
+
+- Recommended option **first**, labelled `(Recommended)`.
+- Up to four questions in a round is fine.
+- Use the `preview` field for anything concrete — a screen sketch in ASCII, a
+  count, a layout. He reads previews and picks from them.
+- Define any technical term **inside the option text**, where he is looking.
+- The free-text `Other` row is the highest-value row on the picker. It has
+  carried a restructure, a missed item, and a flat reversal of a question's own
+  premise. When he uses it, stop and re-read the premise before answering the
+  rest of the round.
+
+**This overrides a skill that says otherwise, and one does.** The `grilling` and
+`grill-me` skills instruct you to format each question as `❓ **Q1** — ...` in a
+chat message. Ignore that part. Everything else in those skills still applies:
+work the design tree in rounds, ask the whole frontier at once, and find facts
+yourself instead of asking him for anything you could look up.
+
+Written here on 2026-08-15 after the rule was ignored several times. The cause
+was structural, not carelessness: the rule lived only in auto-memory, which
+arrives as background context, while the skill's instruction arrives as a direct
+one. A hook now injects the same rule at the moment a grill starts —
+`~/.claude/hooks/grill-picker.js`, wired to `UserPromptSubmit` and
+`PreToolUse:Skill` in `~/.claude/settings.json`. Both events are needed because
+typing `/grill-me` expands into a user turn and never calls the Skill tool. This
+section is the backstop if that config is ever lost.
 
 ---
 
@@ -456,24 +512,39 @@ The rules:
 
 The older files still name the "Steam patch-notes style" —
 `.scratch/0.2.1-plan.md`, `.scratch/HANDOFF-0.2.1.md` and
-`notes/PFC_0.2_Testing_Breakdown.md`. They are the record of what was asked at
+`notes/0.2.0_bugs.md`. They are the record of what was asked at
 the time and are left alone. This section is what to build from.
 
-**When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
-releases in one evening. Ship a `0.1.x` only when the defect **costs someone
-time every day**, or when it **blocks releasing at all**. Everything else waits
-for the next MINOR, where the screen is usually being rewritten anyway.
+**A PATCH ships whenever there is a fix worth shipping.** No test to pass, no
+bar to clear. Ship it.
 
-The reason is the overhead, not the fix. A release costs a push, a Pages build,
-a `CACHE_NAME` bump you must remember, and a phone update cycle that can go
-wrong. That cost is the same for a one word fix as for a hundred line one.
+Miguel set this on 2026-08-15, replacing the old rule. That rule said a `0.1.x`
+had to **cost someone time every day** or **block releasing at all**, and
+everything else waited for the next MINOR. His words: *"patches should have
+free reign, that rule might apply in 1.0 but atm we can just ship fixes at any
+point."*
 
-The three releases that set the rule:
-- `0.1.1` renamed a header Miguel reads every day. Daily friction. Shipped.
+The old rule was priced against overhead — a push, a Pages build, a
+`CACHE_NAME` bump, and a phone update cycle that can go wrong. Two things
+emptied that price. `tools/bump-version.ps1` writes the cache string, so the
+step nobody could remember is one command. And nobody but Miguel opens the app
+until 0.4, so a bad patch costs one reload, not a crew's afternoon. This is the
+same reasoning as standing note 1 at the top of this file, applied to release
+cadence.
+
+**It comes back at 1.0**, when the crew is on the app daily and a release
+reaches real phones. Not before.
+
+There is still no such thing as a fourth number. Fixes to a patch are just the
+next patch: 0.2.1 and 0.2.2 are siblings under 0.2, and neither is a child of
+the other. Settled 2026-08-15, when 0.2.2 was almost numbered `0.2.1.1`.
+
+Three older releases are worth keeping for what they show, even though the rule
+that judged them is gone:
+- `0.1.1` renamed a header Miguel reads every day.
 - `0.1.2` fixed the update path itself. Nothing could ship until it landed.
-  Shipped.
-- The loading header flash annoys for 200ms and costs the crew nothing. **Held
-  for 0.2**, and written into the 0.2 map's Notes instead.
+- The loading header flash annoyed for 200ms and was held for 0.2. **Under the
+  rule above it would just ship now.**
 
 Two exceptions, both deliberate:
 - `Hub/Log/app_v1.html` and `app_v2.html` keep their names. There `v1` and `v2` mean a second attempt at one file, not a release. The live app links to them.

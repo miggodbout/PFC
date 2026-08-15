@@ -26,7 +26,7 @@ this one crashed and lost everything, so this file assumes you know nothing.
 3. This file, for the order of work and the traps.
 
 Read only if a question comes up: `.scratch/test-week-triage.md` for why an item
-went where it did, and `notes/PFC_0.2_Testing_Breakdown.md` for the raw findings.
+went where it did, and `notes/0.2.0_bugs.md` for the raw findings.
 
 ---
 
@@ -133,7 +133,7 @@ was broken as well as what landed. The plan file has the material for it.
 it on 2026-08-15: voice and AI on site, Sheets versus a real database, a frontend
 framework for 1.0, and a generic no-branding version for other trades. His
 reason: the answers may change how 0.3 is built. The four topics are listed at
-the end of `notes/PFC_0.2_Testing_Breakdown.md`.
+the end of `notes/0.2.0_bugs.md`.
 
 Then 0.3 is charted with `/wayfinder`, into roughly six steps, the way 0.2 was.
 The decisions it starts from are already made and written down in

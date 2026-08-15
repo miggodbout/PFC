@@ -580,22 +580,49 @@ button {
   flex-shrink: 0;
 }
 
-/* The phase split, in words under the bar. The bar is one number now, so
-   this is the only place the three phases are told apart. */
-.phase-line {
-  display: block;
-  font-size: 12px;
-  color: var(--fg-6);
-  margin-top: 5px;
+/* THE PHASE SPLIT, ONE COLUMN PER PHASE. The bar is one number now, so this
+   is the only place the three phases are told apart.
+
+   IT WAS A SINGLE LINE OF TEXT UNTIL 0.2.2 — `Phase 1 76% · Phase 2 21% ·
+   Phase 3 18%` — and Miguel reported it as eye strain: it "just looks like
+   a string of text". One run of characters joined by `·` gives the eye no
+   edges to chunk on, so it reads as prose and every number has to be
+   hunted for.
+
+   Equal columns give it edges without a border or a separator. `1fr` each
+   rather than auto, so the columns line up down the whole building list
+   even though `Phase 1` and `Phase 2` are different widths. */
+.phase-split {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin-top: 9px;
 }
 
-/* "30 of 36 units started · 0 done", the last line of a Tracking row. */
-.row-count {
-  display: block;
-  font-size: 12px;
-  color: var(--fg-6);
-  margin-top: 3px;
+.phase-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
+
+/* Small, dim, letter-spaced. It only has to say WHICH phase. */
+.phase-cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fg-6);
+}
+
+/* The number is what gets read, so it carries the size and the brightness. */
+.phase-cell-pct {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg-3);
+}
+
+/* .row-count lived here — the "30 of 36 units started · 0 done" line under
+   the phase split. Cut in 0.2.2 with the readout it styled. */
 
 /* A unit chip used to carry a bar on its bottom edge. It does not any
    more — twelve of them under a floor header that has one too read as
@@ -789,6 +816,21 @@ button {
   line-height: 1.4;
   color: var(--fg-2);
 }
+/* The site address, inside step 2 of the non-Safari iPhone steps.
+   It breaks anywhere, because a URL has no spaces to break at and a phone
+   is narrow. Monospace so a person reading it out does not confuse a 1
+   with an l. */
+.sheet-url {
+  display: block;
+  margin-top: 5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--accent-2);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
 .sheet-n {
   flex-shrink: 0;
   width: 22px; height: 22px;
@@ -811,8 +853,21 @@ button {
 
 /* THE ROW ON THE HUB THAT OPENS THE SHEET AGAIN.
    Later holds the sheet off for fourteen days, so there has to be a door
-   back in. It draws nothing on a phone that already has the app. */
-.add-row {
+   back in. It draws nothing on a phone that already has the app.
+
+   IT WAS CALLED .add-row AND THAT WAS THE BUG, found as 0.2.2 item 2. The
+   Set Up Building screen has its own unrelated .add-row, further down this
+   file, for the row that adds a custom item. Later rule wins, so the Hub
+   row was silently taking `margin: 2px 4px 6px 34px` from it — indented
+   34px to clear a checkbox that only exists on the other screen, while
+   still being `width: calc(100% - 40px)` wide, so it also hung off the
+   right edge. Two screens, two meanings, one class name.
+
+   THE LABEL IS CENTRED, which is the half Miguel asked for directly. The
+   chevron cannot sit in the flow or it would push the label off centre,
+   so it is taken out of the flow and pinned to the right edge.  */
+.install-row {
+  position: relative;
   margin: 0 20px 18px;
   padding: 13px 16px;
   border-radius: 14px;
@@ -820,12 +875,16 @@ button {
   border: 1px solid var(--line-card);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: center;
   width: calc(100% - 40px);
-  text-align: left;
 }
-.add-row-text {
+.install-row svg {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.install-row-text {
   font-size: 14px;
   font-weight: 700;
   color: var(--fg-4);
@@ -1185,6 +1244,16 @@ button {
   letter-spacing: 0.3px;
 }
 .field-note { font-size: 12.5px; color: var(--fg-6); }
+
+/* `Optional`, sitting on the label line beside the field name.
+   It rides INSIDE .field-label so it cannot be mistaken for a note about
+   the box below — on Needed, below the box is where the suggestion chips
+   are. Dimmed and not bold, so the field name still reads first. */
+.field-opt {
+  margin-left: 7px;
+  font-weight: 600;
+  color: var(--fg-6);
+}
 
 .input {
   width: 100%;

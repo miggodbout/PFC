@@ -1,6 +1,6 @@
 # Test week triage — the 0.2 fix list, sorted and settled
 
-Source: `notes/PFC_0.2_Testing_Breakdown.md`, from the 0.2 test week that started
+Source: `notes/0.2.0_bugs.md`, from the 0.2 test week that started
 2026-08-09. This file sorts that list and records what was decided about it. It
 does not replace it.
 

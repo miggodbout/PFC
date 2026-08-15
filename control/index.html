@@ -108,13 +108,19 @@
    what it is filed under. `Buildings & units` named the contents of a
    screen nobody had opened yet.
 
+   TWO SUBTITLES GOT LONGER IN 0.2.2. `See what is done` hid that Tracking
+   is where Progress is set, not only read, so it says `See and update
+   building progress`. Set Up Building says `edit` rather than `change`.
+   Both wrap to two lines on a phone, which is why the card has a
+   min-height and not a fixed one.
+
    Five cards in a two-across grid leaves the last one alone on its row.
    That is known and it is cosmetic.
 */
 var CARDS = [
-  { label: 'Tracking',        sub: 'See what is done',            href: 'tracker/index.html', icon: 'bars' },
-  { label: 'Log',             sub: 'Log an issue',                href: 'logging/index.html', icon: 'flagBig' },
-  { label: 'Set Up Building', sub: 'Create or change a building', href: 'setup/index.html',   icon: 'plus' },
+  { label: 'Tracking',        sub: 'See and update building progress', href: 'tracker/index.html', icon: 'bars' },
+  { label: 'Log',             sub: 'Log an issue',                     href: 'logging/index.html', icon: 'flagBig' },
+  { label: 'Set Up Building', sub: 'Create or edit a building',        href: 'setup/index.html',   icon: 'plus' },
   { label: 'Reports', sub: 'Coming soon' },
   { label: 'Archive', sub: 'Coming soon' }
 ];

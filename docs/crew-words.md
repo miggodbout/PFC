@@ -37,6 +37,87 @@ Three more this app learned the hard way, all from the 0.2 step 3 test round:
 
 ---
 
+## The shape comes before the words
+
+**Added 2026-08-15, and it is the most important rule in this file.** Miguel:
+*"no app would say 'You can leave this empty' it would just say 'Optional'."*
+He is right, and STE did not stop it.
+
+**STE is a documentation standard.** It was written for aircraft maintenance
+manuals — procedures, warnings, descriptions. Every rule in it drives toward a
+well-formed sentence, because a manual is made of sentences. `You can leave this
+empty.` passes every STE rule above: short, active, plain words, no contraction,
+one idea. It is good STE and bad UI.
+
+A screen is mostly **not** made of sentences. It is made of labels. So STE alone
+will keep producing sentences in places that want a label, and a sentence in a
+label's place is the thing that reads as written-by-a-machine.
+
+**Pick the shape first. Then apply STE inside that shape.**
+
+| Shape | When | Form | Examples in this app |
+|---|---|---|---|
+| **Label** | Names a thing, a state, or a rule about a field | Fragment. No verb if it can be dropped. **No full stop.** | `Optional`, `Queued`, `Not Started`, `Did not save`, `Needed` |
+| **Instruction** | The person must do something | One STE sentence, imperative, full stop | `Tap Add to Home Screen.`, `Try again.`, `Fix the open flag first.` |
+| **Explanation** | Rare. Only where the person would otherwise be confused or lose data | One STE sentence, full stop | `A browser tab can delete your saved work after 7 days.` |
+
+**Most UI text is a label.** If you are writing a sentence, prove the shape is
+Instruction or Explanation first. Explanation has the highest bar in the file —
+it must survive *A message earns its place by being actionable* above.
+
+### The tells
+
+Any one of these means the shape is probably wrong. Not a style preference — a
+signal to stop and re-shape:
+
+- **`you` or `your` outside an instruction.** `You can leave this empty` names
+  the reader in order to describe a field. The field is the subject, not the
+  reader. → `Optional`
+- **Granting permission instead of stating a fact.** `You can`, `Feel free to`,
+  `It is okay to`. A screen states what is true; it does not give leave.
+- **A full stop on something that is not a sentence.** A label with a full stop
+  is a sentence that got cut short, or a label that got padded.
+- **A reason welded to a label.** `Optional, so you can skip it if you have
+  nothing to order` is a label plus a justification. Cut the justification. The
+  reason belongs in the code comment.
+- **Reassurance.** `Do not worry`, `This is normal`, `Nothing was lost`. If the
+  state is fine, the screen should not raise it. If it is not fine, say what to
+  do.
+- **`simply`, `just`, `easily`.** Already banned as filler above. They cluster
+  in machine-written text, so treat one as a sign the whole string needs
+  re-shaping, not one word deleted.
+- **The app narrating itself.** `The app is now saving your changes` where
+  `Saving` does the job.
+
+### Two tests, in order
+
+1. **Cut until one more cut changes the meaning.**
+   `You can leave this empty.` → `Can leave empty` → **`Optional`**. Stop at the
+   last thing that is still true. If cutting never breaks it, it was padding all
+   the way down.
+
+2. **Point at it on a phone you already own.** Could this exact string appear in
+   iOS Settings, a banking app, or Google Maps? `Optional` yes. `You can leave
+   this empty.` no. This test is not about being fashionable. Those apps have had
+   millions of people fail to read them, and the shapes that survived are the
+   shapes that work.
+
+### When the two tests do not settle it, ask Miguel
+
+**Do not guess, and do not settle it with a rule you just made up.** This
+section removes the common failure, not every failure. If a string is not a
+plain label, not one of the settled rows below, and the tests leave two
+defensible options — **ask Miguel how to phrase it before writing it.**
+
+That is cheap. He answers in one line, the answer becomes a row in this file,
+and it is settled for good. Shipping a guess is what costs — it reaches a screen,
+it reads as machine-written, and somebody finds it three versions later.
+
+This is the same rule as *a word this file does not cover gets a new row marked
+OPEN, never a guess*, applied to phrasing rather than vocabulary.
+
+---
+
 ## One thing, one word
 
 The worst vocabulary problem in the app was not a hard word. It was **three easy
@@ -219,6 +300,7 @@ draws is listed here. **Six field names come straight from the build plan**
 | String | Where | Status |
 |---|---|---|
 | `Issue`, `Item`, `Type`, `Needed`, `Count`, `Reason` | the six field labels | **Settled.** Four came from plan 5.7 unchanged. `Issue` and `Type` were `Type` and `Subtype` until 2026-08-09, when the open row closed — see the section above |
+| `Optional` | beside `Needed` on the label line | **Settled 2026-08-15, and it is the worked example for "The shape comes before the words".** `Needed` stopped being required in 0.2.1 and nothing said so. It shipped as `You can leave this empty.` and Miguel cut it: *"no app would say 'You can leave this empty' it would just say 'Optional'."* One word, no full stop, and it sits on the label line — a rule about a field belongs beside the field's name, and a line under the Needed box would read as being about the suggestion chips |
 | `Deficiency` / `Waiting` | the two Issue buttons | **Settled** above. They are the two kinds of issue |
 | `Whole phase — Phase 1` | the first Item row, on a Waiting record | **Settled** in plan 5.7. It read `Whole phase — Doors & Windows` until 2026-08-09, when the phase tags were removed — a phase is named by its number alone |
 | `Choose an item`, `Choose a type`, `Choose a reason` | the empty row of each dropdown | Plain, active, names the action. `Choose a type` needed no change in the rename — it was already right, and it is what showed the label above it was wrong |

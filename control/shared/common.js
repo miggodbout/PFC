@@ -2397,26 +2397,46 @@ function weightedShare(roll) {
 
 
 /**
- * "Phase 1 76% · Phase 2 21% · Phase 3 18%" — the line under the bar.
+ * The phase split under the bar — one column per phase.
  *
- * The bar is one number now, so this is where the split went. Each phase
- * reads against ITSELF, which is the question a person actually asks:
- * Phase 1 is 76% done, not "Phase 1 supplies 23% of the building".
+ * Each phase reads against ITSELF, which is the question a person actually
+ * asks: Phase 1 is 76% done, not "Phase 1 supplies 23% of the building".
  *
  * A phase with no items is left out. It has nothing to be a percentage of.
+ *
+ * IT WAS ONE LINE OF TEXT UNTIL 0.2.2, and that was the eye strain Miguel
+ * reported: `Phase 1 76% · Phase 2 21% · Phase 3 18%`. His words: it "just
+ * looks like a string of text". He was right, and the cause is chunking —
+ * one continuous run of characters joined by `·` gives the eye no edges, so
+ * it reads the whole run as prose to find three numbers.
+ *
+ * Columns fix it without cutting anything. Three blocks are three things to
+ * look at. The label goes small and dim ABOVE a big bright number, because
+ * the number is what is read and the label only has to say which one it is.
+ *
+ * Grilled to this on 2026-08-15 against a small bar per phase and a row of
+ * chips. Bars lost because the row already carries the weighted bar and
+ * four bars compete; chips lost because the row already carries flag chips
+ * and a second chip kind reads as clutter.
  */
 function phaseLineHtml(roll, copy) {
   var phases = (roll && roll.phases) || [];
   if (phases.length < 2) return '';
 
-  var parts = phases.filter(function (phase) { return phase.total > 0; })
+  var cells = phases.filter(function (phase) { return phase.total > 0; })
     .map(function (phase) {
-      return escapeHtml(phaseTitle(phase.key, copy)) + ' ' +
-             Math.round((phase.done / phase.total) * 100) + '%';
+      return '<span class="phase-cell">' +
+               '<span class="phase-cell-label">' +
+                 escapeHtml(phaseTitle(phase.key, copy)) +
+               '</span>' +
+               '<span class="phase-cell-pct">' +
+                 Math.round((phase.done / phase.total) * 100) + '%' +
+               '</span>' +
+             '</span>';
     });
 
-  if (!parts.length) return '';
-  return '<span class="phase-line">' + parts.join(' · ') + '</span>';
+  if (!cells.length) return '';
+  return '<span class="phase-split">' + cells.join('') + '</span>';
 }
 
 
@@ -2470,25 +2490,22 @@ function countText(roll, one, many) {
 }
 
 
-/**
- * "30 of 36 units started · 0 done", for the Tracking row.
- *
- * STARTED IS THE NUMBER THAT MOVES ON A LIVE BUILDING. Elsliger 36-B has 36
- * units and none of them finished, because the last hardware goes on at the
- * very end. Every done count on that screen reads zero for months. Started
- * reads 30.
- *
- * It needs no backend change: the list answer already sends the total and
- * the not-started count, and started is what is left.
- */
-function startedText(roll) {
-  if (!roll || !roll.total) return 'No units';
+/*
+   startedText lived here — "30 of 36 units started · 0 done", the last line
+   of a Tracking row. It shipped in 0.2.1 and Miguel cut it in 0.2.2, four
+   weeks later, in the same pass that fixed the phase line: "we can just
+   remove the 30 of 36 units started line."
 
-  var started = roll.total - (roll.notStarted || 0);
-  return started + ' of ' + roll.total + ' ' +
-         (roll.total === 1 ? 'unit' : 'units') + ' started · ' +
-         roll.done + ' done';
-}
+   It is not that the number was wrong. It is that the row was carrying
+   three separate numeric readouts — the weighted %, the phase split and
+   this — and a list row is read in about a second. Two of them sat 3px
+   apart in the same size and the same colour, so the eye had nothing
+   telling it which to read.
+
+   Nothing is lost that the row does not still say. `36 units · 3 floors` is
+   already on the line under the title, and the weighted % answers how far
+   along the building is more honestly than a started count does.
+*/
 
 
 /** One flag chip: the glyph, then its own count. */
@@ -2630,13 +2647,33 @@ var ICON = {
 
   /* The same flag at Hub-card size, for the Log card.
 
-     THE viewBox IS TRIMMED TO THE DRAWING, and that is the centring fix.
-     The box was 9 by 11 while the flag only occupied x 0.25 to 7.5 and
-     y 0.25 to 11.25 of it, so the glyph carried a column of empty space on
-     its right and hung a quarter pixel below its box. Flexbox then centred
-     the BOX, which put the drawing up and to the left inside the diamond.
-     Nothing about the shape changed; only the frame around it. */
-  flagBig: '<svg width="11.2" height="17" viewBox="0.25 0.25 7.25 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
+     THE viewBox WAS TRIMMED TO THE DRAWING in 0.2.1. The box was 9 by 11
+     while the flag only occupied x 0.25 to 7.5 and y 0.25 to 11.25 of it,
+     so the glyph carried a column of empty space on its right and hung a
+     quarter pixel below its box. Flexbox centred the BOX, which put the
+     drawing up and to the left inside the diamond.
+
+     THAT MADE IT MEASURE CENTRED AND STILL LOOK WRONG, which is item 4 of
+     0.2.2. Miguel: "technically speaking (Pixel count) it is centered but
+     to the human eye it looks slightly off". He is right, and both
+     readings are correct at once.
+
+     The reason is where the ink sits. The pole is a 1.5-wide line down the
+     left edge; the pennant is a solid shape filling the right. So the top
+     right of the box is nearly all ink and the bottom left is nearly all
+     air. An eye centres the MASS it sees, not the bounding box, so a box
+     centred by measurement reads as pushed right.
+
+     The fix is 2.6 units of empty space added to the right of the drawing
+     inside the viewBox — 7.25 wide becomes 9.85. The drawing does not
+     move; the frame grows past it on one side, so the drawing now sits
+     1.3 units left of the frame's centre. The svg width grows by the same
+     ratio (11.2 -> 15.2) so the flag itself renders at the size it
+     already was. At that scale 1.3 units is about 2 screen pixels.
+
+     Do not re-trim this viewBox to the drawing. That is the 0.2.1 fix and
+     it is what this one deliberately undoes. */
+  flagBig: '<svg width="15.2" height="17" viewBox="0.25 0.25 9.85 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
 
   /* A wifi symbol with a slash — the queued-edit mark. currentColor, so
      the badge's own background sets the colour.
@@ -3297,6 +3334,35 @@ function isApplePhone() {
 }
 
 
+/**
+ * True on an iPhone in a browser that is NOT Safari.
+ *
+ * WHY THIS EXISTS. Apple puts `Add to Home Screen` in the Safari share
+ * sheet only. Every other browser on an iPhone is Safari's engine wearing
+ * a different coat, and none of them carries that row. So the four steps
+ * this app printed since 0.2.1 lead a Chrome user to a menu that does not
+ * hold the thing the steps name. Miguel, 0.2.2 item 2: "IOS users will
+ * most often open in chrome, nobody uses safari."
+ *
+ * HOW THE TEST WORKS, and why it is safe. Each of these browsers stamps
+ * its own tag into the user agent, because the engine underneath is
+ * identical and there is no other way to tell them apart:
+ *
+ *   CriOS   Chrome        FxiOS   Firefox
+ *   EdgiOS  Edge          OPT     Opera Touch
+ *
+ * Safari stamps none of them. A tag this app does not know about reads as
+ * Safari and gets the old steps, which is the right way round to be
+ * wrong: a Safari user shown Safari steps loses nothing, and the worst
+ * case for an unknown browser is the instructions it would have had
+ * anyway.
+ */
+function isAppleNonSafari() {
+  if (!isApplePhone()) return false;
+  return /CriOS|FxiOS|EdgiOS|OPT\//.test(navigator.userAgent || '');
+}
+
+
 /** Whether there is anything to offer on this phone at all. */
 function canInstall() {
   if (isInstalled()) return false;
@@ -3370,6 +3436,10 @@ function showInstallSheet() {
 
   var go = wrap.querySelector('.sheet-go');
   if (go) go.addEventListener('click', runInstallPrompt);
+
+  // Copy address, on the non-Safari iPhone body only.
+  var copy = wrap.querySelector('.sheet-copy');
+  if (copy) copy.addEventListener('click', copyInstallAddress);
 }
 
 
@@ -3442,13 +3512,24 @@ function runInstallPrompt() {
  * storage is deleted after seven days of Safari use with no visit to the
  * site, and a Home Screen app is not part of Safari and keeps its own
  * counter. It is not true on Android, so Android does not read it.
+ *
+ * THERE ARE THREE BODIES, NOT TWO, SINCE 0.2.2. Android gets a button,
+ * Safari gets the four taps, and every other iPhone browser gets sent to
+ * Safari first, because that is the only place the row it needs exists.
+ * The order of the test matters: the Android branch is checked first, so
+ * a real Chrome install event always wins.
  */
 function installSheetHtml() {
+  var body;
+  if (installEvent)             body = installBodyAndroid();
+  else if (isAppleNonSafari())  body = installBodyAppleOtherBrowser();
+  else                          body = installBodyApple();
+
   return '<div class="sheet-scrim"></div>' +
          '<div class="sheet" role="dialog" aria-label="Add to Home Screen">' +
            '<div class="sheet-grip" aria-hidden="true"></div>' +
            '<div class="sheet-title">Add to Home Screen</div>' +
-           (installEvent ? installBodyAndroid() : installBodyApple()) +
+           body +
          '</div>';
 }
 
@@ -3463,27 +3544,107 @@ function installBodyAndroid() {
 }
 
 
-function installBodyApple() {
-  var steps = [
-    'Tap Share, or tap ••• in the browser bar.',
-    'Scroll down.',
-    'Tap Add to Home Screen.',
-    'Tap Add.'
-  ];
-
+/** The numbered list both Apple bodies print. */
+function installStepsHtml(steps) {
   var list = steps.map(function (line, index) {
     return '<li class="sheet-step">' +
              '<span class="sheet-n">' + (index + 1) + '</span>' +
-             '<span>' + escapeHtml(line) + '</span>' +
+             '<span>' + line + '</span>' +
            '</li>';
   }).join('');
 
-  return '<ol class="sheet-steps">' + list + '</ol>' +
-         '<div class="sheet-text">A browser tab can delete your saved work ' +
-           'after 7 days. The Home Screen app keeps it.</div>' +
+  return '<ol class="sheet-steps">' + list + '</ol>';
+}
+
+
+/** The seven-day line. iOS only, on both Apple bodies. */
+var INSTALL_STORAGE_LINE =
+  '<div class="sheet-text">A browser tab can delete your saved work ' +
+    'after 7 days. The Home Screen app keeps it.</div>';
+
+
+function installBodyApple() {
+  return installStepsHtml([
+           'Tap Share, or tap ••• in the browser bar.',
+           'Scroll down.',
+           'Tap Add to Home Screen.',
+           'Tap Add.'
+         ].map(escapeHtml)) +
+         INSTALL_STORAGE_LINE +
          '<div class="sheet-acts">' +
            '<button type="button" class="btn btn-ghost press sheet-later">Later</button>' +
          '</div>';
+}
+
+
+/**
+ * CHROME, FIREFOX OR EDGE ON AN iPHONE. Six steps, because the first job
+ * is getting the person into Safari.
+ *
+ * THE ADDRESS IS PRINTED AND COPYABLE, which is the difference between an
+ * instruction and a working instruction. Nobody retypes a Pages URL from
+ * memory on a phone, so a step reading "go to the site in Safari" is a
+ * dead end. The button puts it on the clipboard; the printed line is the
+ * fallback for reading it out, and for a browser that refuses the
+ * clipboard.
+ *
+ * The query and the hash are dropped. The Hub takes none, and a copied
+ * address is something a person may keep.
+ */
+function installBodyAppleOtherBrowser() {
+  var address = location.origin + location.pathname;
+
+  return '<div class="sheet-text">Only Safari can add this app to the Home ' +
+           'Screen. This browser cannot.</div>' +
+         installStepsHtml([
+           escapeHtml('Open Safari.'),
+           escapeHtml('Go to this address:') +
+             '<span class="sheet-url">' + escapeHtml(address) + '</span>',
+           escapeHtml('Tap Share, or tap ••• in the browser bar.'),
+           escapeHtml('Scroll down.'),
+           escapeHtml('Tap Add to Home Screen.'),
+           escapeHtml('Tap Add.')
+         ]) +
+         INSTALL_STORAGE_LINE +
+         '<div class="sheet-acts">' +
+           '<button type="button" class="btn btn-primary press sheet-copy" ' +
+                   'data-url="' + escapeHtml(address) + '">Copy address</button>' +
+           '<button type="button" class="btn btn-ghost press sheet-later">Later</button>' +
+         '</div>';
+}
+
+
+/**
+ * Puts the address on the clipboard and says so on the button itself.
+ *
+ * THE BUTTON IS THE RECEIPT. A toast would be covered by the sheet, and
+ * there is nowhere else on a sheet for a confirmation to live.
+ *
+ * Clipboard access needs a real tap and a secure page. Pages serves over
+ * https so the second is always true, and this only ever runs from a
+ * click. If it is refused anyway, the button says so and the printed
+ * address above it is still there to read.
+ */
+function copyInstallAddress(event) {
+  var button = event.currentTarget;
+  var url = button.getAttribute('data-url') || '';
+
+  function done(text) {
+    button.textContent = text;
+    setTimeout(function () {
+      if (button.parentNode) button.textContent = 'Copy address';
+    }, 2500);
+  }
+
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    done('Copy it by hand');
+    return;
+  }
+
+  navigator.clipboard.writeText(url).then(
+    function () { done('Copied'); },
+    function () { done('Copy it by hand'); }
+  );
 }
 
 
@@ -3493,11 +3654,15 @@ function installBodyApple() {
  * THE SHEET CAN ALWAYS BE REACHED, so `Later` can be firm about its
  * fourteen days. It draws nothing at all when the app is installed, or on
  * a browser that offers no way to install anything.
+ *
+ * The class is `install-row`, not `add-row`. See the note beside it in
+ * theme.css — `add-row` is taken by the Set Up Building screen and was
+ * quietly moving this one.
  */
 function installRowHtml() {
   if (!canInstall()) return '';
-  return '<button type="button" class="add-row press" onclick="openInstallSheet()">' +
-           '<span class="add-row-text">Add to phone</span>' +
+  return '<button type="button" class="install-row press" onclick="openInstallSheet()">' +
+           '<span class="install-row-text">Add to phone</span>' +
            ICON.chevron +
          '</button>';
 }
