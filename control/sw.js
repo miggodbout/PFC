@@ -20,7 +20,7 @@
    seen before. -dev also says this is on the way to 0.2.0, not at it.
    ===================================================================== */
 
-var CACHE_NAME = 'pfc-control-0.2.1-dev.1';
+var CACHE_NAME = 'pfc-control-0.2.1';
 
 /** The app's own files. Everything needed to open with no signal. */
 var SHELL = [

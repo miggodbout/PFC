@@ -232,6 +232,11 @@ it says how the 0.2 build is run, and points at the spec and the log.
    card. A new control inside an existing screen is free under this guideline.
    The thing it guards against is the Hub turning into a wall of buttons.
 
+   **A release can also spend the budget backwards.** 0.2.1 removed two greyed
+   cards, `Deficiencies` and `Materials`. Deficiencies named a window Log
+   already is, and Materials is the 0.5 export. A card that reads "Coming soon"
+   for six months stops meaning anything, and it is still a button on the wall.
+
    **How to use it:** when a release wants a second Hub card, do not refuse it —
    **push back, make the case both ways, and let Miguel decide.** That is what he
    wants the guideline to buy. 0.2 spent its card on **Logger** and argued the
@@ -366,8 +371,8 @@ Use `MAJOR.MINOR.PATCH`. Never use `v1`, `v2` style names for a milestone again 
 - **PATCH** (`0.1.1` → `0.1.2`) — fixes only, inside a milestone. No new features.
 - **1.0** — reached when the crew uses PFC Control daily as the primary tool. It marks trust, not a feature count.
 
-Current: PFC Control `0.2.0`. Camera app `0.1.2`. Last shipped Control
-release: `0.2.0`, on 2026-08-09.
+Current: PFC Control `0.2.1`. Camera app `0.1.2`. Last shipped Control
+release: `0.2.1`, on 2026-08-15.
 
 ### Mid-build versions, and the counter that feeds the cache
 
@@ -458,7 +463,11 @@ Two exceptions, both deliberate:
 
 - 0.1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
 - 0.2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from 0.3.
-- 0.2.1: twelve fixes out of the 0.2 test week. Listed in `.scratch/test-week-triage.md`.
+- 0.2.1: fourteen fixes out of the 0.2 test week. **Shipped 2026-08-15.** The
+  build list is `.scratch/0.2.1-plan.md`; the sorting behind it is
+  `.scratch/test-week-triage.md`. Three of the fourteen shared one root cause —
+  the app read a weak signal as a refused write. See `hasReachedServer()` in
+  `control/shared/common.js`.
 - 0.3: **The Logger release.** Three record types, reason lists per type and per
   item, the History tab, bulk Progress by scope, and the "Log issue here" button.
   Decided 2026-08-15 — see below.
