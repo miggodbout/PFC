@@ -473,8 +473,33 @@ still runs from a plain file if it is deleted.
 
 Release history belongs in tags, not in a Service Worker string. Backfilled
 2026-08-09: `0.1.0` at the first PFC Control commit, `0.1.1` and `0.1.2` at
-the two patch commits. Tag every release from here on, at the commit stamped
-by `-Release`.
+the two patch commits.
+
+**Tag every release at the merge commit on `main`** — the one `git merge` makes
+when the version branch rejoins, not the `Ship <version>` commit that stamped
+`CACHE_NAME`. Tag after the merge, not before.
+
+This line used to say "at the commit stamped by `-Release`", which is the ship
+commit. It was corrected on 2026-08-15 to match what `0.2.1` and `0.2.2` both
+actually did. The practice was right and the file was wrong: `main` is what
+Pages serves, so the tag belongs on `main`.
+
+Both usually hold identical files, because `main` gains no commits while a
+version branch is open — `git diff <ship> <merge>` came back empty for 0.2.2.
+**It stops being identical the moment something lands on `main` during a
+build.** Then the merge commit is the first place both sets of changes exist
+together, and the ship commit is a state that was never served. That is the
+case the rule is written for.
+
+**Pushing a release needs explicit refspecs**, because the branch and the tag
+carry the same name and `git push origin main 0.2.2` fails with `src refspec
+0.2.2 matches more than one`:
+
+```
+git push origin refs/heads/main:refs/heads/main \
+                refs/heads/0.2.2:refs/heads/0.2.2 \
+                refs/tags/0.2.2:refs/tags/0.2.2
+```
 
 **Every MINOR and every PATCH gets a GitHub Release.** Asked by Miguel on
 2026-08-09 and agreed. A tag is a pointer with no room to explain itself. The
