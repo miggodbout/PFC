@@ -49,13 +49,6 @@ features. No Sheet was migrated and the backend was not touched.
 
 - Spinner centered to header
 
-## Reported, but not a bug
-
-- Items are not marked Complete by themselves. The item was already Complete,
-  and the app showed In Progress while the issue was open
-- Item-specific reasons work, but an item can only hide a reason, never add
-  one. 0.3 fixes that
-
 ## Not fixed here
 
 - `Other` is still the escape hatch on the reason list, used by 8 of 27 records.

@@ -434,8 +434,30 @@ gh release create 0.2.0 --verify-tag --title "0.2.0 — <what it is>" --notes-fi
 not a version, it is a tally. A milestone runs to forty of them. Releasing each
 one would bury the three that matter.
 
-Notes follow the repo writing standard: plain, no filler, and they say what
-broke as well as what landed.
+**Release notes are bullet points. One line per change, and nothing else.**
+Settled by Miguel on 2026-08-15, after the first 0.2.1 notes came back as an
+essay. He had asked for "Steam patch notes", and a session read that as
+permission to explain. It is not. Read the shipped `0.2.1` release for the
+shape, or `.scratch/notes-0.2.1.md`.
+
+The rules:
+
+- **One line per change.** `Spinner centered to header`. `Needed is optional`.
+  If a bullet needs a paragraph, it is two bullets or it is a design doc.
+- **Group under a heading that names a screen** — Saving, Progress, Hub,
+  Logging an issue. Not Fixed / Added / Changed.
+- **Only what actually changed in the app.** A report that turned out not to be
+  a bug is not a change, so it does not go in the notes. Neither does the
+  reasoning behind a fix — that belongs in the plan file and the commit.
+- **Every change, however small.** That part of "Steam patch notes" stands. The
+  small ones are the ones Miguel cannot see from the screen.
+- Still the repo writing standard otherwise: plain, no filler, and it says what
+  broke as well as what landed.
+
+The older files still name the "Steam patch-notes style" —
+`.scratch/0.2.1-plan.md`, `.scratch/HANDOFF-0.2.1.md` and
+`notes/PFC_0.2_Testing_Breakdown.md`. They are the record of what was asked at
+the time and are left alone. This section is what to build from.
 
 **When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
 releases in one evening. Ship a `0.1.x` only when the defect **costs someone
