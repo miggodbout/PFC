@@ -1,5 +1,16 @@
 # Handoff — build PFC Control 0.2.1
 
+> **DONE. 0.2.1 shipped on 2026-08-15**, all fourteen items, tagged and
+> released. Keep this file for the reasoning; do not run it again. What comes
+> next is the big-picture session at the bottom, then 0.3.
+>
+> Two calls were made at build time that the plan did not make:
+> - The Queue row reads `Queued`, not `Waiting`. In this app Waiting is a kind
+>   of issue on an item, and one word cannot mean two things.
+> - The Tracking row keeps its `36 units · 3 floors` line, which the plan's
+>   mockup did not show. It costs one line and it is the only place the floor
+>   count is written.
+
 Written 2026-08-15, at the end of the session that planned it. The session before
 this one crashed and lost everything, so this file assumes you know nothing.
 
