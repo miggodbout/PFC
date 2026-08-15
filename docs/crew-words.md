@@ -60,10 +60,20 @@ restart per building, so the data agreed with this before the words did.
 
 | Screen | Hub card | Sub | Header | Folder |
 |---|---|---|---|---|
-| Tracking | `Tracking` | `Buildings & units` | `Buildings` | `control/tracker/` |
-| Logging | `Logging` | `Record an issue` | `Logging` | `control/logging/` |
+| Tracking | `Tracking` | `See what is done` | `Buildings` | `control/tracker/` |
+| Log | `Log` | `Log an issue` | `Log` | `control/logging/` |
 | Set up | `Set Up Building` | `Create or change a building` | — | `control/setup/` |
 | Queue | *(none — reached from the sync bar)* | — | `Queue` | `control/tracker/queue.html` |
+
+**`Logging` became `Log` in 0.2.1**, which reverses the row further down this
+file. `Log` is an instruction; `Logging` is a category, and a card is a thing you
+tap. The folder, the file and the code comments keep the longer word — a crew
+word and a code word are allowed to differ, and `Project`/`projectId` is the
+precedent.
+
+**EVERY SUBTITLE LEADS WITH A VERB**, settled 2026-08-15. A card says what you
+do with it. `Buildings & units` named the contents of a screen nobody had opened
+yet, which is only useful to somebody who already knows what is in there.
 
 **Tracking is the section; Buildings is the screen inside it.** That split is
 older than this file and deliberate — see CLAUDE.md. A header names what is on
@@ -130,7 +140,7 @@ and the queued record keep it. See `code-words.md`.
 | `placeholder` | `Units get placeholder names.` | `Units are numbered for now. Rename them when you know the addresses.` |
 | `Flat List` | Building shape | `Units only`, opposite `Floors and units` |
 | `Create Job` | Hub card | `Set Up Building` |
-| `Log` / `Logger` | Hub card, window | `Logging`, in all five places — card, header, folder, file, build plan |
+| `Log` / `Logger` | Hub card, window | `Logging`, in all five places — card, header, folder, file, build plan. **Half reversed on 2026-08-15:** the card, the header and the tab title read `Log` again. See the screen-names table above. The folder and the file keep `logging` |
 | `Type` | Logging, the top field | `Issue`. See the section above |
 | `Subtype` | Logging field, Set Up Building list card | `Type`. Code word only from here |
 | `Hint` | Set Up Building Lists card | `Example`. The text is an example of what to type, so the label now says what it is. **The config key stays `hint`** — a crew word and a code word may differ, and `Project`/`projectId` is the precedent. Renaming the key would need a fallback read for every building already on Drive |
@@ -169,7 +179,7 @@ phone without opening anything.
 | Code | Failure | On screen |
 |---|---|---|
 | E1 | The app is not set up — `API_URL` is empty | `This app is not set up yet. Tell the Admin. (E1)` |
-| E2 | Cannot reach the server, or the reply could not be read | `This app cannot reach the server. Tell the Admin. (E2)` |
+| E2 | Cannot reach the server, or the reply could not be read | `This app cannot reach the server. Tell the Admin. (E2)` — **only until the app has reached the server once on this phone.** See below |
 | E3 | The app is newer than the backend | `This app needs an update. Tell the Admin. (E3)` |
 
 The full technical reason still goes to the **browser console**, which is the
@@ -181,6 +191,22 @@ already. A code on those reads as though something is wrong when nothing is.
 
 **`Tell the Admin` names a role, never a person.** Miguel is the Admin today.
 Writing his name into the app would break the first time that is not true.
+
+**E2 SPLIT IN TWO ON 2026-08-15, and the phone's own history picks between
+them.** The first week of real use showed E2 firing in a bad hallway, because a
+weak signal and a broken deployment produce the same failure inside the browser.
+Telling a carpenter to report a hallway is exactly the message this file says to
+cut: he cannot act on it, and it is not a warning.
+
+| The phone has | On screen |
+|---|---|
+| never had a reply from the server | `This app cannot reach the server. Tell the Admin. (E2)` |
+| had one before | `The app could not reach the server. The signal here may be weak. Try again.` |
+
+The second sentence carries **no code**, which follows the rule directly above:
+nothing gets a code unless a crew member can do nothing about it. It also matches
+the wording already settled for a slow server, which is the same fact from the
+other side. The technical line still goes to the console in both cases.
 
 ---
 
@@ -258,7 +284,7 @@ and the `Phase not found` and `Unit not found` beside it. They predate 0.2 and n
 tap can reach one — the dropdowns only offer values the same answer named. Left
 as they are.
 
-## The install note — checked 2026-08-09, in step 6
+## The install note — checked 2026-08-09, in step 6. REPLACED IN 0.2.1
 
 Step 6 added one new thing a crew member reads: a small note, drawn only when
 the app is running in a browser tab, asking for it to be added to the Home
@@ -278,6 +304,66 @@ after seven days. This is not decoration.
 **The note never says the word `install`.** It is the developer's word for it.
 What a person does is add an icon to the Home Screen, which is what the title
 says and what the phone's own buttons say.
+
+**Every string above went out of the app on 2026-08-15.** The note became a
+bottom sheet — see the next section. Two rulings did NOT survive the rewrite and
+that is deliberate:
+
+- **`Install` is now on a button**, on Android only, because there it is not the
+  developer's word for it. It is the word Chrome prints on its own dialog, and
+  the button fires that dialog. On iOS, where there is no dialog, the sheet still
+  never says it.
+- **`Tap` is settled**, closing a gap this file had left open twice. The iOS
+  steps are instructions and an instruction needs a verb.
+
+## The Add to Home Screen sheet — checked 2026-08-15, in 0.2.1
+
+The note above was rebuilt as a bottom sheet: it rises from the bottom edge,
+near the thumb, and dims the page above it. Two versions, because Android has a
+real install button and no browser on iOS has one at all.
+
+| String | Where | Status |
+|---|---|---|
+| `Add to Home Screen` | the sheet title, both versions | **Apple's own words**, capitalised the way Apple capitalises them in its Share sheet. The title is the same on Android, because it is what a person ends up with on either phone |
+| `This site works like an app. Install it to keep your saved work.` | the Android body | Two short active sentences. **The one line in this sheet that is ours.** The standard line for this is `This site has app functionality`, and `functionality` is not a word the crew uses |
+| `Install` | the Android button | The word on Chrome's own install dialog, which is what the button opens. See the note above about why this is not the developer's word here |
+| `Later` | the dismiss button, both versions | One word, and it says what it means: the sheet comes back. It holds off for fourteen days, and `Add to phone` on the Hub opens it before that |
+| `Tap Share, or tap ••• in the browser bar.` | iOS step 1 | **It names both buttons on purpose.** iOS 26 hides Share behind the three dots and an older layout shows Share directly. The page cannot read which one a phone is set to, so it must not guess |
+| `Scroll down.` | iOS step 2 | The row is below the fold in the Share sheet, every time. Without this step people stop at step 1 |
+| `Tap Add to Home Screen.` `Tap Add.` | iOS steps 3 and 4 | Both name the words iOS prints on those rows |
+| `A browser tab can delete your saved work after 7 days. The Home Screen app keeps it.` | under the iOS steps | **iOS only, because it is only true there.** It is a WebKit rule: script-written storage goes after seven days of Safari use with no visit, and a Home Screen app is not part of Safari. Android does not read this line. `saved work` rather than `queued edits`: this is the sentence that has to land with somebody who has never opened the Queue |
+| `Add to phone` | the permanent row on the Hub | The way back in after a `Later`. `phone` rather than `Home Screen` because the row is a door, not the instruction — the sheet it opens carries the longer words |
+
+**New words settled here, all on 2026-08-15:** `Install`, `Tap`, `Share`,
+`Home Screen`, `browser`, `tab`, `phone`. `Share` and `Home Screen` are the
+phone's own labels and were already used as keys in the old note. `browser` and
+`tab` are what the crew calls those things.
+
+**`Tap`, not `press`.** The app had never settled it and had been avoiding the
+choice by drawing buttons as keys instead. Instructions cannot avoid it. `Tap`
+is the word Apple uses in its own documentation, and it is one syllable.
+
+## The Queue screen rows — checked 2026-08-15, in 0.2.1
+
+Each row said its state with a ring. A ring says "working" whatever it is doing,
+so a screen of them said every edit was on its way while the phone had no signal
+at all. They are words now.
+
+| String | Where | Status |
+|---|---|---|
+| `Queued` | a row waiting to go | **Settled above** as the word for an edit on its way. The 0.2.1 plan wrote `Waiting` here and that was overruled at build time: in this app `Waiting` is a kind of issue on an item, and one word cannot mean two things. `Queued` is what the sync bar, the chips and this file already say |
+| `Sending` | the row in the air | The one moving mark left on the screen. It is the present tense of what is happening, and it stops the moment the call answers |
+| `Did not save` | a row the app gave up on | **Settled above**, and already the heading over those rows |
+
+## The Tracking row — checked 2026-08-15, in 0.2.1
+
+The building list grew two lines under its progress bar.
+
+| String | Where | Status |
+|---|---|---|
+| `58%` | on the end of the bar | The weighted number. The bar alone could not say the difference between 55 and 60, and this is the screen where that number is what a person came to read |
+| `Phase 1 76% · Phase 2 21% · Phase 3 18%` | under the bar | **Each phase reads against itself**, which is the question a person asks. The names come from the building's own config, and `Phase 1` is what the crew says out loud |
+| `30 of 36 units started · 0 done` | under that | **`started` is the number that moves.** No unit on a live building is finished until the last hardware goes on, so every done count reads zero for months. `unit` and `done` are both settled above |
 
 ## Two strings the step 6 sweep corrected
 
@@ -299,9 +385,16 @@ a sentence is written.
 A word this file does not cover gets a row here rather than a guess at build
 time. An OPEN row does not block building a screen. It blocks shipping one.
 
-| Word | Where | Status |
-|---|---|---|
-| `Deficiencies` | The greyed Hub card | **OPEN** on purpose. It is a 0.3 placeholder for a window that does not exist. Whether it stays `Deficiencies` or becomes `Issues` is decided when that window is designed, not before |
+**There are none.** The list is empty for the first time since this file was
+written.
+
+**`Deficiencies` closed on 2026-08-15 by deletion, not by a decision.** It was
+open on purpose — a greyed Hub card naming a window that did not exist, and
+whether it read `Deficiencies` or `Issues` was to be settled when that window
+was designed. 0.2.1 removed the card instead: Logging already does that job, and
+two cards for one job is how a person taps the wrong one. There is no string
+left to settle. **A word can also stop being a question by the screen dropping
+it.** Check whether the thing still exists before arguing about its name.
 
 **Four rows closed on 2026-08-09**, in one pass, and each one is written up
 where it belongs rather than here:
@@ -328,9 +421,9 @@ When a screen is written, every new string gets checked here first. A word this
 file does not cover gets a row marked OPEN rather than a guess. An OPEN row is
 not a blocker for building a screen — it is a blocker for shipping one.
 
-Open rows live in the section above. **There is one left: `Deficiencies`**, and
-it is open on purpose until its window is designed. The other four closed on
-2026-08-09.
+Open rows live in the section above. **There are none left.** Four closed on
+2026-08-09 and the last one, `Deficiencies`, closed on 2026-08-15 when 0.2.1
+deleted the card it named.
 
 **An open row can close by changing a word the row does not name.** `Subtype`
 was raised as one bad label, and the alternatives on the table — `Kind`,

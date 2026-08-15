@@ -70,9 +70,10 @@ if (lastList) {
 
 mountSyncBar();
 
-// Only if the visit has not shown it yet. Somebody who opened a link
-// straight into Tracking never passed the Hub, so it has to be here too.
-mountInstallNudge();
+/* The install note used to be mounted here as well as on the Hub. It is a
+   bottom sheet now — a blocking panel — and one of those in front of the
+   building list is in the way of the work. The Hub offers it, and the Hub
+   keeps a permanent row that opens it again. See mountInstallSheet(). */
 
 // A held or a queued edit is a mark on a Tracking row, so the list
 // redraws whenever the queue changes.
@@ -84,6 +85,13 @@ enablePullToRefresh(function () {
   // Send first, then ask. A pull is the one gesture that means "catch up".
   return Queue.wake().then(refresh, refresh);
 });
+
+// Walking to the next building and opening the app again asks for the list
+// afresh. A glance and straight back does not.
+refetchOnReturn(function () {
+  var stored = Store.list();
+  return stored ? stored.fetchedAt : 0;
+}, refresh);
 
 
 function refresh() {
@@ -193,19 +201,35 @@ function rowHtml(project, wasFinished) {
 
   var marks = marksHtml(roll, jobs.held, jobs.waiting);
 
+  /*
+     THE PROGRESS BLOCK: a full-width bar with its own number, the phase
+     split under it, and the unit line under that.
+
+     The number is weighted by how long each phase takes, so it reads what
+     standing in the building feels like — see barPercent() in common.js.
+     The phase line is where the three phases are told apart now that the
+     bar is one colour, and it names them the way this building names them,
+     out of the local copy when there is one.
+  */
+  var copy = Store.project(project.id);
+
   return '<a class="card row press' + (grey ? ' row--finished' : '') + '" ' +
             'href="building.html?p=' + encodeURIComponent(project.id) + '" ' +
             'aria-label="' + escapeHtml(marksLabel(project.name, roll, jobs.held, jobs.waiting)) + '">' +
-           '<span class="row-main">' +
-             '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
-             '<span class="row-sub">' + escapeHtml(shapeOf(project)) + '</span>' +
-             '<span class="meta">' + barHtml(roll) +
-               '<span class="floor-count">' + escapeHtml(countText(roll, 'Unit', 'Units')) + '</span>' +
+           '<span class="row-head">' +
+             '<span class="row-main">' +
+               '<span class="row-title">' + escapeHtml(project.name) + tag + '</span>' +
+               '<span class="row-sub">' + escapeHtml(shapeOf(project)) + '</span>' +
              '</span>' +
-             marks +
+             pillHtml(roll) +
+             ICON.chevron +
            '</span>' +
-           pillHtml(roll) +
-           ICON.chevron +
+           '<span class="meta">' + barHtml(roll, true) +
+             '<span class="bar-pct">' + barPercent(roll) + '%</span>' +
+           '</span>' +
+           phaseLineHtml(roll, copy) +
+           '<span class="row-count">' + escapeHtml(startedText(roll)) + '</span>' +
+           marks +
          '</a>';
 }
 
