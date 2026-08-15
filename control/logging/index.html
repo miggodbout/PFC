@@ -471,6 +471,12 @@ function subtypeFieldHtml() {
  *
  * Its placeholder is the item's own hint, inside the empty box. The three
  * chips sit under it and filter as you type.
+ *
+ * IT SAYS IT IS OPTIONAL SINCE 0.2.2. The field stopped being required in
+ * 0.2.1 but nothing on the screen said so, and a person who has nothing to
+ * order still reads a bare label as something to fill. The note sits ABOVE
+ * the box, not under it, because under it is where the suggestion chips
+ * are — a line below them reads as being about the chips.
  */
 function neededFieldHtml() {
   var item = currentItem();
@@ -480,6 +486,7 @@ function neededFieldHtml() {
 
   return '<div class="field">' +
            '<div class="field-label">Needed</div>' +
+           '<div class="field-note">You can leave this empty.</div>' +
            '<input class="input needed-box" id="needed" type="text" ' +
                   'placeholder="' + escapeHtml(hint) + '" ' +
                   'value="' + escapeHtml(needed) + '" oninput="typeNeeded(this.value)">' +
