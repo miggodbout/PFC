@@ -29,8 +29,11 @@ say plainly what was and was not tested, and still ask before anything
 destructive — a force push, a history rewrite, a hard reset, or deleting a
 Sheet. The rule is about hesitating, not about care.
 
-The camera app is the exception, and it always was. It IS in daily crew use.
-Its rules further down stand untouched.
+The camera app **was** the exception, on the grounds that it was in daily crew
+use. **It is not any more.** Miguel said on 2026-08-15 that it is dead and will
+probably be scrapped. Its "do not modify without instruction" rules further down
+still stand — but they stand because he may rebuild it, not because a push can
+cost a carpenter his afternoon.
 
 ### 2. Claude is connected to Apps Script. Redeploy it yourself.
 
@@ -174,11 +177,16 @@ section is the backstop if that config is ever lost.
 
 This repo holds two independent systems. Keep them separate until a roadmap milestone bridges them on purpose — the QR Log/Status menu is that planned bridge. Until then, do not share code, Apps Script deployments, or Drive folders unless told to.
 
-### System 1 — Camera App (live, in daily use by the crew)
+### System 1 — Camera App (deployed, but dead. Nobody uses it.)
 
 Purpose: crew photographs the physical checklist sheet taped to each unit door. Photo uploads to Google Drive, auto-sorted by job/floor/unit.
 
-Status: live, but Miguel expects to scrap or rebuild it. Ask before any large work on it.
+**Status: dead as of 2026-08-15.** Miguel: *"the Camera / QR app is currently
+dead, will probably get scrapped."* It is still deployed and still answers, but
+no one opens it. This file used to call it "live, in daily use by the crew" and
+that was the basis for treating it as the one thing a bad push could hurt. That
+basis is gone. Ask before any large work on it — not because it is in use, but
+because he may rebuild it and has not decided.
 
 **Do not modify these files without explicit instruction:**
 - `Hub/Log/index.html`
@@ -190,7 +198,29 @@ Status: live, but Miguel expects to scrap or rebuild it. Ask before any large wo
 
 `upload.html` is part of the live camera app but is not in this repo. It exists only inside the Apps Script project. Do not look for it here.
 
-Backend: Google Apps Script, deployed as a web app. Redeploy via Manage Deployments → pencil icon → New Version. Never create a new deployment — the URL is embedded in printed QR codes on physical sheets and cannot change.
+Backend: Google Apps Script, deployed as a web app. Redeploy via Manage Deployments → pencil icon → New Version. Never create a new deployment.
+
+**The reason given here for years was wrong, and it matters.** This line used to
+say the Apps Script URL "is embedded in printed QR codes on physical sheets and
+cannot change." It is not. Verified against both live deployments on 2026-08-15:
+
+```
+camera Apps Script /exec        -> 200, text/plain, 26 bytes
+                                   "PFC Project Log — Active"
+miggodbout.github.io/PFC/Hub/Log/ -> 200, the redirect to app_v2.html
+```
+
+`doGet` in `appscript/Code.js:74` returns plain text and serves **no page at
+all**. So a QR code pointing at the script would show a carpenter a line of text.
+**The QR codes point at GitHub Pages.** `Hub/Log/index.html` takes the query
+string off the QR and hands it to `app_v2.html`, which then posts photos to the
+script URL above.
+
+The consequence a future session must not walk into: **turning the repo private,
+or moving off GitHub Pages, breaks every printed QR code — not redeploying the
+script.** That was a live hazard until 2026-08-15; it is not any more, only
+because the camera app is dead and nobody scans the sheets. If it is ever
+rebuilt, put it on a domain Miguel owns first.
 
 Branding: dark theme, accent color `#C4814E`, Arial font.
 
@@ -586,15 +616,72 @@ Two exceptions, both deliberate:
   `.scratch/test-week-triage.md`. Three of the fourteen shared one root cause —
   the app read a weak signal as a refused write. See `hasReachedServer()` in
   `control/shared/common.js`.
+- 0.2.3: **the cold-start fix, pending one measurement.** Opening the app after
+  the Apps Script has sat idle overnight appears to take ~33 s against an
+  `API_TIMEOUT` of 12 s, so it times out and shows the offline message. Measured
+  once on 2026-08-15 (33.0 s cold, then 2.6 s and 2.7 s warm). **One reading is
+  not proof — measure it cold before opening the app in the morning.** If it
+  repeats, ship a keep-warm time-based trigger in `control/appscript/Code.js`,
+  about five lines. If it comes back at ~2 s, it was a fluke; drop it.
 - 0.3: **The Logger release.** Three record types, reason lists per type and per
   item, the History tab, bulk Progress by scope, and the "Log issue here" button.
   Decided 2026-08-15 — see below.
+  - **Plus two things settled in the big-picture session, both riding on the same
+    screens.** 0.3 already opens `logging`, `setup` and `unit` and adds two new
+    screens, so both changes open each screen once instead of twice:
+    1. **The Preact + htm conversion**, screen by screen. See Technical
+       Constraints.
+    2. **Fast reads.** The phone reads the Sheet directly and skips Apps Script;
+       writes keep going through `save-batch`, unchanged. **No data moves.**
+       Measured 2026-08-15: Apps Script takes 1.68–1.86 s for one building, while
+       the direct endpoints answer in 0.27–0.39 s and have no cold start. The
+       Sheet must be set readable-by-link, which exposes nothing new — see the
+       security line in Technical Constraints.
 - 0.4: **The Archive release.** The history door, and the closed-job work behind it.
   - **Scoping rule, stated by Miguel on 2026-08-08:** anything about a **closed job** belongs to the Archive. Four items land under this one rule: the Archive window, the GC punch list, an abandoned job that never leaves Tracking, and rebuilding the chip history on a new phone. Settle the next one with the rule, not a fresh argument.
   - **It bound 0.2, and 0.2 paid it.** The short version: **the server answers with everything, and the phone does the hiding.** Verified in the shipped code — `handleGetProject` sends every record state, `handleListProjects` sends finished buildings, the Hub carries the greyed card. Do not trim any of those.
-- 0.5: PDF export, material order summaries.
+- 0.5: PDF export, material order summaries. **Smaller than it looks** — most of
+  it is grouping records into an order, and that only gets easy after 0.3 splits
+  the record types. Proved by hand on 2026-08-15 against live Elsliger data; see
+  `.scratch/big-picture-decisions.md`.
 - **Unplaced:** the QR-based Log/Status menu, and the three crew-access items. See
   `.scratch/0.3-backlog.md`.
+- **Post-1.0, a real goal with a named customer:** a version sold as a service to
+  small crews. Needs logins, a database and multi-tenancy. **The painters PFC
+  works beside daily** are the concrete target — a similarly sized outfit still
+  using a checklist taped to a door. De-branding waits until after 1.0 too;
+  Miguel's call. See `.scratch/big-picture-decisions.md` decision 4.
+
+### The big-picture session, 2026-08-15. Four questions, all settled.
+
+Miguel asked for these before 0.3 charts. **The write-up is
+`.scratch/big-picture-decisions.md` — read it before charting 0.3.** It holds the
+measurements, the rejected options and the reasoning, which a summary cannot
+carry.
+
+| Question | Answer |
+|---|---|
+| A frontend framework | **Yes — Preact + htm, vendored, no build step.** Screen by screen, inside 0.3. |
+| Voice and AI | **Read-only, now, for free.** Claude reads the Sheets through the Drive connector. No write path is built. |
+| Sheets or a database | **Stay on Sheets.** Speed is fixed by reading the Sheet directly, not by moving the data. |
+| A generic version | **A post-1.0 goal**, sold as a service to small crews. Nothing built now. |
+
+Two things came out of it that were not on the list:
+
+- **The hosting moves.** Buy a domain, point it at Cloudflare Pages, then take
+  the repo private. The fragility was never the host — it is that everything is
+  pinned to `miggodbout.github.io`, a hostname Miguel does not own. Cloudflare
+  serves private repos on its free tier; GitHub Pages does not. **This was
+  blocked until 2026-08-15 by the printed QR codes, and is unblocked only because
+  the camera app is dead.**
+- **A private repo does not hide the app's code.** The front end is downloaded by
+  every phone that opens it and View Source shows all of it. What a private repo
+  hides is `.scratch/`, `notes/` and the commit history — the design reasoning,
+  which is the real IP here.
+
+**Two triggers reopen the database question, and only these two:** somebody other
+than Miguel writes, or the generic version happens. **Not data volume** — Elsliger
+is 468 status cells and a Sheet holds ten million.
 
 ### 0.3 is the Logger. The Archive is 0.4. The QR menu has no version.
 
@@ -688,8 +775,12 @@ Do not build ahead of the current version without explicit instruction. Do leave
 
 ## Technical Constraints (both systems)
 
-- **Default to no frameworks and no build tools.** Vanilla HTML, CSS and JavaScript. The app must run by opening a file directly, or by serving it from static hosting.
-- **This is a strong default, not a ban.** If a framework or a build tool is the obvious fix for a real problem, propose it. State what it solves, what it costs, and what breaks if it is removed later. Miguel decides. Never add one quietly, and never add one for tidiness alone.
-- Known candidate: raising `CACHE_NAME` in `control/sw.js` by hand is easy to forget, and stale phones are the result. A build step that stamps the version automatically would earn its place.
+- **No build tools. Still true, and now it is Miguel's rule.** No npm, no Node, no bundler, no `dist/`. **The app must run by double-clicking `control/index.html`** — no server, no internet. This line was written by a Claude session and Miguel had never been told what it meant. It was explained to him on 2026-08-15 and he kept it knowingly, so it is his now. Its real job is to rule out a build step, and it costs nothing: every option worth having keeps it for free.
+- **One framework is adopted: Preact + htm, vendored, no build step.** Settled 2026-08-15. It lands **one screen at a time, as 0.3 touches that screen**, starting with the Logger. `control/shared/preact.js` is one ~12 KB file in the repo and one line in the `SHELL` list in `control/sw.js`. Nothing else changes on disk. Two styles coexist in the repo during and after 0.3, and that is accepted — the raw screens convert whenever they next need real work.
+  - **The reason, in one line:** every screen rebuilds itself from a string on every tap, and the workarounds for that are already in the code — the focus-and-caret restore at `control/logging/index.html:221`, three hand-written partial redraws, `placeOpenMenu()` at `control/tracker/unit.html:679`, and 42 inline `onclick` attributes.
+  - **Svelte, Vue and React were formally proposed and formally declined**, which is what the clause below asks for. Alpine.js and a hand-rolled ~100-line plumbing layer were also rejected. The full argument, including what each rejected option would have bought, is in `.scratch/big-picture-decisions.md`.
+- **Beyond that one, the vanilla default holds, and it is a strong default rather than a ban.** If another framework or a build tool is the obvious fix for a real problem, propose it. State what it solves, what it costs, and what breaks if it is removed later. Miguel decides. Never add one quietly, and never add one for tidiness alone.
+- Known candidate, now solved: raising `CACHE_NAME` in `control/sw.js` by hand was easy to forget. `tools/bump-version.ps1` does it. This no longer argues for a build step.
+- **The repo is public and the backend has no authentication.** `github.com/miggodbout/PFC` is public, `control/shared/common.js:30` holds the Apps Script URL in plain text, and `control/appscript/appsscript.json` sets `"access": "ANYONE_ANONYMOUS"`. **Anyone who finds the repo can read and write every project Sheet.** Accepted on 2026-08-15 — it is one building of door statuses, and a secret in a public file is not a secret. **But treat it as a hard requirement on both crew access and any multi-tenant version.** You cannot sell a tool whose customers' data is world-writable.
 - Mobile-first. iOS Safari is the primary browser for the camera app. iOS/Android PWA is the primary target for PFC Control.
 - Every fetch call must fail gracefully with a clear message. Never a blank crash.
