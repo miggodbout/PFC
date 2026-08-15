@@ -218,15 +218,24 @@ it says how the 0.2 build is run, and points at the spec and the log.
 3. **Offline-aware.** Job sites have unreliable signal. Every fetch call must fail gracefully, never crash blank. Data edits (from 0.2 onward) queue locally and sync when signal returns, with a visible pending state — never a silent optimistic save that can lose data.
 4. **Many doors, one system.** Different users reach the same data through different views. Do not duplicate data per view.
 5. **Expect frequent change.** Miguel will request many incremental changes over time. Favor small, separate files over large ones. Comment clearly.
-6. **Aim for one new window per MINOR release. This is a guideline, not a rule.**
+6. **Aim for one new Hub card per MINOR release. This is a guideline, not a rule.**
    Miguel proposed it on 2026-08-08 while planning 0.2, and said plainly it is a
-   suggestion to hold back scope creep, not a law. A window is a screen reached
-   from the Hub or from a door of its own.
-   **How to use it:** when a release wants a second window, do not refuse it —
+   suggestion to hold back scope creep, not a law.
+
+   **It counts buttons on the Hub. It does not count features.** Corrected by
+   Miguel on 2026-08-15, after this file's old wording made a session argue that
+   0.3 had to be split in two. His words: *"the main screen / hub should aim to
+   only gain one button / window. in this case bulk would be the only one, the
+   other features are just extra buttons within existing ones."*
+
+   So a release may hold any amount of work, as long as the Hub gains at most one
+   card. A new control inside an existing screen is free under this guideline.
+   The thing it guards against is the Hub turning into a wall of buttons.
+
+   **How to use it:** when a release wants a second Hub card, do not refuse it —
    **push back, make the case both ways, and let Miguel decide.** That is what he
-   wants the guideline to buy. 0.2 spends its window on **Logger**, argued the
-   **Outbox** through as necessary, and moved the **Archive** window to 0.3 on
-   the strength of it.
+   wants the guideline to buy. 0.2 spent its card on **Logger** and argued the
+   **Outbox** through as necessary. 0.3 spends its card on **Bulk**.
 
 ---
 
@@ -316,6 +325,13 @@ last set by hand, and it never changes on its own. The app *displays* that value
 with one downgrade: Complete shows as In Progress while an open flag sits on the
 item. Fix the last record and Complete comes back by itself, because the stored
 value was never touched. No extra column, and no automatic write.
+
+**0.3 splits the record kinds three ways, and this section will need rewriting
+then.** Decided 2026-08-15: `Deficiency` becomes work to redo, `Order` becomes
+material to buy, and `Waiting` is unchanged. An Order blocks Complete exactly as
+a Deficiency does, and carries its own count and colour. Nothing below is wrong
+yet — it describes what is live — but do not treat two record kinds as settled.
+See `.scratch/test-week-triage.md`.
 
 **This section describes the shipped code, as of 0.2.0.** It used to carry a
 warning that 0.1 still held the old five-value model. That is gone: `STATUS` and
@@ -442,55 +458,81 @@ Two exceptions, both deliberate:
 
 - 0.1: Admin (create/edit project structure) + Tracker (read-only view). Service Worker shell caching. **Shipped.**
 - 0.2: Status editing with offline queue-and-retry sync, **plus structured deficiency entry**, which moved up from 0.3.
-- 0.3: **The Archive release.** The history door, and the closed-job work that sits behind it. Decided by Miguel on 2026-08-09 — see below.
-  - **Scoping rule, stated by Miguel on 2026-08-08:** anything about a **closed job** belongs to the Archive, and the Archive is 0.3 — "while still leaving openings in 0.2 for them." Four items landed in 0.3 under this one rule: the Archive window, the GC punch list, an abandoned job that never leaves Tracking, and rebuilding the chip history on a new phone. Settle the next one with the rule, not a fresh argument.
-  - **The second half bound 0.2, and 0.2 paid it.** The short version: **the server answers with everything, and the phone does the hiding.** Verified in the shipped code — `handleGetProject` sends every record state, `handleListProjects` sends finished buildings, the Hub carries the greyed card. Do not trim any of those.
-- 0.4: QR-based Log/Status menu for trades and GCs, bridging to the camera app's existing QR system.
+- 0.2.1: twelve fixes out of the 0.2 test week. Listed in `.scratch/test-week-triage.md`.
+- 0.3: **The Logger release.** Three record types, reason lists per type and per
+  item, the History tab, bulk Progress by scope, and the "Log issue here" button.
+  Decided 2026-08-15 — see below.
+- 0.4: **The Archive release.** The history door, and the closed-job work behind it.
+  - **Scoping rule, stated by Miguel on 2026-08-08:** anything about a **closed job** belongs to the Archive. Four items land under this one rule: the Archive window, the GC punch list, an abandoned job that never leaves Tracking, and rebuilding the chip history on a new phone. Settle the next one with the rule, not a fresh argument.
+  - **It bound 0.2, and 0.2 paid it.** The short version: **the server answers with everything, and the phone does the hiding.** Verified in the shipped code — `handleGetProject` sends every record state, `handleListProjects` sends finished buildings, the Hub carries the greyed card. Do not trim any of those.
 - 0.5: PDF export, material order summaries.
+- **Unplaced:** the QR-based Log/Status menu, and the three crew-access items. See
+  `.scratch/0.3-backlog.md`.
 
-### 0.3 is the Archive. Crew access is out of it.
+### 0.3 is the Logger. The Archive is 0.4. The QR menu has no version.
 
-Decided by Miguel on 2026-08-09, the day 0.2.0 shipped. His words: "Its decided,
-0.3 will be archive."
+Decided by Miguel across 2026-08-14 and 2026-08-15, in one grill session on the
+0.2 test-week fix list. **The full write-up is `.scratch/test-week-triage.md`.
+Read it before charting 0.3** — it holds the live-data evidence behind every call
+below, and 0.3 is charted with `/wayfinder` from it.
 
-0.3 used to hold two clusters that had nothing to do with each other — the
-closed-job work above, and crew access (Google login, an author column, a lock
-per project, a rule for two phones on one unit). **Only the first cluster is
-0.3 now.**
+**What 0.3 holds.** Three record types — `Deficiency` (work), `Order` (buy),
+`Waiting`. A reason list per type, plus words an item can add for itself, which
+raises `_Config` to version 3. An append-only History tab, one row per Progress
+change. Bulk Progress by scope. A "Log issue here" button on Tracker items.
 
-**Why crew access left.** It pays out on the day somebody other than Miguel
-edits, and not one hour before. The standing note at the top of this file says
-the crew is not on this app until 0.4 at the earliest. So every hour spent on
-login before then buys nothing, while the Archive answers a question Miguel has
-standing in a unit today: was this door already reported.
+**Why it beat the Archive to 0.3.** Both were on the table the day 0.2.0 shipped,
+when 0.3 was named the Archive release. A week of real logging changed the
+answer: 8 of 27 records escaped through `Other`, and the `needed` column that
+feeds the 0.5 material order filled with verbs — `Adjust`, `Install`, `Flip
+Privacy` — because the field is required. Every day of logging on the old shape
+costs data. The Archive costs nothing to wait, and it stays cheap: read-only,
+three screens, no backend change, every seam already left.
 
-**Where crew access went is NOT decided.** It was proposed for 0.4, beside the
-QR menu that actually brings other people in, and Miguel has not ruled on that.
-Do not write it into 0.4 until he does. The three items stay in
-`.scratch/0.3-backlog.md` under their own heading, unassigned.
+**Why the QR menu left the roadmap.** Miguel, 2026-08-14: "QR is a little stale i
+dont even know where / if that fits at this point." It had held 0.4 since before
+0.1 shipped, on a plan nobody had revisited. It is in the backlog now, unplaced,
+beside crew access. **Do not write it into a version until something real puts it
+there** — a GC asking for it, or the camera app needing the bridge.
 
-**What is inside 0.3 is not charted yet.** The release is named, not scoped.
+**Crew access is still unplaced too**, and that has not changed since 2026-08-09.
+The three items are in `.scratch/0.3-backlog.md` under their own heading.
+
+### What the Archive holds, whenever it is charted
+
+The release is named, not scoped. It was 0.3 from 2026-08-09 and became 0.4 on
+2026-08-15 — see the section above for why. Nothing about its contents changed
+with the move.
+
+**Crew access is not in it, and never was after 2026-08-09.** The three items —
+Google login, an author column, a lock per project, two phones on one unit — pay
+out on the day somebody other than Miguel edits, and not one hour before. They
+sit in `.scratch/0.3-backlog.md` under their own heading, with no version. **Do
+not write them into a release until Miguel rules on it.**
+
 The recommendation on the table, not yet ruled on:
 
-- **The read-only Archive window alone.** One window, and it needs **no backend
+- **The read-only Archive window alone.** One Hub card, and it needs **no backend
   change at all** — every seam 0.2 promised was checked in the shipped code. The
   three new screens are the Tracker screens with the item grid swapped for a
   record list, and read-only, so they are smaller than the originals.
 - **The other three ride later, each on its own merit.** Each is bigger than the
-  window. The close/reopen switch raises `_Config` to version 3 and migrates
-  every live Sheet. The GC punch list may add columns to the Deficiencies tab,
-  which migrates every live Sheet again. `rebuild-suggestions` runs one tab read
-  per Sheet against the 6 minute Apps Script limit.
-- **One conflict is already known and must be settled when 0.3 charts.**
+  window. The close/reopen switch raises `_Config` again and migrates every live
+  Sheet. The GC punch list may add columns to the Deficiencies tab, which
+  migrates every live Sheet again. `rebuild-suggestions` runs one tab read per
+  Sheet against the 6 minute Apps Script limit.
+- **One conflict is already known and must be settled when it charts.**
   `dropFinishedCopies` in `control/tracker/index.html` deletes a finished
   building's local copy every time the Tracking list loads. Archive downloads it
   back, and Tracking throws it away again. Archive also cannot promise offline
   for a closed building, because 0.2 dropped that copy on purpose. It must say so
   rather than fail blank.
 
-**Charting waits on the 0.2 test week**, which started 2026-08-09. Archive draws
-the record data 0.2 writes. If testing changes the record shape or the Fixed and
-Undo behaviour, anything built on top of it now gets built twice.
+**Waiting on the test week was the right call, and it paid.** The reasoning was:
+Archive draws the record data, so if testing changed the record shape, anything
+built on top of it now gets built twice. Testing did change it — 0.3 splits
+records into three types. An Archive built in August would have been rebuilt in
+September.
 
 Two scope moves were made on 2026-08-06, both for the same reason: building the
 save path around free text first means building it twice.
