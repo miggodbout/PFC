@@ -167,6 +167,13 @@ function rollup(counts, flags) {
     status:     status,
     done:       complete,
     total:      total,
+
+    // Carried out as well as counted, so a screen can say how many are
+    // STARTED. On a building where no unit is finished every done number
+    // reads zero, and "30 of 36 units started" is the only line on that
+    // screen with any news in it.
+    notStarted: notStarted,
+
     itemsDone:  itemsDone,
     itemsTotal: itemsTotal,
     phases:     phases,
@@ -401,12 +408,21 @@ function apiCall(action, data, method, options) {
   return request
     .then(function (response) {
       clearTimeout(timer);
+
       if (!response.ok) {
         // 'blocked', not 'server'. A status code is not a message a person
         // can act on, and reason 'server' is reserved for a reply the
         // backend WROTE — those go on the screen as they are.
+        //
+        // NOT COUNTED AS REACHING THE SERVER. A 404 means the network is
+        // fine and the DEPLOYMENT is wrong, which is exactly the fault E2
+        // exists to report. See markReached().
         return { ok: false, reason: 'blocked', detail: 'The server replied ' + response.status + '.' };
       }
+
+      // The web app answered. Whatever it says next, the setup works.
+      markReached();
+
       return response.json().then(function (body) {
         if (body && body.success === false) {
           // data carries the WHOLE refusal, not only its sentence. Set Up
@@ -474,6 +490,11 @@ function jsonpCall(action, data) {
       if (script.parentNode) script.parentNode.removeChild(script);
 
       if (!body) return resolve(null);
+
+      // The script tag ran our callback, so the server answered. Same proof
+      // as the fetch path above.
+      markReached();
+
       if (body.success === false) {
         // data carries the whole refusal here too. Both paths answer with
         // the same shape, or a screen would behave differently on the
@@ -493,6 +514,49 @@ function jsonpCall(action, data) {
 }
 
 
+/* ── HAS THIS PHONE EVER REACHED THE SERVER? ──────────────────────── */
+/*
+   ONE FACT, AND THREE COMPLAINTS OUT OF THE 0.2 TEST WEEK CAME FROM NOT
+   HOLDING IT.
+
+   `blocked` means "the browser could not read the reply". The app read that
+   as a broken deployment: it printed E2 — tell the Admin — and it burnt one
+   of the ten tries that hold a queued edit. But a weak signal in a hallway
+   produces exactly the same `blocked`, so a bad spot on a job site read as
+   a broken app, ten of them held the edit, and the technical log filled
+   with E2 lines that meant nothing.
+
+   The two cases are told apart by one question. If a call has EVER come
+   back on this phone, the setup works, and a `blocked` now is the hallway.
+   If none ever has, the setup really may be broken, and E2 is right.
+
+   THE FIFTH STORAGE KEY, and it is not one of the four data stores. It
+   holds one number, nothing syncs it, and losing it costs one wrong message
+   until the next call lands. It is written once and then left alone.
+*/
+var REACHED_KEY = 'reached';
+
+/**
+ * Remembers that the web app answered. Called from both call paths.
+ *
+ * ONLY A REPLY THE WEB APP ITSELF WROTE COUNTS. A 404 from Google is not
+ * one: it means the network is fine and the deployment address is wrong,
+ * and that is the exact fault E2 exists to report. Marking it reached would
+ * turn a broken deployment into "the signal here may be weak" for ever.
+ */
+function markReached() {
+  // Written once. A write on every call would rewrite a key on every tap
+  // for no gain.
+  if (Store.read(REACHED_KEY, 0)) return;
+  Store.write(REACHED_KEY, Date.now());
+}
+
+/** True once any call has come back from the server on this phone. */
+function hasReachedServer() {
+  return !!Store.read(REACHED_KEY, 0);
+}
+
+
 /* ── THE LOCAL COPY ───────────────────────────────────────────────── */
 /*
    FOUR KEYS, FOUR LIFETIMES. DO NOT MERGE THEM.
@@ -508,6 +572,13 @@ function jsonpCall(action, data) {
                                   phone is orphaned.)
      pfc.control.v1.chips         needed lines from DROPPED buildings only
                                   (0.2 step 4 fills this one)
+
+   A FIFTH KEY SITS BESIDE THEM AND IS NOT ONE OF THEM.
+
+     pfc.control.v1.reached       the first time a call came back from the
+                                  server on this phone. One number, written
+                                  once, read by hasReachedServer(). It holds
+                                  no data and nothing syncs it.
 
    localStorage, not sessionStorage. sessionStorage dies with the page
    session, and Apple publishes no timer for when iOS ends a backgrounded
@@ -1664,6 +1735,13 @@ function jsonpUrlLength(slice) {
  * attempted, or the answer simply never came back — because driving
  * through a dead zone must not turn six taps of work into six taps of
  * housekeeping.
+ *
+ * A BLOCKED CALL ON A PHONE THAT HAS REACHED THE SERVER BEFORE IS THE SAME
+ * KIND OF FAILURE. It is a hallway, not a refusal, so it does not burn a
+ * try either. Ten weak-signal attempts used to hold an edit and force a
+ * person to re-queue it by hand. See hasReachedServer() for the whole
+ * reasoning. The edit keeps trying on the five-minute beat, on reconnect,
+ * and every time the app comes back to the front.
  */
 function classifyCallFailure(result) {
   var reason = result.reason || 'blocked';
@@ -1675,6 +1753,10 @@ function classifyCallFailure(result) {
 
   if (reason === 'offline' || reason === 'timeout') {
     return { retry: true, burn: false, error: reasonText(reason) };
+  }
+
+  if (reason === 'blocked' && hasReachedServer()) {
+    return { retry: true, burn: false, error: reasonText(reason, detail) };
   }
 
   if (reason === 'server') {
@@ -2208,90 +2290,172 @@ function dotHtml(roll) {
  * twelve units each half built has no unit finished, so filling by units
  * drew nothing there and nothing on the building above it. See rollup().
  *
+ * ONE FILL, ONE COLOUR, AND THE LENGTH IS WEIGHTED — see barPercent below.
+ * It carried one run per phase until 0.2.1, in green and amber. That is
+ * gone: every run was measured against the whole building, so the three of
+ * them still added up to a number that read a third when the heavy work was
+ * three quarters done.
+ *
  * A GROUP WITH NOTHING DONE DRAWS NO BAR AT ALL, not an empty track. An
  * empty track and a missing bar say the same thing, and the missing one
  * costs no ink.
  *
  * A 60px bar cannot tell 15/18 from 16/18. That is accepted: the chip is a
- * target, and the exact number is on the Unit screen.
+ * target, and the exact number is on the Unit screen. Pass wide for the
+ * Tracking row, which gives the bar the width of the row and prints the
+ * number beside it.
  */
-function barHtml(roll) {
-  if (!roll || !roll.itemsTotal || !roll.itemsDone) return '';
+function barHtml(roll, wide) {
+  if (!roll || !roll.itemsTotal) return '';
 
-  var runs = phaseRunsHtml(roll);
-  if (runs) return '<span class="bar">' + runs + '</span>';
+  // The wide bar draws its empty track. It is the main thing on the
+  // Tracking row and it prints its own number beside it, so "0%" with no
+  // track behind it would read as a bar that failed to draw.
+  if (!wide && !roll.itemsDone) return '';
 
-  // No breakdown to draw with — a stored list from before the backend sent
-  // one. One fill, one colour, exactly as it was.
-  var pct = Math.round((roll.itemsDone / roll.itemsTotal) * 100);
-  return '<span class="bar"><span class="bar-fill s-' + safeStatus(roll.status) + '" ' +
-         'style="width:' + pct + '%"></span></span>';
+  return '<span class="bar' + (wide ? ' bar--wide' : '') + '">' +
+           '<span class="bar-fill s-' + safeStatus(roll.status) + '" ' +
+                 'style="width:' + barPercent(roll) + '%"></span>' +
+         '</span>';
 }
 
 
 /**
- * THE FILL, CUT INTO ONE RUN PER PHASE, LAID END TO END.
+ * HOW FULL THE BAR IS, WEIGHTED BY HOW LONG EACH PHASE TAKES.
  *
- * Miguel's report: a unit with Phase 1 entirely finished still drew one
- * amber bar part way along, which says "some work is done" and hides the
- * fact that a whole phase is closed. A bar cannot say which third is
- * finished when it only has one colour.
+ * THE BUG IN ONE RATIO: hardware is 54% of every count in the app and 6% of
+ * the work. A unit holds 13 items — 4 doors, 2 baseboard, 7 hardware — so a
+ * ball catch counted the same as a unit door. Elsliger 36-B read 36% with
+ * the heavy work three quarters done.
  *
- * SO EVERY PHASE CONTRIBUTES A RUN AS LONG AS THE ITEMS IT HAS FINISHED,
- * and the runs BUTT UP AGAINST EACH OTHER. There are no slots and no gaps:
- * a phase that is half done does not leave the other half as a hole for
- * the next phase to start after. Miguel set that rule himself — "if P3 has
- * data logged that third should stick at the tail end of P2" — and it is
- * what keeps the thing reading as one bar. Two amber phases in a row are
- * indistinguishable from one longer amber run, which is the point.
+ * So a phase contributes its OWN completion, times how long that phase
+ * takes, and the whole is divided by the weights that took part:
  *
- * A run is GREEN when its phase is wholly complete and AMBER while it is
- * part way. So the finished phases are a solid green block on the left,
- * and everything still moving is the amber that follows.
+ *     ( 1.60 x 109/144 ) + ( 0.57 x 15/72 ) + ( 0.17 x 46/252 )
+ *     ---------------------------------------------------------  =  58%
+ *                      1.60 + 0.57 + 0.17
  *
- * The total filled width is unchanged: the runs add up to itemsDone, which
- * is what the single fill was. Only the colouring is new.
+ * 58% is what standing in that building feels like. It is also why the
+ * three phase-coloured runs are gone: each was measured against the whole
+ * building, so a phase 76% finished drew a short run and the three still
+ * added up to the wrong number.
  *
- * EVERY JOIN CARRIES A SEAM, and that reverses the first rule this function
- * shipped with. It said two amber phases in a row must read as one bar. On
- * a whole building that hid the split completely: Elsliger 36-B stood at
- * 115/144, 8/72 and 48/252, so all three runs were amber and butted into
- * one amber block, identical to the old single fill. A phase only turns
- * green at 100%, and a building rarely closes one until the end, so the
- * split could not show at the level Miguel looks at most.
+ * A PHASE WITH NO ITEMS CARRIES NO WEIGHT. It is not zero progress, it is
+ * not part of this building, so it leaves the sum entirely.
  *
- * THE SEAM IS DRAWN INSIDE THE RUN, as an inset shadow on its right edge,
- * not as a spacer between runs. A spacer would add its own pixels and make
- * the fill read longer than itemsDone. This way the arithmetic above stays
- * exactly true — the bar still ends where progress ends.
- *
- * The last drawn run gets no seam. It is the leading edge of progress, and
- * a cut there would read as a gap in front of the empty track.
- *
- * A phase with nothing done draws no run, so it contributes no seam either.
- * Phase 1 and Phase 3 with an empty Phase 2 between them show ONE seam,
- * which is correct: there is one boundary you can see.
- *
- * Answers '' when there is no breakdown, or when it is a single phase — at
- * one phase this is the old bar with extra markup.
+ * With no breakdown at all — a stored list from before the backend sent one
+ * — it falls back to plain items done over items total. An old copy draws
+ * the old number rather than no bar, and the next fetch fixes it.
  */
-function phaseRunsHtml(roll) {
-  var phases = roll.phases || [];
+function barPercent(roll) {
+  if (!roll || !roll.itemsTotal) return 0;
+
+  var share = weightedShare(roll);
+  if (share === null) share = roll.itemsDone / roll.itemsTotal;
+  return Math.round(share * 100);
+}
+
+
+/**
+ * The weights, in days per unit. Miguel's own rates, 2026-08-15:
+ *
+ *   Phase 1   2 people, 1.25 units a day   ->  1.60 days
+ *   Phase 2   1 person, 1.75 units a day   ->  0.57 days
+ *   Phase 3   1 person, about 6 a day      ->  0.17 days
+ *
+ * THEY LIVE IN CODE FOR 0.2.1 ONLY. A phase carrying its own `weight` wins,
+ * and 0.3 puts that field on the building settings tab. This table is the
+ * fallback under it, and it quietly stops being read once every building
+ * sets its own. No Sheet is touched to ship this.
+ *
+ * A phase this table does not name weighs 1, so a fourth phase counts as
+ * one day per unit rather than disappearing.
+ */
+var PHASE_WEIGHT = { phase1: 1.60, phase2: 0.57, phase3: 0.17 };
+
+function phaseWeight(phase) {
+  return phase.weight || PHASE_WEIGHT[phase.key] || 1;
+}
+
+/** The weighted 0-to-1 share, or null when there is nothing to weight. */
+function weightedShare(roll) {
+  var phases = (roll && roll.phases) || [];
+  if (phases.length < 2) return null;      // one phase weighs the whole thing
+
+  var carried = 0;
+  var total   = 0;
+
+  phases.forEach(function (phase) {
+    if (!phase.total) return;
+    var weight = phaseWeight(phase);
+    total   += weight;
+    carried += weight * (phase.done / phase.total);
+  });
+
+  return total ? (carried / total) : null;
+}
+
+
+/**
+ * "Phase 1 76% · Phase 2 21% · Phase 3 18%" — the line under the bar.
+ *
+ * The bar is one number now, so this is where the split went. Each phase
+ * reads against ITSELF, which is the question a person actually asks:
+ * Phase 1 is 76% done, not "Phase 1 supplies 23% of the building".
+ *
+ * A phase with no items is left out. It has nothing to be a percentage of.
+ */
+function phaseLineHtml(roll, copy) {
+  var phases = (roll && roll.phases) || [];
   if (phases.length < 2) return '';
 
-  // Which phases actually draw. Worked out first, because a run needs to
-  // know whether it is the last one before it can decide on its seam.
-  var drawn = phases.filter(function (phase) { return phase.done > 0; });
+  var parts = phases.filter(function (phase) { return phase.total > 0; })
+    .map(function (phase) {
+      return escapeHtml(phaseTitle(phase.key, copy)) + ' ' +
+             Math.round((phase.done / phase.total) * 100) + '%';
+    });
 
-  return drawn.map(function (phase, index) {
-    var pct  = (phase.done / roll.itemsTotal) * 100;
-    var full = (phase.total > 0 && phase.done === phase.total);
-    var seam = (index < drawn.length - 1) ? ' bar-fill--seam' : '';
-
-    return '<span class="bar-fill s-' + (full ? 'complete' : 'in_progress') + seam + '" ' +
-                 'style="width:' + pct.toFixed(3) + '%"></span>';
-  }).join('');
+  if (!parts.length) return '';
+  return '<span class="phase-line">' + parts.join(' · ') + '</span>';
 }
+
+
+/**
+ * What this building calls that phase.
+ *
+ * The Buildings list answer carries phase counts but no phase names, and
+ * 0.2.1 changes no backend. So: the building's own copy if this phone holds
+ * one, then the names a new building starts with, then the key itself made
+ * readable. All three read `Phase 1` today.
+ */
+function phaseTitle(key, copy) {
+  var found = '';
+
+  ((copy && copy.phases) || []).forEach(function (phase) {
+    if (phase.key === key) found = phase.label;
+  });
+  if (found) return found;
+
+  DEFAULT_PHASES.forEach(function (phase) {
+    if (phase.key === key) found = phase.label;
+  });
+  if (found) return found;
+
+  var numbered = /^phase(\d+)$/.exec(key || '');
+  return numbered ? ('Phase ' + numbered[1]) : (key || '');
+}
+
+
+/*
+   phaseRunsHtml lived here — the fill cut into one run per phase, green
+   where a phase was closed and amber where it was moving. It is deleted in
+   0.2.1, and the reason is worth keeping: every run was measured against
+   the WHOLE building, so a phase 76% finished drew a short run, and the
+   three runs still added up to the same wrong total the single bar gave.
+   Colour cannot fix a length that is counted from the wrong denominator.
+   barPercent() above weights the length instead, and phaseLineHtml() says
+   the split in words, where a number can be exact.
+*/
 
 
 /**
@@ -2303,6 +2467,27 @@ function phaseRunsHtml(roll) {
 function countText(roll, one, many) {
   if (!roll || !roll.total) return 'No ' + many;
   return roll.done + '/' + roll.total + ' ' + (roll.total === 1 ? one : many) + ' done';
+}
+
+
+/**
+ * "30 of 36 units started · 0 done", for the Tracking row.
+ *
+ * STARTED IS THE NUMBER THAT MOVES ON A LIVE BUILDING. Elsliger 36-B has 36
+ * units and none of them finished, because the last hardware goes on at the
+ * very end. Every done count on that screen reads zero for months. Started
+ * reads 30.
+ *
+ * It needs no backend change: the list answer already sends the total and
+ * the not-started count, and started is what is left.
+ */
+function startedText(roll) {
+  if (!roll || !roll.total) return 'No units';
+
+  var started = roll.total - (roll.notStarted || 0);
+  return started + ' of ' + roll.total + ' ' +
+         (roll.total === 1 ? 'unit' : 'units') + ' started · ' +
+         roll.done + ' done';
 }
 
 
@@ -2443,8 +2628,15 @@ var ICON = {
      chip's own class picks the red or the blue. */
   flag:    '<svg width="9" height="11" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
 
-  /* The same flag at Hub-card size, for the Logging card. */
-  flagBig: '<svg width="15" height="17" viewBox="0 0 9 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
+  /* The same flag at Hub-card size, for the Log card.
+
+     THE viewBox IS TRIMMED TO THE DRAWING, and that is the centring fix.
+     The box was 9 by 11 while the flag only occupied x 0.25 to 7.5 and
+     y 0.25 to 11.25 of it, so the glyph carried a column of empty space on
+     its right and hung a quarter pixel below its box. Flexbox then centred
+     the BOX, which put the drawing up and to the left inside the diamond.
+     Nothing about the shape changed; only the frame around it. */
+  flagBig: '<svg width="11.2" height="17" viewBox="0.25 0.25 7.25 11" fill="none" aria-hidden="true"><path d="M1 10.5V1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M1.9 1.2h5.6L6.1 3.4l1.4 2.2H1.9z" fill="currentColor"/></svg>',
 
   /* A wifi symbol with a slash — the queued-edit mark. currentColor, so
      the badge's own background sets the colour.
@@ -2512,9 +2704,24 @@ function reasonText(reason, detail) {
     case 'timeout':
       return 'The server did not answer in time. The signal here may be weak. Try again.';
 
+    /*
+       TWO SENTENCES, AND THE PHONE'S OWN HISTORY PICKS BETWEEN THEM.
+
+       A blocked call on a phone that has never heard from the server is a
+       setup fault, and only the Admin can fix it. The same blocked call on
+       a phone that HAS heard from the server is a weak signal, and telling
+       a carpenter to report a hallway is noise. The reasoning is written up
+       at hasReachedServer().
+
+       THE TECHNICAL LINE IS WRITTEN IN BOTH CASES. Nothing is lost for
+       debugging; only the sentence on the screen changes.
+    */
     case 'blocked':
       logTechnical('E2', detail ||
         'The browser could not read the reply. Check that the web app is deployed with access set to Anyone.');
+      if (hasReachedServer()) {
+        return 'The app could not reach the server. The signal here may be weak. Try again.';
+      }
       return 'This app cannot reach the server. Tell the Admin. (E2)';
 
     // A reply the backend WROTE. It is a sentence aimed at a person, so it
@@ -2583,8 +2790,9 @@ function noCopyHtml() {
 /**
  * Pull the screen down from the top to fetch again.
  *
- * There is no refresh timer anywhere in this app, so this and opening a
- * screen are the only two ways a fetch happens. It has to be here.
+ * There is still no refresh timer anywhere in this app. Three things fetch:
+ * opening a screen, this pull, and coming back to the app on a copy older
+ * than two minutes — see refetchOnReturn() below. Nothing fires on a clock.
  *
  * onRefresh returns a Promise. The arrow turns while it runs.
  */
@@ -2637,19 +2845,20 @@ function enablePullToRefresh(onRefresh) {
   var MAX     = 110;     // how far the finger is followed
 
   /*
-     THE FINGER GOES 110px. THE RING GOES 30px.
+     THE FINGER GOES 110px. THE RING GOES 41px.
 
      They used to be the same number, so the ring sat wherever the finger
      was — and it only becomes visible at TRIGGER, which is already 70px
      down. It appeared across the header title and kept going, over
      whatever the screen draws under it.
 
-     30px is where the ring parks while it spins, level with the top of
-     the header. The pull now slides it down to that spot and no further,
-     so it lands where it will rest and never covers anything below the
-     header. KEEP THIS IN STEP WITH `.ptr.spin` in theme.css.
+     41px is where the ring parks while it spins, level with the header
+     text. The pull slides it down to that spot and no further, so it lands
+     where it will rest and never covers anything below the header. KEEP
+     THIS IN STEP WITH `.ptr.spin` in theme.css, which carries the
+     arithmetic behind the number.
   */
-  var RING_MAX = 30;
+  var RING_MAX = 41;
 
   var indicator = refreshIndicator();
 
@@ -2694,6 +2903,62 @@ function enablePullToRefresh(onRefresh) {
 
     function done() { running = false; stopRefreshRing(); }
     Promise.resolve(onRefresh()).then(done, done);
+  });
+}
+
+
+/* ── COMING BACK TO THE APP ───────────────────────────────────────── */
+
+/**
+ * How old a copy has to be before returning to the app fetches again.
+ *
+ * TWO MINUTES IS THE LINE BETWEEN A GLANCE AND A WALK. Looking at the app
+ * in a hallway and going straight back costs nothing. Walking to the next
+ * unit takes longer than this, and that is the moment the numbers on screen
+ * are worth asking about again.
+ */
+var RETURN_MAX_AGE = 2 * 60 * 1000;
+
+/**
+ * Fetches the open screen again when the app comes back to the front, but
+ * only if its copy is old.
+ *
+ * THIS IS NOT A TIMER, AND IT MUST NOT BECOME ONE. Nothing fires while the
+ * app sits open. It answers one event — the app coming back — and it asks
+ * one question before it does anything.
+ *
+ * IT ALSO CLEARS THE "updated 1:22 AM" LINE. That line only leaves on a
+ * fetch that SUCCEEDS, and a fetch only happened on screen load or on a
+ * pull. So the line stayed on screen after the phone came back into signal,
+ * saying the copy was old when it was not. There is no separate fix for
+ * that: this is it.
+ *
+ *   ageOf   answers when the copy on this screen was last fetched, in
+ *           milliseconds. 0 means never, which always fetches.
+ *   again   the screen's own refresh. It answers a Promise.
+ */
+function refetchOnReturn(ageOf, again) {
+  if (typeof document === 'undefined') return;
+
+  var running = false;
+
+  function maybe() {
+    if (document.hidden || running) return;
+
+    var at = ageOf() || 0;
+    if (at && (Date.now() - at) < RETURN_MAX_AGE) return;
+
+    running = true;
+    function done() { running = false; }
+    Promise.resolve(again()).then(done, done);
+  }
+
+  document.addEventListener('visibilitychange', maybe);
+
+  // iOS can restore a whole page from its back-forward cache without ever
+  // hiding it first, so visibilitychange never fires. This catches that.
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) maybe();
   });
 }
 
@@ -2819,6 +3084,17 @@ function syncBarHtml(href) {
   var counts = Queue.counts();
   var stale  = syncStale.on;
 
+  /*
+     THE AGE LINE GOES WHILE A SAVE IS IN THE AIR.
+
+     "updated 1:22 AM" is the age of a copy whose last fetch FAILED. A call
+     is going out right now, so the failed one is old news, and a bar that
+     says `Saving 3 edits…` over `updated 1:22 AM` is telling a person the
+     app is both working and stuck. The line comes back by itself if the
+     call fails, and markFresh() takes it away for good if it lands.
+  */
+  var showAge = stale && !Queue.sending();
+
   if (!counts.waiting && !counts.held && !stale) return '';
 
   var parts = [];
@@ -2844,7 +3120,7 @@ function syncBarHtml(href) {
                                : editsText(counts.held) + ' did not save'));
   }
 
-  var when = stale ? whenText(syncStale.fetchedAt) : '';
+  var when = showAge ? whenText(syncStale.fetchedAt) : '';
 
   // Offline with an empty queue. One line, and the age sits on the end of
   // it. There is nothing on the shelf, so there is no door to the Queue.
@@ -2863,9 +3139,9 @@ function syncBarHtml(href) {
   return '<div class="syncbar syncbar--' + kind + '">' +
            '<div class="sync-row">' +
              '<span class="sync-text">' + parts.join('<span class="sync-sep">·</span>') + '</span>' +
-             (stale ? '' : link) +
+             (showAge ? '' : link) +
            '</div>' +
-           (stale
+           (showAge
              ? '<div class="sync-row sync-row--sub">' +
                  '<span class="sync-when">' + (when ? 'updated ' + escapeHtml(when) : 'no signal') + '</span>' +
                  link +
@@ -2892,8 +3168,8 @@ function editsText(n) {
  *
  * THERE IS NO WARNING WHEN IT IS REFUSED. A refusal is not something a
  * carpenter can act on, and a message that cannot be acted on gets cut.
- * Installing is the answer either way, and the nudge is where that is
- * said. Plan section 7.
+ * Installing is the answer either way, and the sheet below is where that
+ * is said. Plan section 7.
  */
 (function keepStorage() {
   if (!navigator.storage || !navigator.storage.persist) return;
@@ -2905,6 +3181,92 @@ function editsText(n) {
 })();
 
 
+/* ── ADD TO HOME SCREEN ───────────────────────────────────────────── */
+/*
+   THE SHEET THAT ASKS FOR IT, AND WHY IT IS A SHEET.
+
+   It was a note under the header, dismissible, once per visit. Miguel's
+   report from the test week: it was built for Safari only, it sat inside
+   the page where a thumb does not reach, and it was easy to read past. A
+   thing worth asking for gets asked for properly. So: a sheet from the
+   BOTTOM edge, near the thumb, with the page dimmed above it.
+
+   WHY IT IS WORTH ASKING AT ALL. A browser tab on iOS loses script-written
+   storage after seven days with no visit, and the queued edits this app
+   holds are script-written storage. A Home Screen app has its own counter
+   and keeps them. It fixes a second thing too: data written in a tab is
+   invisible to the installed app, so somebody who edits in both sees two
+   different sets of queued edits.
+
+   TWO PHONES, TWO SHEETS, AND THE PAGE CANNOT DO IT THE SAME WAY ON BOTH.
+
+     Android  Chrome offers a real install. The browser hands the page an
+              event, the page holds it, and the Install button fires it.
+     iOS      NO BROWSER ON iOS HAS AN INSTALL API. Not Safari, not Chrome,
+              not any of them. Instructions are the only thing that exists,
+              so the sheet prints the four taps.
+
+   IT NEVER SHOWS ON A PHONE THAT ALREADY HAS THE APP, and it never shows
+   on first paint. The Hub draws first and the sheet arrives after, because
+   a panel that lands under a thumb already moving is a mis-tap.
+*/
+
+/*
+   `Later` HOLDS IT OFF FOR FOURTEEN DAYS, and the Hub keeps a row that
+   opens it any time. A dismissal that lasts one session asks again
+   tomorrow, which is nagging; a dismissal that lasts for ever leaves
+   somebody who tapped Later by mistake with no way back.
+
+   localStorage, not sessionStorage: fourteen days has to outlive the tab.
+   It is the sixth key beside the four data stores and `reached`, and it
+   holds one number.
+*/
+var INSTALL_LATER_KEY  = 'install.later';
+var INSTALL_LATER_DAYS = 14;
+
+/** Chrome's install event, caught and kept. Null on iOS, always. */
+var installEvent = null;
+
+/** The sheet on screen, or null. */
+var installSheet = null;
+
+/** Screens that want to know when the Install button becomes possible. */
+var installWatchers = [];
+
+
+(function watchInstall() {
+  if (typeof window === 'undefined') return;
+
+  /*
+     CHROME'S OWN BANNER IS TURNED OFF HERE, and that is what
+     preventDefault does. The event is then kept, because prompt() can only
+     be called on an event the page is holding, and only ONCE per event.
+     After it is used Chrome sends a new one if the app is still not
+     installed.
+  */
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    installEvent = event;
+    installChanged();
+  });
+
+  window.addEventListener('appinstalled', function () {
+    installEvent = null;
+    hideInstallSheet();
+    installChanged();
+  });
+})();
+
+
+function onInstallChange(fn) { installWatchers.push(fn); }
+
+function installChanged() {
+  installWatchers.forEach(function (fn) {
+    try { fn(); } catch (e) {}      // one broken screen must not stop the rest
+  });
+}
+
+
 /**
  * True when the app runs from the Home Screen rather than a browser tab.
  *
@@ -2912,9 +3274,9 @@ function editsText(n) {
  * what Android and a current iPhone answer. navigator.standalone is
  * Apple's own and answers on an older one. Either one saying yes is yes.
  *
- * The lopsided part is deliberate: a wrong NO nudges somebody who already
- * installed the app, and a wrong YES only means a note goes unshown. The
- * first is the one that annoys, so the test leans away from it.
+ * The lopsided part is deliberate: a wrong NO asks somebody who already
+ * installed the app, and a wrong YES only means the sheet goes unshown.
+ * The first is the one that annoys, so the test leans away from it.
  */
 function isInstalled() {
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
@@ -2922,83 +3284,222 @@ function isInstalled() {
 }
 
 
-/*
-   ONCE PER VISIT, NOT ONCE PER SCREEN.
-
-   sessionStorage, and that is deliberate. It is not one of the four data
-   stores, nothing syncs it, and it has to die when the tab does — which
-   is exactly what "once per tab-mode open" means. Losing it costs one
-   extra note. The Buildings screen keeps its finished-set the same way.
-*/
-var NUDGE_KEY = 'pfc.control.v1.session.nudged';
-
-
 /**
- * THE INSTALL NUDGE. Draws only in a browser tab, at most once a visit.
+ * True on an iPhone or an iPad.
  *
- * Install is the line between storage that survives and storage iOS wipes
- * after seven days. It fixes a second thing on its own: data written in a
- * tab is invisible to the installed app, so somebody who edits in both
- * sees two different sets of queued edits. One action answers both, so
- * there is one note and not two.
- *
- * Walking Hub -> Buildings -> a unit prints it once, on the first screen
- * that asks for it. The key is stamped on mount rather than on dismiss,
- * because a note that returns on the next screen reads as a fault.
+ * An iPad running iPadOS 13 or later reports itself as a Mac, so the touch
+ * test is the second half. A desktop Mac has no touch points.
  */
-function mountInstallNudge() {
-  if (isInstalled()) return null;
+function isApplePhone() {
+  var ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/.test(ua)) return true;
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+}
 
-  try {
-    if (sessionStorage.getItem(NUDGE_KEY)) return null;
-  } catch (e) {
-    // No sessionStorage at all. Draw it: once is no worse than never,
-    // and the note takes itself off the screen when it is tapped.
-  }
 
-  var slot = document.createElement('div');
-  slot.className = 'nudge-slot';
-  slot.innerHTML = nudgeHtml();
+/** Whether there is anything to offer on this phone at all. */
+function canInstall() {
+  if (isInstalled()) return false;
+  return !!installEvent || isApplePhone();
+}
 
-  // Under the sync bar where there is one, so news about right now keeps
-  // the line directly below the header. The Hub draws no sync bar.
-  var after = document.querySelector('.syncbar-slot') || document.querySelector('header.hdr');
-  if (after && after.parentNode) after.parentNode.insertBefore(slot, after.nextSibling);
-  else document.body.insertBefore(slot, document.body.firstChild);
 
-  slot.querySelector('.nudge-x').addEventListener('click', function () {
-    if (slot.parentNode) slot.parentNode.removeChild(slot);
-  });
-
-  try { sessionStorage.setItem(NUDGE_KEY, '1'); } catch (e) {}
-
-  return slot;
+/** True while a `Later` is still holding. */
+function installDeferred() {
+  var at = Store.read(INSTALL_LATER_KEY, 0);
+  if (!at) return false;
+  return (Date.now() - at) < (INSTALL_LATER_DAYS * 24 * 60 * 60 * 1000);
 }
 
 
 /**
- * The note itself.
+ * Offers the sheet, once the screen behind it has settled.
  *
- * The two steps are drawn as keys, not written into a sentence. `Share`
- * and `Add to Home Screen` are the words iOS prints on those buttons, so
- * the note reads the same as the phone. It also means the note needs no
- * verb of its own, and this app has never settled on tap or press.
+ * NOT ON FIRST PAINT. The Hub draws, the page loads, and only then does
+ * the sheet come up — so it cannot land under a thumb that is already
+ * moving toward a card.
+ *
+ * On Android it waits for Chrome's event as well, which may arrive after
+ * the page has loaded. That is what onInstallChange is for.
  */
-function nudgeHtml() {
-  return '<div class="nudge">' +
-           '<div class="nudge-body">' +
-             '<div class="nudge-title">Add PFC Control to the Home Screen</div>' +
-             '<div class="nudge-text">A browser can lose your queued edits.</div>' +
-             '<div class="nudge-steps">' +
-               '<span class="nudge-step">Share</span>' +
-               '<span class="nudge-arrow" aria-hidden="true">›</span>' +
-               '<span class="nudge-step">Add to Home Screen</span>' +
-             '</div>' +
-           '</div>' +
-           '<button type="button" class="nudge-x press" aria-label="Hide this note">' +
-             ICON.close +
-           '</button>' +
+function mountInstallSheet() {
+  if (typeof window === 'undefined') return;
+
+  var settled = false;
+
+  function offer() {
+    if (!settled || installSheet) return;
+    if (!canInstall() || installDeferred()) return;
+    showInstallSheet();
+  }
+
+  onInstallChange(offer);
+
+  window.addEventListener('load', function () {
+    // One beat after the page settles. Long enough to read as arriving,
+    // short enough that nobody has walked away.
+    setTimeout(function () { settled = true; offer(); }, 700);
+  });
+}
+
+
+/** Opens it whatever `Later` says. This is what the Hub row calls. */
+function openInstallSheet() {
+  if (installSheet) return;
+  showInstallSheet();
+}
+
+
+function showInstallSheet() {
+  var wrap = document.createElement('div');
+  wrap.className = 'sheet-wrap';
+  wrap.innerHTML = installSheetHtml();
+  document.body.appendChild(wrap);
+  installSheet = wrap;
+
+  // The class goes on one frame later, so the browser has something to
+  // slide FROM. Set both in one frame and it simply appears.
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { wrap.classList.add('sheet-wrap--up'); });
+  });
+
+  wrap.querySelector('.sheet-scrim').addEventListener('click', laterInstall);
+
+  var later = wrap.querySelector('.sheet-later');
+  if (later) later.addEventListener('click', laterInstall);
+
+  var go = wrap.querySelector('.sheet-go');
+  if (go) go.addEventListener('click', runInstallPrompt);
+}
+
+
+function hideInstallSheet() {
+  if (!installSheet) return;
+  var wrap = installSheet;
+  installSheet = null;
+
+  wrap.classList.remove('sheet-wrap--up');
+  setTimeout(function () {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+  }, 260);
+}
+
+
+/**
+ * Later, and a tap on the dimmed page above, do the same thing.
+ *
+ * BOTH STORE THE DATE. A tap outside that only closed the sheet would
+ * bring it straight back on the next open, which reads as a fault. The
+ * Hub row is the way back in, so nothing is lost by being firm here.
+ */
+function laterInstall() {
+  Store.write(INSTALL_LATER_KEY, Date.now());
+  hideInstallSheet();
+}
+
+
+/**
+ * ANDROID ONLY, AND IT MUST RUN INSIDE THE TAP.
+ *
+ * Chrome refuses prompt() outside a user gesture, so this cannot be moved
+ * behind a timer or a promise. The event is also single use: once it is
+ * fired it is spent, and Chrome sends a fresh one later if the app is
+ * still not installed.
+ */
+function runInstallPrompt() {
+  if (!installEvent) { hideInstallSheet(); return; }
+
+  var event = installEvent;
+  installEvent = null;
+
+  try {
+    event.prompt();
+  } catch (e) {
+    // Chrome refused it. Nothing to say to a person about that.
+  }
+
+  hideInstallSheet();
+  installChanged();
+}
+
+
+/**
+ * THE WORDS, AND WHERE EVERY ONE OF THEM COMES FROM.
+ *
+ * `Add to Home Screen` is the row Apple prints in its own Share sheet,
+ * capitalised the way Apple capitalises it. `Install` is the word on
+ * Chrome's own install dialog. `Later` is the dismiss label a shipping
+ * library uses. The body line is the only sentence that is ours: the
+ * standard `This site has app functionality` fails crew-words.md, because
+ * functionality is not a word the crew uses.
+ *
+ * STEP 1 NAMES BOTH BUTTONS ON PURPOSE. iOS 26 hides Share behind the
+ * three dots in the browser bar, and an older layout on an older phone
+ * shows Share directly. The page cannot read which one is set, so it must
+ * not guess.
+ *
+ * THE SEVEN DAY LINE IS iOS ONLY. It is a WebKit rule — script-written
+ * storage is deleted after seven days of Safari use with no visit to the
+ * site, and a Home Screen app is not part of Safari and keeps its own
+ * counter. It is not true on Android, so Android does not read it.
+ */
+function installSheetHtml() {
+  return '<div class="sheet-scrim"></div>' +
+         '<div class="sheet" role="dialog" aria-label="Add to Home Screen">' +
+           '<div class="sheet-grip" aria-hidden="true"></div>' +
+           '<div class="sheet-title">Add to Home Screen</div>' +
+           (installEvent ? installBodyAndroid() : installBodyApple()) +
          '</div>';
+}
+
+
+function installBodyAndroid() {
+  return '<div class="sheet-text">This site works like an app. ' +
+           'Install it to keep your saved work.</div>' +
+         '<div class="sheet-acts">' +
+           '<button type="button" class="btn btn-primary press sheet-go">Install</button>' +
+           '<button type="button" class="btn btn-ghost press sheet-later">Later</button>' +
+         '</div>';
+}
+
+
+function installBodyApple() {
+  var steps = [
+    'Tap Share, or tap ••• in the browser bar.',
+    'Scroll down.',
+    'Tap Add to Home Screen.',
+    'Tap Add.'
+  ];
+
+  var list = steps.map(function (line, index) {
+    return '<li class="sheet-step">' +
+             '<span class="sheet-n">' + (index + 1) + '</span>' +
+             '<span>' + escapeHtml(line) + '</span>' +
+           '</li>';
+  }).join('');
+
+  return '<ol class="sheet-steps">' + list + '</ol>' +
+         '<div class="sheet-text">A browser tab can delete your saved work ' +
+           'after 7 days. The Home Screen app keeps it.</div>' +
+         '<div class="sheet-acts">' +
+           '<button type="button" class="btn btn-ghost press sheet-later">Later</button>' +
+         '</div>';
+}
+
+
+/**
+ * The permanent row on the Hub.
+ *
+ * THE SHEET CAN ALWAYS BE REACHED, so `Later` can be firm about its
+ * fourteen days. It draws nothing at all when the app is installed, or on
+ * a browser that offers no way to install anything.
+ */
+function installRowHtml() {
+  if (!canInstall()) return '';
+  return '<button type="button" class="add-row press" onclick="openInstallSheet()">' +
+           '<span class="add-row-text">Add to phone</span>' +
+           ICON.chevron +
+         '</button>';
 }
 
 

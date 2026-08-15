@@ -117,6 +117,10 @@ if (!projectId || !unitKey) {
 
   refresh();
   enablePullToRefresh(refresh);
+
+  // Walking to the next unit and opening the app again asks for this
+  // building afresh. A glance and straight back does not.
+  refetchOnReturn(function () { return Store.projectFetchedAt(projectId); }, refresh);
 }
 
 

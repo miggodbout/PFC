@@ -14,9 +14,11 @@
 <title>PFC Control</title>
 <link rel="stylesheet" href="shared/theme.css">
 <style>
-  /* The card grid. Two across on every phone size. */
+  /* The card grid. Two across on every phone size.
+     The bottom gap is small because the Add to phone row sits under it and
+     carries its own margin. */
   .grid {
-    padding: 0 20px calc(40px + var(--btm-safe));
+    padding: 0 20px 20px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
@@ -79,6 +81,8 @@
 
 <nav class="grid" id="grid"></nav>
 
+<div id="add-row"></div>
+
 <p class="foot">Built by Miguel Godbout</p>
 
 <script src="shared/common.js"></script>
@@ -90,23 +94,29 @@
    ===================================================================== */
 
 /*
-   A card with no href is greyed and does not press. Those four name the
-   windows that are coming, and Archive is the one 0.3 lands on: a
-   finished building leaves Tracking in 0.2 and there is no door onto it
-   until that window exists. The card is the seam. Do not remove it to
-   tidy the grid.
+   A card with no href is greyed and does not press. TWO ARE LEFT, and
+   Archive is the one 0.4 lands on: a finished building leaves Tracking in
+   0.2 and there is no door onto it until that window exists. The card is
+   the seam. Do not remove it to tidy the grid.
 
-   Seven cards in a two-across grid leaves the last one alone on its row.
+   TWO GREY CARDS WENT IN 0.2.1. Deficiencies named a window Logging
+   already is, and two cards for one job is how a person taps the wrong
+   one. Materials is really the 0.5 export, and a card reading "Coming
+   soon" for six months stops meaning anything.
+
+   EVERY SUBTITLE LEADS WITH A VERB, so a card says what you do rather than
+   what it is filed under. `Buildings & units` named the contents of a
+   screen nobody had opened yet.
+
+   Five cards in a two-across grid leaves the last one alone on its row.
    That is known and it is cosmetic.
 */
 var CARDS = [
-  { label: 'Tracking',        sub: 'Buildings & units',            href: 'tracker/index.html', icon: 'bars' },
-  { label: 'Logging',         sub: 'Record an issue',              href: 'logging/index.html', icon: 'flagBig' },
-  { label: 'Set Up Building', sub: 'Create or change a building',  href: 'setup/index.html',   icon: 'plus' },
-  { label: 'Deficiencies', sub: 'Coming soon' },
-  { label: 'Materials',    sub: 'Coming soon' },
-  { label: 'Reports',      sub: 'Coming soon' },
-  { label: 'Archive',      sub: 'Coming soon' }
+  { label: 'Tracking',        sub: 'See what is done',            href: 'tracker/index.html', icon: 'bars' },
+  { label: 'Log',             sub: 'Log an issue',                href: 'logging/index.html', icon: 'flagBig' },
+  { label: 'Set Up Building', sub: 'Create or change a building', href: 'setup/index.html',   icon: 'plus' },
+  { label: 'Reports', sub: 'Coming soon' },
+  { label: 'Archive', sub: 'Coming soon' }
 ];
 
 document.getElementById('grid').innerHTML = CARDS.map(function (card) {
@@ -125,9 +135,23 @@ document.getElementById('grid').innerHTML = CARDS.map(function (card) {
 }).join('');
 
 
-// The Hub is the screen the app opens on, so it is where the install note
-// usually lands. It draws nothing when the app is already installed.
-mountInstallNudge();
+/*
+   THE ADD TO HOME SCREEN SHEET, AND THE ROW THAT REOPENS IT.
+
+   The Hub is the screen the app opens on, so this is the only screen that
+   offers the sheet. The sheet waits for the page to settle before it comes
+   up, and it draws nothing at all when the app is already on the Home
+   Screen. The row under the cards is the way back in after a Later.
+
+   The row is repainted when Chrome hands over its install event, which can
+   arrive after this line has run.
+*/
+mountInstallSheet();
+
+var addRow = document.getElementById('add-row');
+function paintAddRow() { addRow.innerHTML = installRowHtml(); }
+onInstallChange(paintAddRow);
+paintAddRow();
 
 
 /*

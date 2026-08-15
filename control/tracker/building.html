@@ -113,6 +113,10 @@ if (!projectId) {
     // Send first, then ask. A pull is the one gesture that means "catch up".
     return Queue.wake().then(refresh, refresh);
   });
+
+  // Walking to the next floor and opening the app again asks for this
+  // building afresh. A glance and straight back does not.
+  refetchOnReturn(function () { return Store.projectFetchedAt(projectId); }, refresh);
 }
 
 

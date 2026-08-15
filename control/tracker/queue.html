@@ -123,9 +123,9 @@ function jobHtml(job, canAct) {
            '<div class="item-top">' +
              '<span class="item-name">' + escapeHtml(place.what) + '</span>' +
              // .item-name no longer grows on its own — see theme.css — so
-             // the ring needs this to stay on the right edge.
+             // the state needs this to stay on the right edge.
              '<span class="head-gap"></span>' +
-             queuedRingHtml(canAct) +
+             stateHtml(canAct) +
            '</div>' +
            '<div class="item-details">' + escapeHtml(place.where) + '</div>' +
 
@@ -148,6 +148,34 @@ function jobHtml(job, canAct) {
                '</div>'
              : '') +
          '</div>';
+}
+
+
+/**
+ * WHAT THIS ROW IS DOING, IN A WORD.
+ *
+ * It was a ring on every row, and a ring says "working" whatever it is
+ * doing. Twelve of them under a bar reading Offline said twelve edits were
+ * on their way while none of them was. A word cannot say that.
+ *
+ *   Did not save  the app gave up. A person decides. Red, and still.
+ *   Sending       a call is in the air right now. The one moving mark on
+ *                 the screen, and it stops the moment the call answers.
+ *   Queued        written down, nothing going out. Still.
+ *
+ * THE WORD IS `Queued`, NOT `Waiting`. In this app Waiting is a kind of
+ * issue on an item, and one word cannot mean two things. Queued is the
+ * word the sync bar, the chips and crew-words.md all already use for an
+ * edit on its way.
+ */
+function stateHtml(held) {
+  if (held) return '<span class="q-state q-state--bad">Did not save</span>';
+
+  if (Queue.sending()) {
+    return '<span class="q-state q-state--go"><span class="ring"></span>Sending</span>';
+  }
+
+  return '<span class="q-state">Queued</span>';
 }
 
 
