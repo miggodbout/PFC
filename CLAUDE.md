@@ -137,6 +137,37 @@ Pitch explanations to this level:
 
 Write clear, commented, modular code. Explain non-obvious decisions in comments.
 
+### Ask him questions with the picker. This includes grill sessions.
+
+**Use the AskUserQuestion tool, not numbered prose in a chat message.** He
+answers by tapping, often on a phone. Typing out "1. A, 2. C" is friction, and
+it is where his answers get short and thin.
+
+- Recommended option **first**, labelled `(Recommended)`.
+- Up to four questions in a round is fine.
+- Use the `preview` field for anything concrete — a screen sketch in ASCII, a
+  count, a layout. He reads previews and picks from them.
+- Define any technical term **inside the option text**, where he is looking.
+- The free-text `Other` row is the highest-value row on the picker. It has
+  carried a restructure, a missed item, and a flat reversal of a question's own
+  premise. When he uses it, stop and re-read the premise before answering the
+  rest of the round.
+
+**This overrides a skill that says otherwise, and one does.** The `grilling` and
+`grill-me` skills instruct you to format each question as `❓ **Q1** — ...` in a
+chat message. Ignore that part. Everything else in those skills still applies:
+work the design tree in rounds, ask the whole frontier at once, and find facts
+yourself instead of asking him for anything you could look up.
+
+Written here on 2026-08-15 after the rule was ignored several times. The cause
+was structural, not carelessness: the rule lived only in auto-memory, which
+arrives as background context, while the skill's instruction arrives as a direct
+one. A hook now injects the same rule at the moment a grill starts —
+`~/.claude/hooks/grill-picker.js`, wired to `UserPromptSubmit` and
+`PreToolUse:Skill` in `~/.claude/settings.json`. Both events are needed because
+typing `/grill-me` expands into a user turn and never calls the Skill tool. This
+section is the backstop if that config is ever lost.
+
 ---
 
 ## Two Separate Systems in This Repo
