@@ -456,24 +456,39 @@ The rules:
 
 The older files still name the "Steam patch-notes style" —
 `.scratch/0.2.1-plan.md`, `.scratch/HANDOFF-0.2.1.md` and
-`notes/PFC_0.2_Testing_Breakdown.md`. They are the record of what was asked at
+`notes/0.2.0_bugs.md`. They are the record of what was asked at
 the time and are left alone. This section is what to build from.
 
-**When to ship a PATCH at all.** Decided by Miguel on 2026-08-07, after two
-releases in one evening. Ship a `0.1.x` only when the defect **costs someone
-time every day**, or when it **blocks releasing at all**. Everything else waits
-for the next MINOR, where the screen is usually being rewritten anyway.
+**A PATCH ships whenever there is a fix worth shipping.** No test to pass, no
+bar to clear. Ship it.
 
-The reason is the overhead, not the fix. A release costs a push, a Pages build,
-a `CACHE_NAME` bump you must remember, and a phone update cycle that can go
-wrong. That cost is the same for a one word fix as for a hundred line one.
+Miguel set this on 2026-08-15, replacing the old rule. That rule said a `0.1.x`
+had to **cost someone time every day** or **block releasing at all**, and
+everything else waited for the next MINOR. His words: *"patches should have
+free reign, that rule might apply in 1.0 but atm we can just ship fixes at any
+point."*
 
-The three releases that set the rule:
-- `0.1.1` renamed a header Miguel reads every day. Daily friction. Shipped.
+The old rule was priced against overhead — a push, a Pages build, a
+`CACHE_NAME` bump, and a phone update cycle that can go wrong. Two things
+emptied that price. `tools/bump-version.ps1` writes the cache string, so the
+step nobody could remember is one command. And nobody but Miguel opens the app
+until 0.4, so a bad patch costs one reload, not a crew's afternoon. This is the
+same reasoning as standing note 1 at the top of this file, applied to release
+cadence.
+
+**It comes back at 1.0**, when the crew is on the app daily and a release
+reaches real phones. Not before.
+
+There is still no such thing as a fourth number. Fixes to a patch are just the
+next patch: 0.2.1 and 0.2.2 are siblings under 0.2, and neither is a child of
+the other. Settled 2026-08-15, when 0.2.2 was almost numbered `0.2.1.1`.
+
+Three older releases are worth keeping for what they show, even though the rule
+that judged them is gone:
+- `0.1.1` renamed a header Miguel reads every day.
 - `0.1.2` fixed the update path itself. Nothing could ship until it landed.
-  Shipped.
-- The loading header flash annoys for 200ms and costs the crew nothing. **Held
-  for 0.2**, and written into the 0.2 map's Notes instead.
+- The loading header flash annoyed for 200ms and was held for 0.2. **Under the
+  rule above it would just ship now.**
 
 Two exceptions, both deliberate:
 - `Hub/Log/app_v1.html` and `app_v2.html` keep their names. There `v1` and `v2` mean a second attempt at one file, not a release. The live app links to them.
